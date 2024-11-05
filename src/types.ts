@@ -6,6 +6,12 @@ export enum RsaSize {
     B4096 = 4096
 }
 
+export enum SymmKeyLength {
+    B128 = 128,
+    B192 = 192,
+    B256 = 256,
+}
+
 export enum HashAlg {
     SHA_1 = 'SHA-1',
     SHA_256 = 'SHA-256',
@@ -18,9 +24,18 @@ export enum KeyUse {
     Sign = 'signing',  // sign
 }
 
+export type SymmKey = CryptoKey
+
 export enum CharSize {
     B8 = 8,
     B16 = 16,
 }
 
+export type SymmAlgorithm = 'AES-CTR'|'AES-CBC'|'AES-GCM'
 export type Msg = ArrayBuffer|string|Uint8Array
+
+export type SymmKeyOpts = {
+    alg:SymmAlgorithm
+    length:SymmKeyLength
+    iv:ArrayBuffer
+}

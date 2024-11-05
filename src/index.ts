@@ -1,13 +1,19 @@
 import { webcrypto } from '@bicycle-codes/one-webcrypto'
+import { toString } from 'uint8arrays'
 import { set } from 'idb-keyval'
 import {
     RSA_ALGORITHM,
     DEFAULT_RSA_SIZE,
     DEFAULT_HASH_ALGORITHM,
     RSA_SIGN_ALGORITHM,
-    DEFAULT_CHAR_SIZE
+    DEFAULT_CHAR_SIZE,
+    DEFAULT_SYMM_ALGORITHM,
+    DEFAULT_SYMM_LENGTH,
+    AES_GCM
 } from './constants'
 import {
+    SymmKeyLength,
+    type SymmAlgorithm,
     KeyUse,
     type RsaSize,
     HashAlg,
@@ -21,7 +27,13 @@ import {
     rsaOperations,
     didToPublicKey,
     importPublicKey,
-    toBase64
+    toBase64,
+    isCryptoKey,
+    normalizeUnicodeToBuf,
+    importKey,
+    randomBuf,
+    joinBufs,
+    normalizeBase64ToBuf
 } from './util'
 import Debug from '@bicycle-codes/debug'
 const debug = Debug()
@@ -58,6 +70,10 @@ export class Keys {
 
     get publicEncryptKey ():CryptoKey {
         return this.encryptKey.publicKey
+    }
+
+    get privateKey ():CryptoKey {
+        return this.encryptKey.privateKey
     }
 
     get publicSignKey ():CryptoKey {
@@ -133,6 +149,16 @@ export class Keys {
         const sig = await this.sign(msg, charsize)
         return toBase64(sig)
     }
+
+    async decrypt (msg:string|Uint8Array):Promise<Uint8Array> {
+        const decrypted = await rsaOperations.decrypt(msg, this.privateKey)
+        return decrypted
+    }
+
+    async decryptAsString (msg:string|Uint8Array):Promise<string> {
+        const decrypted = await rsaOperations.decrypt(msg, this.privateKey)
+        return toString(decrypted)
+    }
 }
 
 async function makeRSAKeypair (
@@ -196,4 +222,143 @@ export async function encryptTo ({ content, publicKey }:{
 }):Promise<Uint8Array> {
     const buf = await rsaOperations.encrypt(content, publicKey)
     return new Uint8Array(buf)
+}
+
+export const AES = {
+    create (opts:{ alg, length } = {
+        alg: DEFAULT_SYMM_ALGORITHM,
+        length: DEFAULT_SYMM_LENGTH
+    }):Promise<CryptoKey> {
+        return webcrypto.subtle.generateKey({
+            name: opts.alg,
+            length: opts.length
+        }, true, ['encrypt', 'decrypt'])
+    },
+
+    async export (key:CryptoKey):Promise<Uint8Array> {
+        const raw = await webcrypto.subtle.exportKey('raw', key)
+        return new Uint8Array(raw)
+    },
+
+    async exportAsString (key:CryptoKey):Promise<string> {
+        const raw = await AES.export(key)
+        return toBase64(raw)
+    },
+
+    async encrypt (
+        data:Uint8Array,
+        cryptoKey:CryptoKey|Uint8Array,
+        iv?:Uint8Array
+    ):Promise<Uint8Array> {
+        const key = (isCryptoKey(cryptoKey) ?
+            cryptoKey :
+            await importAesKey(cryptoKey)
+        )
+
+        // prefix the `iv` into the cipher text
+        const encrypted = iv ? await webcrypto.subtle.encrypt(
+            { name: AES_GCM, iv },
+            key,
+            data
+        ) : await encryptBytes(data, key)
+
+        return new Uint8Array(encrypted)
+    },
+
+    async decrypt (
+        encryptedData:Uint8Array,
+        cryptoKey:CryptoKey|Uint8Array,
+        iv?:Uint8Array
+    ) {
+        const key = isCryptoKey(cryptoKey) ? cryptoKey : await importAesKey(cryptoKey)
+        // the `iv` is prefixed to the cipher text
+        const decrypted = iv ?
+            await webcrypto.subtle.decrypt({
+                name: AES_GCM,
+                iv
+            }, key, encryptedData) :
+            await decryptBytes(encryptedData, key)
+
+        return new Uint8Array(decrypted)
+    }
+}
+
+export async function aesDecrypt (
+    encrypted:Uint8Array,
+    key:CryptoKey|Uint8Array,
+    iv?:Uint8Array
+):Promise<Uint8Array> {
+    const cryptoKey = isCryptoKey(key) ? key : await importAesKey(key)
+    // we prefix the `iv` into the cipher text
+    const decrypted = iv ?
+        await webcrypto.subtle.decrypt({
+            name: AES_GCM,
+            iv
+        }, cryptoKey, encrypted) :
+        await decryptBytes(encrypted, cryptoKey)
+
+    return new Uint8Array(decrypted)
+}
+
+function importAesKey (key:Uint8Array):Promise<CryptoKey> {
+    return webcrypto.subtle.importKey(
+        'raw',
+        key,
+        {
+            name: AES_GCM,
+            length: SymmKeyLength.B256,
+        },
+        true,
+        ['encrypt', 'decrypt']
+    )
+}
+
+async function encryptBytes (
+    msg:Msg,
+    key:CryptoKey|string,
+    opts?:Partial<{ iv:ArrayBuffer, charsize:number }>
+):Promise<ArrayBuffer> {
+    const data = normalizeUnicodeToBuf(msg, opts?.charsize ?? DEFAULT_CHAR_SIZE)
+    const importedKey = typeof key === 'string' ?
+        await importKey(key, opts) :
+        key
+    const iv:ArrayBuffer = opts?.iv || randomBuf(12)
+    const cipherBuf = await webcrypto.subtle.encrypt({
+        name: AES_GCM,
+        iv
+    }, importedKey, data)
+
+    return joinBufs(iv, cipherBuf)
+}
+
+/**
+ * Decrypt the given message with the given key. We expect the `iv` to be
+ * prefixed to the encrypted message.
+ * @param msg The message to decrypt
+ * @param key The key to decrypt with
+ * @param opts Optional args for algorithm and stuff
+ * @returns {Promise<ArrayBuffer>}
+ */
+async function decryptBytes (
+    msg:Msg,
+    key:CryptoKey|string,
+    opts?:Partial<{
+        alg:SymmAlgorithm;
+        length: SymmKeyLength;
+        iv: ArrayBuffer;
+    }>
+):Promise<ArrayBuffer> {
+    const cipherText = normalizeBase64ToBuf(msg)
+    const importedKey = typeof key === 'string' ?
+        await importKey(key, opts) :
+        key
+    // `iv` is prefixed to the cypher text
+    const iv = cipherText.slice(0, 12)
+    const cipherBytes = cipherText.slice(12)
+    const msgBuff = await webcrypto.subtle.decrypt({
+        name: DEFAULT_SYMM_ALGORITHM,
+        iv
+    }, importedKey, cipherBytes)
+
+    return msgBuff
 }

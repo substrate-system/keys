@@ -4,6 +4,8 @@ import type {
     DID,
     Msg,
     HashAlg,
+    SymmKeyOpts,
+    SymmKey
 } from './types'
 import {
     KeyUse,
@@ -20,7 +22,9 @@ import {
     RSA_DID_PREFIX,
     KEY_TYPE,
     EDWARDS_DID_PREFIX,
-    BLS_DID_PREFIX
+    BLS_DID_PREFIX,
+    DEFAULT_SYMM_ALGORITHM,
+    DEFAULT_SYMM_LENGTH
 } from './constants'
 
 /**
@@ -398,4 +402,62 @@ function hasPrefix (prefixedKey:ArrayBuffer, prefix:ArrayBuffer) {
 
 export function toBase64 (arr:Uint8Array) {
     return uToString(arr, 'base64pad')
+}
+
+export async function importKey (
+    key:string|Uint8Array,
+    opts?:Partial<SymmKeyOpts>
+):Promise<SymmKey> {
+    const buf = typeof key === 'string' ? base64ToArrBuf(key) : key
+
+    return webcrypto.subtle.importKey(
+        'raw',
+        buf,
+        {
+            name: opts?.alg || DEFAULT_SYMM_ALGORITHM,
+            length: opts?.length || DEFAULT_SYMM_LENGTH,
+        },
+        true,
+        ['encrypt', 'decrypt']
+    )
+}
+
+export function randomBuf (
+    length:number,
+    { max }:{ max:number } = { max: 255 }
+):ArrayBuffer {
+    if (max < 1 || max > 255) {
+        throw InvalidMaxValue
+    }
+
+    const arr = new Uint8Array(length)
+
+    if (max === 255) {
+        webcrypto.getRandomValues(arr)
+        return arr.buffer
+    }
+
+    let index = 0
+    const interval = max + 1
+    const divisibleMax = Math.floor(256 / interval) * interval
+    const tmp = new Uint8Array(1)
+
+    while (index < arr.length) {
+        webcrypto.getRandomValues(tmp)
+        if (tmp[0] < divisibleMax) {
+            arr[index] = tmp[0] % interval
+            index++
+        }
+    }
+
+    return arr.buffer
+}
+
+export function joinBufs (fst:ArrayBuffer, snd:ArrayBuffer):ArrayBuffer {
+    const view1 = new Uint8Array(fst)
+    const view2 = new Uint8Array(snd)
+    const joined = new Uint8Array(view1.length + view2.length)
+    joined.set(view1)
+    joined.set(view2, view1.length)
+    return joined.buffer
 }
