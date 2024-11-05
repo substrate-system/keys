@@ -4,9 +4,11 @@ import { fromString, toString } from 'uint8arrays'
 import {
     Keys,
     verifyFromString,
+    encryptKeyTo,
     encryptTo,
     AES
 } from '../src/index.js'
+import type { EncryptedMessage } from '../src/types.js'
 
 let keys:Keys
 test('create a new Keys', async t => {
@@ -49,7 +51,7 @@ test('verify an invalid signature', async t => {
 
 let encrypted:Uint8Array
 test('encrypt something to a keys instance', async t => {
-    encrypted = await encryptTo({
+    encrypted = await encryptKeyTo({
         content: 'hello',
         publicKey: keys.publicEncryptKey
     })
@@ -58,14 +60,14 @@ test('encrypt something to a keys instance', async t => {
 })
 
 test('decrypt a message', async t => {
-    const decrypted = await keys.decrypt(encrypted)
+    const decrypted = await keys.decryptKey(encrypted)
     t.equal(toString(decrypted), 'hello', 'should decrypt the text')
 })
 
 test('decrypt a message with the wrong keys', async t => {
     const newKeys = await Keys.create()
     try {
-        const decrypted = await newKeys.decrypt(encrypted)
+        const decrypted = await newKeys.decryptKey(encrypted)
         t.ok(toString(decrypted) !== 'hello',
             'should not decrypt with the wrong keys')
     } catch (err) {
@@ -74,7 +76,7 @@ test('decrypt a message with the wrong keys', async t => {
 })
 
 test('decrypt as string', async t => {
-    const decrypted = await keys.decryptAsString(encrypted)
+    const decrypted = await keys.decryptKeyAsString(encrypted)
     t.equal(decrypted, 'hello', 'should decrypt and return a string')
 })
 
@@ -105,4 +107,32 @@ test('AES decrypt', async t => {
     t.ok(decryptedText instanceof Uint8Array, 'should return a Uint8Array')
     t.equal(toString(decryptedText), 'hello AES',
         'should decrypt to the right value')
+})
+
+let bob:Keys
+let encryptedMsg:EncryptedMessage
+test('encrypt content to a public key', async t => {
+    bob = await Keys.create()
+
+    const message = 'Hello bob'
+
+    encryptedMsg = await encryptTo({
+        content: message,
+        publicKey: bob.publicEncryptKey
+    })
+
+    t.ok(encryptedMsg.content instanceof Uint8Array,
+        'should return the content as a Uint8Array')
+    t.ok(encryptedMsg.key instanceof Uint8Array,
+        'should return the key as a Uint8Array')
+})
+
+test('Bob can decrypt the message addressed to Bob', async t => {
+    const decrypted = await bob.decrypt(encryptedMsg)
+    t.equal(toString(decrypted), 'Hello bob', 'should decrypt the message')
+})
+
+test('keys.decryptToString', async t => {
+    const decrypted = await bob.decryptToString(encryptedMsg)
+    t.equal(decrypted, 'Hello bob', 'should decrypt the message to a string')
 })

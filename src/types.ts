@@ -12,6 +12,11 @@ export enum SymmKeyLength {
     B256 = 256,
 }
 
+export type EncryptedMessage = {
+    content:string|Uint8Array;
+    key:string|Uint8Array;
+}
+
 export enum HashAlg {
     SHA_1 = 'SHA-1',
     SHA_256 = 'SHA-256',
