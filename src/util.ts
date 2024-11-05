@@ -318,3 +318,13 @@ function hasProp<K extends PropertyKey> (
     return (typeof data === 'object' && data != null && prop in data)
 }
 
+export async function getPublicKeyAsArrayBuffer (
+    keypair:CryptoKeyPair
+):Promise<ArrayBuffer> {
+    const spki = await webcrypto.subtle.exportKey(
+        'spki',
+        keypair.publicKey
+    )
+
+    return spki
+}

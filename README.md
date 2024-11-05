@@ -9,7 +9,7 @@
 
 Create and store keypairs in-browser with the [web crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API).
 
-Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) to store [non-extractable keypairs](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey#extractable). This means that the browser prevents you from reading the private key, but it can be persisted and re-used indefinitely.
+Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) to store [non-extractable keypairs](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey#extractable). "Non-extractable" means that the browser prevents you from ever reading the private key, but the keys can be persisted and re-used indefinitely.
 
 <details><summary><h2>Contents</h2></summary>
 <!-- toc -->

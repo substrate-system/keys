@@ -9,7 +9,7 @@
   "scripts": {
     "lint": "eslint \"./**/*.{ts,js}\"",
     "build-tests": "esbuild test/index.ts --target=es2020 --bundle --keep-names > test/test-bundle.js",
-    "test": "npm run lint && npm run build && npm run build-tests && npm run test-tape-run",
+    "test": "npm run build && npm run build-tests && npm run test-tape-run",
     "test-tape-run": "cat test/index.html | tape-run --input=html --static=test | tap-spec",
     "build-cjs": "esbuild src/*.ts --format=cjs --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.cjs --sourcemap",
     "build-cjs:min": "esbuild src/*.ts --format=cjs --minify --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.min.cjs --sourcemap",
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@bicycle-codes/one-webcrypto": "^1.1.2",
+    "idb-keyval": "^6.2.1",
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
