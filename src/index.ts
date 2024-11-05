@@ -56,6 +56,14 @@ export class Keys {
         }
     }
 
+    get publicEncryptKey ():CryptoKey {
+        return this.encryptKey.publicKey
+    }
+
+    get publicSignKey ():CryptoKey {
+        return this.signKey.publicKey
+    }
+
     static async create (opts?:{
         encryptionKeyName:string,
         signingKeyName:string
@@ -173,4 +181,19 @@ export async function verifyFromString (
     } catch (_err) {
         return false
     }
+}
+
+/**
+ * Encrypt the given content to the given public key.
+ *
+ * @param {{ content, publicKey }} params The content to encrypt, and public key
+ * to encrypt it to.
+ * @returns {Promise<Uint8Array>}
+ */
+export async function encryptTo ({ content, publicKey }:{
+    content:string|Uint8Array;
+    publicKey:CryptoKey|string;
+}):Promise<Uint8Array> {
+    const buf = await rsaOperations.encrypt(content, publicKey)
+    return new Uint8Array(buf)
 }

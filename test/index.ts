@@ -1,6 +1,6 @@
 import { get } from 'idb-keyval'
 import { test } from '@bicycle-codes/tapzero'
-import { Keys, verifyFromString } from '../src/index.js'
+import { Keys, verifyFromString, encryptTo } from '../src/index.js'
 
 let keys:Keys
 test('create a new Keys', async t => {
@@ -39,4 +39,13 @@ test('verify a valid signature', async t => {
 test('verify an invalid signature', async t => {
     const isOk = await verifyFromString('hello string123', sig, keys.DID)
     t.ok(!isOk, 'should not verify an invalid signature')
+})
+
+test('encrypt something to a keys instance', async t => {
+    const encrypted = await encryptTo({
+        content: 'hello',
+        publicKey: keys.publicEncryptKey
+    })
+
+    t.ok(encrypted instanceof Uint8Array, 'should return a Uint8Array')
 })
