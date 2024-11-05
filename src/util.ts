@@ -16,7 +16,11 @@ import {
     DEFAULT_HASH_ALGORITHM,
     DEFAULT_CHAR_SIZE,
     SALT_LENGTH,
-    RSA_HASHING_ALGORITHM
+    RSA_HASHING_ALGORITHM,
+    RSA_DID_PREFIX,
+    KEY_TYPE,
+    EDWARDS_DID_PREFIX,
+    BLS_DID_PREFIX
 } from './constants'
 
 /**
@@ -327,4 +331,71 @@ export async function getPublicKeyAsArrayBuffer (
     )
 
     return spki
+}
+
+export function didToPublicKey (did:string):({
+    publicKey:Uint8Array,
+    type:'rsa' | 'ed25519' | 'bls12-381'
+}) {
+    if (!did.startsWith(BASE58_DID_PREFIX)) {
+        throw new Error(
+            'Please use a base58-encoded DID formatted `did:key:z...`')
+    }
+
+    const didWithoutPrefix = ('' + did.substring(BASE58_DID_PREFIX.length))
+    const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
+    const { keyBuffer, type } = parseMagicBytes(magicalBuf)
+
+    return {
+        publicKey: new Uint8Array(keyBuffer),
+        type
+    }
+}
+
+/**
+ * Parse magic bytes on prefixed key-buffer
+ * to determine cryptosystem & the unprefixed key-buffer.
+ */
+function parseMagicBytes (prefixedKey:ArrayBuffer) {
+    // RSA
+    if (hasPrefix(prefixedKey, RSA_DID_PREFIX)) {
+        return {
+            keyBuffer: prefixedKey.slice(RSA_DID_PREFIX.byteLength),
+            type: KEY_TYPE.RSA
+        }
+    // EDWARDS
+    } else if (hasPrefix(prefixedKey, EDWARDS_DID_PREFIX)) {
+        return {
+            keyBuffer: prefixedKey.slice(EDWARDS_DID_PREFIX.byteLength),
+            type: KEY_TYPE.Edwards
+        }
+    // BLS
+    } else if (hasPrefix(prefixedKey, BLS_DID_PREFIX)) {
+        return {
+            keyBuffer: prefixedKey.slice(BLS_DID_PREFIX.byteLength),
+            type: KEY_TYPE.BLS
+        }
+    }
+
+    throw new Error('Unsupported key algorithm. Try using RSA.')
+}
+
+const arrBufs = {
+    equal: (aBuf:ArrayBuffer, bBuf:ArrayBuffer) => {
+        const a = new Uint8Array(aBuf)
+        const b = new Uint8Array(bBuf)
+        if (a.length !== b.length) return false
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) return false
+        }
+        return true
+    }
+}
+
+function hasPrefix (prefixedKey:ArrayBuffer, prefix:ArrayBuffer) {
+    return arrBufs.equal(prefix, prefixedKey.slice(0, prefix.byteLength))
+}
+
+export function toBase64 (arr:Uint8Array) {
+    return uToString(arr, 'base64pad')
 }

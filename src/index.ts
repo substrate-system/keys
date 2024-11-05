@@ -10,7 +10,7 @@ import {
 import {
     KeyUse,
     type RsaSize,
-    type HashAlg,
+    HashAlg,
     type DID,
     type Msg,
     type CharSize
@@ -18,7 +18,10 @@ import {
 import {
     publicKeyToDid,
     getPublicKeyAsArrayBuffer,
-    rsaOperations
+    rsaOperations,
+    didToPublicKey,
+    importPublicKey,
+    toBase64
 } from './util'
 import Debug from '@bicycle-codes/debug'
 const debug = Debug()
@@ -117,6 +120,11 @@ export class Keys {
 
         return new Uint8Array(sig)
     }
+
+    async signAsString (msg:Msg, charsize?:CharSize):Promise<string> {
+        const sig = await this.sign(msg, charsize)
+        return toBase64(sig)
+    }
 }
 
 async function makeRSAKeypair (
@@ -142,4 +150,27 @@ async function makeRSAKeypair (
 
 function publicExponent ():Uint8Array {
     return new Uint8Array([0x01, 0x00, 0x01])
+}
+
+/**
+ * Check that the given signature is valid with the given message.
+ */
+export async function verifyFromString (
+    msg:string,
+    sig:string,
+    signingDid:DID
+):Promise<boolean> {
+    const _key = didToPublicKey(signingDid)
+    const key = await importPublicKey(
+        _key.publicKey.buffer,
+        HashAlg.SHA_256,
+        KeyUse.Sign
+    )
+
+    try {
+        const isOk = rsaOperations.verify(msg, sig, key)
+        return isOk
+    } catch (_err) {
+        return false
+    }
 }
