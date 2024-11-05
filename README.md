@@ -12,7 +12,20 @@ Create and store keypairs in-browser with the [web crypto API](https://developer
 Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) to store [non-extractable keypairs](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey#extractable). "Non-extractable" means that the browser prevents you from ever reading the private key, but the keys can be persisted and re-used indefinitely.
 
 <details><summary><h2>Contents</h2></summary>
+
 <!-- toc -->
+
+- [install](#install)
+- [API](#api)
+  * [ESM](#esm)
+  * [Common JS](#common-js)
+  * [pre-built JS](#pre-built-js)
+- [use](#use)
+  * [example](#example)
+  * [JS](#js)
+
+<!-- tocstop -->
+
 </details>
 
 ## install
@@ -51,11 +64,49 @@ cp ./node_modules/@bicycle-codes/keys/dist/index.min.js ./public/keys.min.js
 
 ------------------------------------------------------
 
-## use
+## example
 
-### example
+### Create a new `Keys` instance
 
-### JS
+Use the factory function `Keys.create` because `async`. The optional parameters, `encryptionKeyName` and `signingKeyName`, are added as properties to the `keys` instance -- `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. These are used as keys for saving the keys in `indexedDB`.
+
+```ts
+class Keys {
+  ENCRYPTION_KEY_NAME:string = 'encryption-key'
+  SIGNING_KEY_NAME:string = 'signing-key'
+
+  static async create (opts?:{
+      encryptionKeyName:string,
+      signingKeyName:string
+  }):Promise<Keys>
+}
+```
+
+#### example
 ```js
-import '@bicycle-codes/keys'
+import { Keys } from '@bicycle-codes/keys'
+
+const keys = await Keys.create()
+```
+
+### Sign something
+Create a new signature for the given input.
+
+```ts
+class Keys {
+  async sign (
+    msg:ArrayBuffer|string|Uint8Array,
+    charsize?:CharSize,
+  ):Promise<Uint8Array>
+}
+```
+
+#### example
+```js
+const sig = await keys.sign('hello signatures')
+```
+
+### Verify a signature
+
+```ts
 ```

@@ -204,9 +204,9 @@ function publicExponent ():Uint8Array {
 /**
  * Check that the given signature is valid with the given message.
  */
-export async function verifyFromString (
-    msg:string,
-    sig:string,
+export async function verify (
+    msg:string|Uint8Array,
+    sig:string|Uint8Array,
     signingDid:DID
 ):Promise<boolean> {
     const _key = didToPublicKey(signingDid)

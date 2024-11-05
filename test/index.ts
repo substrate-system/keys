@@ -3,10 +3,10 @@ import { test } from '@bicycle-codes/tapzero'
 import { fromString, toString } from 'uint8arrays'
 import {
     Keys,
-    verifyFromString,
     encryptKeyTo,
     encryptTo,
-    AES
+    AES,
+    verify
 } from '../src/index.js'
 import type { EncryptedMessage } from '../src/types.js'
 
@@ -28,9 +28,15 @@ test('indexedDB', async t => {
     t.ok(signKey, 'should save a signature key in indexedDB')
 })
 
+let sigArr:Uint8Array
 test('sign something', async t => {
-    const sig = await keys.sign('hello signatures')
-    t.ok(sig instanceof Uint8Array, 'should return a Uint8Array by default')
+    sigArr = await keys.sign('hello signatures')
+    t.ok(sigArr instanceof Uint8Array, 'should return a Uint8Array by default')
+})
+
+test('verify the buffer signature', async t => {
+    const isOk = await verify('hello signatures', sigArr, keys.DID)
+    t.ok(isOk, 'should verify a valid signature')
 })
 
 let sig:string
@@ -40,12 +46,12 @@ test('.signAsString', async t => {
 })
 
 test('verify a valid signature', async t => {
-    const isOk = await verifyFromString('hello string', sig, keys.DID)
+    const isOk = await verify('hello string', sig, keys.DID)
     t.ok(isOk, 'should verify a valid signature')
 })
 
 test('verify an invalid signature', async t => {
-    const isOk = await verifyFromString('hello string123', sig, keys.DID)
+    const isOk = await verify('hello string123', sig, keys.DID)
     t.ok(!isOk, 'should not verify an invalid signature')
 })
 
