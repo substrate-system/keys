@@ -20,9 +20,15 @@ Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) 
   * [ESM](#esm)
   * [Common JS](#common-js)
   * [pre-built JS](#pre-built-js)
-- [use](#use)
-  * [example](#example)
-  * [JS](#js)
+- [example](#example)
+  * [Create a new `Keys` instance](#create-a-new-keys-instance)
+  * [Sign something](#sign-something)
+  * [Get a signature as a string](#get-a-signature-as-a-string)
+  * [Verify a signature](#verify-a-signature)
+  * [Encrypt a key](#encrypt-a-key)
+  * [Encrypt some arbitrary data](#encrypt-some-arbitrary-data)
+  * [Decrypt a message](#decrypt-a-message)
+  * [`decryptToString`](#decrypttostring)
 
 <!-- tocstop -->
 

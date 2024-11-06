@@ -1,11 +1,32 @@
 {
-  "private": true,
+  "name": "@bicycle-codes/keys",
+  "description": "Create keys with the webcrypto API",
+  "directories": {
+    "test": "test"
+  },
   "type": "module",
   "version": "0.0.0",
   "main": "dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "./dist/*"
   ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./*": {
+      "import": [
+        "./dist/*.js",
+        "./dist/*"
+      ],
+      "require": [
+        "./dist/*.cjs",
+        "./dist/*"
+      ]
+    }
+  },
   "scripts": {
     "lint": "eslint \"./**/*.{ts,js}\"",
     "build-tests": "esbuild test/index.ts --target=es2020 --bundle --keep-names > test/test-bundle.js",
@@ -18,7 +39,6 @@
     "build-example": "mkdir -p ./public && rm -rf ./public/* && VITE_DEBUG_MODE=staging vite --mode staging --base=\"/keys\" build",
     "build-docs": "typedoc ./src/index.ts",
     "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-cjs && npm run build-esm && npm run build-esm:min && npm run build-cjs:min",
-    "start": "vite",
     "toc": "markdown-toc --maxdepth 3 -i README.md",
     "preversion": "npm run lint",
     "version": "npm run toc && auto-changelog -p --template keepachangelog --breaking-pattern 'BREAKING CHANGE:' && git add CHANGELOG.md README.md",
@@ -47,25 +67,21 @@
     "tap-spec": "^5.0.0",
     "tape-run": "^11.0.0",
     "typedoc": "^0.26.4",
-    "typescript": "^5.4.5",
-    "vite": "^5.3.3"
-  },
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./*": {
-      "import": [
-        "./dist/*.js",
-        "./dist/*"
-      ],
-      "require": [
-        "./dist/*.cjs",
-        "./dist/*"
-      ]
-    }
+    "typescript": "^5.4.5"
   },
   "author": "nichoth <nichoth@nichoth.com> (https://nichoth.com)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bicycle-codes/keys.git"
+  },
+  "keywords": [
+    "keys",
+    "crypto",
+    "browser"
+  ],
+  "bugs": {
+    "url": "https://github.com/bicycle-codes/keys/issues"
+  },
+  "homepage": "https://github.com/bicycle-codes/keys",
   "license": "MIT"
 }
