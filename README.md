@@ -98,7 +98,7 @@ const keys = await Keys.create()
 ```
 
 ### Persist the keys
-Save the keys to `indexedDB`. This depends on the values of class properties `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. Set them if you want to change the keys under which the keys are saved to `indexedDB`.
+Save the keys to `indexedDB`. This depends on the values of class properties `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. Set them if you want to change the indexes under which the keys are saved to `indexedDB`.
 
 #### `.persist`
 

@@ -140,7 +140,6 @@ export class Keys {
         }
 
         const keys = new Keys(constructorOpts)
-
         return keys
     }
 
