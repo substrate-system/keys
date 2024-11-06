@@ -22,6 +22,7 @@ test('create a new Keys', async t => {
 })
 
 test('indexedDB', async t => {
+    await keys.persist()
     const encryptionKey = await get(keys.ENCRYPTION_KEY_NAME)
     const signKey = await get(keys.SIGNING_KEY_NAME)
     t.ok(encryptionKey, 'should save an encryption key in indexedDB')
@@ -34,7 +35,7 @@ test('sign something', async t => {
     t.ok(sigArr instanceof Uint8Array, 'should return a Uint8Array by default')
 })
 
-test('verify the buffer signature', async t => {
+test('verify the signature as a buffer', async t => {
     const isOk = await verify('hello signatures', sigArr, keys.DID)
     t.ok(isOk, 'should verify a valid signature')
 })

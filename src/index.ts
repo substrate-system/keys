@@ -118,13 +118,14 @@ export class Keys {
 
         debug('create new keys', keys)
 
-        // save the keys to indexedDB
-        await Promise.all([
-            set(keys.ENCRYPTION_KEY_NAME, encryptionKeypair),
-            set(keys.SIGNING_KEY_NAME, signingKeypair)
-        ])
-
         return keys
+    }
+
+    async persist ():Promise<void> {
+        await Promise.all([
+            set(this.ENCRYPTION_KEY_NAME, this.encryptKey),
+            set(this.SIGNING_KEY_NAME, this.signKey)
+        ])
     }
 
     /**
