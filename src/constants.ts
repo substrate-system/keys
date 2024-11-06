@@ -15,6 +15,7 @@ export const DEFAULT_CHAR_SIZE = CharSize.B8
 export const AES_GCM = 'AES-GCM' as const
 export const DEFAULT_SYMM_ALGORITHM = AES_GCM
 export const DEFAULT_SYMM_LENGTH = SymmKeyLength.B256
+export const IV_LENGTH = 12
 
 // Misc
 export const SALT_LENGTH = 128

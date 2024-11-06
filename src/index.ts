@@ -12,6 +12,7 @@ import {
     AES_GCM,
     DEFAULT_ENC_NAME,
     DEFAULT_SIG_NAME,
+    IV_LENGTH,
 } from './constants'
 import {
     SymmKeyLength,
@@ -426,7 +427,7 @@ async function encryptBytes (
     const importedKey = typeof key === 'string' ?
         await importKey(key, opts) :
         key
-    const iv:ArrayBuffer = opts?.iv || randomBuf(12)
+    const iv:ArrayBuffer = opts?.iv || randomBuf(IV_LENGTH)
     const cipherBuf = await webcrypto.subtle.encrypt({
         name: AES_GCM,
         iv
@@ -457,8 +458,8 @@ async function decryptBytes (
         await importKey(key, opts) :
         key
     // `iv` is prefixed to the cypher text
-    const iv = cipherText.slice(0, 12)
-    const cipherBytes = cipherText.slice(12)
+    const iv = cipherText.slice(0, IV_LENGTH)
+    const cipherBytes = cipherText.slice(IV_LENGTH)
     const msgBuff = await webcrypto.subtle.decrypt({
         name: DEFAULT_SYMM_ALGORITHM,
         iv
