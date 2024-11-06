@@ -10,6 +10,7 @@ export const RSA_DID_PREFIX = new Uint8Array([0x00, 0xf5, 0x02])
 export const DEFAULT_RSA_SIZE = RsaSize.B2048
 export const DEFAULT_HASH_ALGORITHM = HashAlg.SHA_256
 export const DEFAULT_CHAR_SIZE = CharSize.B8
+export const SALT_LENGTH = 128
 
 // AES
 export const AES_GCM = 'AES-GCM' as const
@@ -18,7 +19,6 @@ export const DEFAULT_SYMM_LENGTH = SymmKeyLength.B256
 export const IV_LENGTH = 12
 
 // Misc
-export const SALT_LENGTH = 128
 export const BLS_DID_PREFIX = new Uint8Array([0xea, 0x01])
 export const EDWARDS_DID_PREFIX = new Uint8Array([0xed, 0x01])
 export const KEY_TYPE = {

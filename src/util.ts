@@ -113,14 +113,17 @@ export const rsaOperations = {
         charSize:CharSize = DEFAULT_CHAR_SIZE,
         hashAlg:HashAlg = DEFAULT_HASH_ALGORITHM
     ):Promise<boolean> {
-        return webcrypto.subtle.verify({
-            name: RSA_SIGN_ALGORITHM,
-            saltLength: SALT_LENGTH
-        }, (typeof publicKey === 'string' ?
-            await importPublicKey(publicKey, hashAlg, KeyUse.Sign) :
-            publicKey),
-        normalizeBase64ToBuf(sig),
-        normalizeUnicodeToBuf(msg, charSize))
+        return webcrypto.subtle.verify(
+            {
+                name: RSA_SIGN_ALGORITHM,
+                saltLength: SALT_LENGTH
+            },
+            (typeof publicKey === 'string' ?
+                await importPublicKey(publicKey, hashAlg, KeyUse.Sign) :
+                publicKey),
+            normalizeBase64ToBuf(sig),
+            normalizeUnicodeToBuf(msg, charSize)
+        )
     },
 
     sign: async function sign (
