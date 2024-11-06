@@ -49,10 +49,11 @@ test('verify the signature as a buffer', async t => {
 let sig:string
 test('.signAsString', async t => {
     sig = await keys.signAsString('hello string')
+    console.log('**string sig**', sig)
     t.equal(typeof sig, 'string', 'should return the signature as a string')
 })
 
-test('verify a valid signature', async t => {
+test('verify a valid string signature', async t => {
     const isOk = await verify('hello string', sig, keys.DID)
     t.ok(isOk, 'should verify a valid signature')
 })
@@ -65,11 +66,21 @@ test('verify an invalid signature', async t => {
 let encrypted:Uint8Array
 test('encrypt something to a keys instance', async t => {
     encrypted = await encryptKeyTo({
-        content: 'hello',
+        key: 'hello',
         publicKey: keys.publicEncryptKey
     })
 
     t.ok(encrypted instanceof Uint8Array, 'should return a Uint8Array')
+})
+
+test('encrypt a key to a keypair, return a string', async t => {
+    const aes = await AES.create()
+    const encrypted = await encryptKeyTo.asString({
+        key: aes,
+        publicKey: keys.publicEncryptKey
+    })
+
+    t.equal(typeof encrypted, 'string', 'should return the AES key as a string')
 })
 
 test('decrypt a message', async t => {

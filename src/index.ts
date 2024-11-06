@@ -38,7 +38,7 @@ import {
     randomBuf,
     joinBufs,
     normalizeBase64ToBuf,
-    base64ToArrBuf
+    base64ToArrBuf,
 } from './util'
 import Debug from '@bicycle-codes/debug'
 const debug = Debug()
@@ -256,20 +256,12 @@ export async function verify (
     }
 }
 
-/**
- * Encrypt the given content to the given public key. This is RSA encryption,
- * and should be used only to encrypt AES keys.
- *
- * @param {{ content, publicKey }} params The content to encrypt, and public key
- * to encrypt it to.
- * @returns {Promise<Uint8Array>}
- */
-export async function encryptKeyTo ({ content, publicKey }:{
-    content:string|Uint8Array;
+encryptKeyTo.asString = async function ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
     publicKey:CryptoKey|string;
-}):Promise<Uint8Array> {
-    const buf = await rsaOperations.encrypt(content, publicKey)
-    return new Uint8Array(buf)
+}):Promise<string> {
+    const asArr = await encryptKeyTo({ key, publicKey })
+    return toBase64(asArr)
 }
 
 /**
@@ -293,7 +285,7 @@ export async function encryptTo ({ content, publicKey }:{
         typeof key === 'string' ? await AES.import(key) : key
     )
     const encryptedKey = await encryptKeyTo({
-        content: (key instanceof CryptoKey ? await AES.export(key) : key),
+        key,
         publicKey
     })
 
@@ -368,6 +360,29 @@ export const AES = {
 
         return new Uint8Array(decrypted)
     }
+}
+
+/**
+ * Encrypt the given content to the given public key. This is RSA encryption,
+ * and should be used only to encrypt AES keys.
+ *
+ * @param {{ content, publicKey }} params The content to encrypt, and public key
+ * to encrypt it to.
+ * @returns {Promise<Uint8Array>}
+ */
+export async function encryptKeyTo ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey:CryptoKey|string;
+}):Promise<Uint8Array> {
+    let _key:Uint8Array|string
+    if (key instanceof CryptoKey) {
+        _key = await AES.export(key)
+    } else {
+        _key = key
+    }
+
+    const buf = await rsaOperations.encrypt(_key, publicKey)
+    return new Uint8Array(buf)
 }
 
 function importAesKey (key:Uint8Array|ArrayBuffer):Promise<CryptoKey> {

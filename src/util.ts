@@ -404,6 +404,10 @@ export function toBase64 (arr:Uint8Array) {
     return uToString(arr, 'base64pad')
 }
 
+export function fromBase64 (str:string) {
+    return fromString(str, 'base64pad')
+}
+
 export async function importKey (
     key:string|Uint8Array,
     opts?:Partial<SymmKeyOpts>

@@ -104,9 +104,55 @@ class Keys {
 #### example
 ```js
 const sig = await keys.sign('hello signatures')
+
+```
+
+### Get a signature as a string
+```ts
+class Keys {
+  async signAsString (
+    msg:ArrayBuffer|string|Uint8Array,
+    charsize?:CharSize
+  ):Promise<string>
+}
+```
+
+```js
+const sig = await keys.signAsString('hello string')
+// => ubW9PIjb360v...
 ```
 
 ### Verify a signature
+Check if a given signature is valid. This is exposed as a stateless function so that it can be used independently from any keypairs. You need to pass in the data that was signed, the signature, and the `DID` string of the public key used to create the signature.
 
 ```ts
+async function verify (
+    msg:string|Uint8Array,
+    sig:string|Uint8Array,
+    signingDid:DID
+):Promise<boolean>
+```
+
+```js
+import { verify } from '@bicycle-codes/keys'
+
+const isOk = await verify('hello string', sig, keys.DID)
+```
+
+### Encrypt a key
+This method uses async (RSA) encryption, so it should be used to encrypt AES keys only, not arbitrary data.
+
+```ts
+async function encryptKeyTo ({ content, publicKey }:{
+    content:string|Uint8Array;
+    publicKey:CryptoKey|string;
+}):Promise<Uint8Array>
+```
+
+#### example
+```js
+const encrypted = await encryptKeyTo({
+    content: myAesKey,
+    publicKey: keys.publicEncryptKey
+})
 ```
