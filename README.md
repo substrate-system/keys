@@ -140,12 +140,13 @@ const isOk = await verify('hello string', sig, keys.DID)
 ```
 
 ### Encrypt a key
-This method uses async (RSA) encryption, so it should be used to encrypt AES keys only, not arbitrary data.
+This method uses async (RSA) encryption, so it should be used to encrypt AES keys only, not arbitrary data. You must pass in either a DID or a public key as the encryption target.
 
 ```ts
-async function encryptKeyTo ({ content, publicKey }:{
-    content:string|Uint8Array;
-    publicKey:CryptoKey|string;
+async function encryptKeyTo ({ key, publicKey, did }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey?:CryptoKey|Uint8Array|string;
+    did?:DID
 }):Promise<Uint8Array>
 ```
 
@@ -155,4 +156,68 @@ const encrypted = await encryptKeyTo({
     content: myAesKey,
     publicKey: keys.publicEncryptKey
 })
+
+const encryptedTwo = await encryptKeyTo({
+  content: aesKey,
+  did: keys.DID
+})
+```
+
+### Encrypt some arbitrary data
+
+Take some arbitrary content and encrypt it. Will use either the given AES key, or will generate a new one if it is not passed in. The return value is the encrypted key and the given data. You must pass in either a DID or a public key to encrypt to.
+
+```ts
+export async function encryptTo (opts:{
+    content:string|Uint8Array;
+    publicKey?:CryptoKey|string;
+    did?:DID;
+}, aesKey?:SymmKey|Uint8Array|string):Promise<{
+    content:Uint8Array;
+    key:Uint8Array;
+}>
+```
+
+#### example
+```js
+const encrypted = await encryptTo({
+    key: 'hello encryption',
+    publicKey: keys.publicEncryptKey
+    // or pass in a DID
+    // did: keys.DID
+})
+
+// => {
+//   content:Uint8Array
+//   key: Uint8Array  <-- the encrypted AES key
+// }
+```
+
+### Decrypt a message
+```ts
+class Keys {
+  async decrypt (msg:{
+      content:string|Uint8Array;
+      key:string|Uint8Array;
+  }):Promise<Uint8Array>
+}
+```
+
+```js
+const decrypted = await keys.decrypt(encrypted)
+// => Uint8Array
+```
+
+### `decryptToString`
+Decrypt a message, and stringify the result.
+
+```ts
+class Keys {
+  async decryptToString (msg:EncryptedMessage):Promise<string>
+}
+```
+
+```js
+const decrypted = await keys.decryptToString(encryptedMsg)
+// => 'hello encryption'
 ```
