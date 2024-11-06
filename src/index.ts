@@ -40,6 +40,7 @@ import {
     joinBufs,
     normalizeBase64ToBuf,
     base64ToArrBuf,
+    sha256
 } from './util'
 import Debug from '@bicycle-codes/debug'
 const debug = Debug()
@@ -81,6 +82,21 @@ export class Keys {
         return this.signKey.publicKey
     }
 
+    /**
+     * Return a 32-character, DNS-friendly hash of the given DID.
+     *
+     * @param {DID} did a DID format string
+     * @returns {string} 32 character, base32 hash of the DID
+     */
+    static async deviceName (did:DID):Promise<string> {
+        const normalizedDid = did.normalize('NFD')
+        const hashedUsername = await sha256(
+            new TextEncoder().encode(normalizedDid)
+        )
+
+        return toString(hashedUsername, 'base32').slice(0, 32)
+    }
+
     static async create ():Promise<Keys> {
         const encryptionKeypair = await makeRSAKeypair(
             DEFAULT_RSA_SIZE,
@@ -113,6 +129,10 @@ export class Keys {
             set(this.ENCRYPTION_KEY_NAME, this.encryptKey),
             set(this.SIGNING_KEY_NAME, this.signKey)
         ])
+    }
+
+    async getDeviceName ():Promise<string> {
+        return Keys.deviceName(this.DID)
     }
 
     /**

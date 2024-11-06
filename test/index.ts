@@ -35,6 +35,13 @@ test('Create keys from indexedDB', async t => {
         'should create a new instance with the same keys')
 })
 
+test('device name', async t => {
+    const name = await Keys.deviceName(keys.DID)
+    const name2 = await keys.getDeviceName()
+    t.equal(name, name2, 'should return the same device name')
+    t.equal(name.length, 32, 'should return 32 chracters')
+})
+
 let sigArr:Uint8Array
 test('sign something', async t => {
     sigArr = await keys.sign('hello signatures')
