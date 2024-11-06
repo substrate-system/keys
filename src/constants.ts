@@ -25,3 +25,7 @@ export const KEY_TYPE = {
     Edwards: 'ed25519',
     BLS: 'bls12-381'
 } as const
+
+// app specific
+export const DEFAULT_ENC_NAME = 'encryption-key'
+export const DEFAULT_SIG_NAME = 'signing-key'

@@ -1,6 +1,6 @@
 import { webcrypto } from '@bicycle-codes/one-webcrypto'
 import { fromString, toString } from 'uint8arrays'
-import { set } from 'idb-keyval'
+import { get, set } from 'idb-keyval'
 import {
     RSA_ALGORITHM,
     DEFAULT_RSA_SIZE,
@@ -9,7 +9,9 @@ import {
     DEFAULT_CHAR_SIZE,
     DEFAULT_SYMM_ALGORITHM,
     DEFAULT_SYMM_LENGTH,
-    AES_GCM
+    AES_GCM,
+    DEFAULT_ENC_NAME,
+    DEFAULT_SIG_NAME,
 } from './constants'
 import {
     SymmKeyLength,
@@ -98,9 +100,8 @@ export class Keys {
             KeyUse.Sign
         )
 
-        const arr = await getPublicKeyAsArrayBuffer(signingKeypair)
-
-        const did = publicKeyToDid(new Uint8Array(arr), 'rsa')
+        const publicKey = await getPublicKeyAsArrayBuffer(signingKeypair)
+        const did = publicKeyToDid(new Uint8Array(publicKey), 'rsa')
 
         const constructorOpts:ConstructorOpts = {
             keys: { encrypt: encryptionKeypair, sign: signingKeypair },
@@ -126,6 +127,36 @@ export class Keys {
             set(this.ENCRYPTION_KEY_NAME, this.encryptKey),
             set(this.SIGNING_KEY_NAME, this.signKey)
         ])
+    }
+
+    /**
+     * Restore some keys from indexedDB.
+     *
+     * @param {{ encryptionKeyName, signingKeyName }} opts Strings to use as
+     * keys in indexedDB.
+     * @returns {Promise<Keys>}
+     */
+    static async load (opts:{
+        encryptionKeyName,
+        signingKeyName
+    } = {
+        encryptionKeyName: DEFAULT_ENC_NAME,
+        signingKeyName: DEFAULT_SIG_NAME
+    }):Promise<Keys> {
+        const encKeys = await get(opts.encryptionKeyName)
+        const sigKeys = await get(opts.signingKeyName)
+
+        const publicKey = await getPublicKeyAsArrayBuffer(sigKeys)
+        const did = publicKeyToDid(new Uint8Array(publicKey), 'rsa')
+
+        const constructorOpts:ConstructorOpts = {
+            keys: { encrypt: encKeys, sign: sigKeys },
+            did
+        }
+
+        const keys = new Keys(constructorOpts)
+
+        return keys
     }
 
     /**

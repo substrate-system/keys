@@ -29,6 +29,12 @@ test('indexedDB', async t => {
     t.ok(signKey, 'should save a signature key in indexedDB')
 })
 
+test('Create keys from indexedDB', async t => {
+    const newKeys = await Keys.load()
+    t.equal(newKeys.DID, keys.DID,
+        'should create a new instance with the same keys')
+})
+
 let sigArr:Uint8Array
 test('sign something', async t => {
     sigArr = await keys.sign('hello signatures')
