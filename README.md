@@ -120,8 +120,15 @@ class Keys {
     } = {
       encryptionKeyName: DEFAULT_ENC_NAME,
       signingKeyName: DEFAULT_SIG_NAME
-    }):Promise<Keys> {
+    }):Promise<Keys>
 }
+```
+
+#### example
+```js
+import { Keys } from '@bicycle-codes/keys'
+
+const newKeys = await Keys.load()
 ```
 
 
