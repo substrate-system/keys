@@ -45,7 +45,6 @@ const debug = Debug()
 
 type ConstructorOpts = {
     keys: { encrypt:CryptoKeyPair, sign:CryptoKeyPair }
-    names?: { encryption:string, sign:string }
     did:DID
 }
 
@@ -58,8 +57,8 @@ type ConstructorOpts = {
 export class Keys {
     private encryptKey:CryptoKeyPair
     private signKey:CryptoKeyPair
-    ENCRYPTION_KEY_NAME:string = 'encryption-key'
-    SIGNING_KEY_NAME:string = 'signing-key'
+    ENCRYPTION_KEY_NAME:string = DEFAULT_ENC_NAME
+    SIGNING_KEY_NAME:string = DEFAULT_SIG_NAME
     DID:DID
 
     constructor (opts:ConstructorOpts) {
@@ -67,10 +66,6 @@ export class Keys {
         this.encryptKey = keys.encrypt
         this.signKey = keys.sign
         this.DID = opts.did
-        if (opts.names) {
-            this.ENCRYPTION_KEY_NAME = opts.names.encryption
-            this.SIGNING_KEY_NAME = opts.names.sign
-        }
     }
 
     get privateKey ():CryptoKey {
@@ -85,10 +80,7 @@ export class Keys {
         return this.signKey.publicKey
     }
 
-    static async create (opts?:{
-        encryptionKeyName:string,
-        signingKeyName:string
-    }):Promise<Keys> {
+    static async create ():Promise<Keys> {
         const encryptionKeypair = await makeRSAKeypair(
             DEFAULT_RSA_SIZE,
             DEFAULT_HASH_ALGORITHM,
@@ -106,13 +98,6 @@ export class Keys {
         const constructorOpts:ConstructorOpts = {
             keys: { encrypt: encryptionKeypair, sign: signingKeypair },
             did
-        }
-
-        if (opts?.encryptionKeyName) {
-            constructorOpts.names = {
-                encryption: opts.encryptionKeyName,
-                sign: opts.signingKeyName
-            }
         }
 
         const keys = new Keys(constructorOpts)
@@ -343,11 +328,11 @@ export const AES = {
         )
 
         // prefix the `iv` into the cipher text
-        const encrypted = iv ? await webcrypto.subtle.encrypt(
+        const encrypted = (iv ? await webcrypto.subtle.encrypt(
             { name: AES_GCM, iv },
             key,
             data
-        ) : await encryptBytes(data, key)
+        ) : await encryptBytes(data, key))
 
         return new Uint8Array(encrypted)
     },

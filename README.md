@@ -20,8 +20,10 @@ Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) 
   * [ESM](#esm)
   * [Common JS](#common-js)
   * [pre-built JS](#pre-built-js)
-- [example](#example)
+- [examples](#examples)
   * [Create a new `Keys` instance](#create-a-new-keys-instance)
+  * [Persist the keys](#persist-the-keys)
+  * [Restore from indexedDB](#restore-from-indexeddb)
   * [Sign something](#sign-something)
   * [Get a signature as a string](#get-a-signature-as-a-string)
   * [Verify a signature](#verify-a-signature)
@@ -70,7 +72,7 @@ cp ./node_modules/@bicycle-codes/keys/dist/index.min.js ./public/keys.min.js
 
 ------------------------------------------------------
 
-## example
+## examples
 
 ### Create a new `Keys` instance
 
@@ -88,12 +90,40 @@ class Keys {
 }
 ```
 
-#### example
+#### `.create()` example
 ```js
 import { Keys } from '@bicycle-codes/keys'
 
 const keys = await Keys.create()
 ```
+
+### Persist the keys
+Save the keys to `indexedDB`. This depends on the values of class properties `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. Set them if you want to change the keys under which the keys are saved to `indexedDB`.
+
+#### `.persist`
+
+```ts
+class Keys {
+  async persist ():Promise<void>
+}
+```
+
+### Restore from indexedDB
+Create a `Keys` instance from data saved to `indexedDB`. Pass in different `indexedDB` key names for the keys if you need to.
+
+#### `static .load`
+```ts
+class Keys {
+    static async load (opts:{
+      encryptionKeyName,
+      signingKeyName
+    } = {
+      encryptionKeyName: DEFAULT_ENC_NAME,
+      signingKeyName: DEFAULT_SIG_NAME
+    }):Promise<Keys> {
+}
+```
+
 
 ### Sign something
 Create a new signature for the given input.
@@ -174,7 +204,7 @@ const encryptedTwo = await encryptKeyTo({
 Take some arbitrary content and encrypt it. Will use either the given AES key, or will generate a new one if it is not passed in. The return value is the encrypted key and the given data. You must pass in either a DID or a public key to encrypt to.
 
 ```ts
-export async function encryptTo (opts:{
+async function encryptTo (opts:{
     content:string|Uint8Array;
     publicKey?:CryptoKey|string;
     did?:DID;
@@ -186,6 +216,8 @@ export async function encryptTo (opts:{
 
 #### example
 ```js
+import { encryptTo } from '@bicycle-codes/keys'
+
 const encrypted = await encryptTo({
     key: 'hello encryption',
     publicKey: keys.publicEncryptKey
