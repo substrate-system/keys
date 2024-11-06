@@ -83,6 +83,16 @@ test('encrypt a key to a keypair, return a string', async t => {
     t.equal(typeof encrypted, 'string', 'should return the AES key as a string')
 })
 
+test('Use a DID as encrypt to target', async t => {
+    const encrypted = await encryptTo.asString({
+        content: 'hello DIDs',
+        did: keys.DID
+    })
+
+    t.equal(typeof encrypted.content, 'string', 'content is a string')
+    t.equal(typeof encrypted.key, 'string', 'key is a string')
+})
+
 test('decrypt a message', async t => {
     const decrypted = await keys.decryptKey(encrypted)
     t.equal(toString(decrypted), 'hello', 'should decrypt the text')

@@ -140,13 +140,18 @@ export const rsaOperations = {
      */
     encrypt: async function rsaEncrypt (
         msg:Msg,
-        publicKey:string|CryptoKey,
+        publicKey:string|CryptoKey|Uint8Array,
         charSize:CharSize = DEFAULT_CHAR_SIZE,
         hashAlg:HashAlg = DEFAULT_HASH_ALGORITHM
     ):Promise<ArrayBuffer> {
-        const pubKey = typeof publicKey === 'string' ?
-            await importPublicKey(publicKey, hashAlg, KeyUse.Encrypt) :
-            publicKey
+        let pubKey:CryptoKey
+        if (typeof publicKey === 'string') {
+            pubKey = await importPublicKey(publicKey, hashAlg, KeyUse.Encrypt)
+        } else {
+            pubKey = publicKey instanceof Uint8Array ?
+                await importPublicKey(publicKey, hashAlg, KeyUse.Encrypt) :
+                publicKey
+        }
 
         return webcrypto.subtle.encrypt(
             { name: RSA_ALGORITHM },
