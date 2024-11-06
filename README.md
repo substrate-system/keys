@@ -97,6 +97,24 @@ import { Keys } from '@bicycle-codes/keys'
 const keys = await Keys.create()
 ```
 
+### Get a hash of the DID
+Get a 32-character, DNS-friendly string of the hash of the given DID. Available as static or instance method.
+
+#### static method
+
+```ts
+class Keys {
+  static async deviceName (did:DID):Promise<string>
+}
+```
+
+#### instance method
+```ts
+class Keys {
+  async getDeviceName ():Promise<string>
+}
+```
+
 ### Persist the keys
 Save the keys to `indexedDB`. This depends on the values of class properties `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. Set them if you want to change the indexes under which the keys are saved to `indexedDB`.
 
