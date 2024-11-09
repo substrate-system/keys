@@ -408,8 +408,13 @@ function hasPrefix (prefixedKey:ArrayBuffer, prefix:ArrayBuffer) {
     return arrBufs.equal(prefix, prefixedKey.slice(0, prefix.byteLength))
 }
 
-export function toBase64 (arr:Uint8Array) {
-    return uToString(arr, 'base64pad')
+export function toBase64 (arr:Uint8Array|ArrayBuffer) {
+    return uToString(
+        arr instanceof ArrayBuffer ?
+            new Uint8Array(arr) :
+            arr,
+        'base64pad'
+    )
 }
 
 export function fromBase64 (str:string) {

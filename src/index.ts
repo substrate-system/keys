@@ -78,6 +78,22 @@ export class Keys {
         return this.encryptKey.publicKey
     }
 
+    /**
+     * Get the public encryption key as a string.
+     *
+     * @returns {string} Return a string b/c mostly would use this for
+     * serializing the public encryption key.
+     */
+    async getPublicEncryptKey ():Promise<string> {
+        const { publicKey } = this.encryptKey
+        const spki = await webcrypto.subtle.exportKey(
+            'spki',
+            publicKey
+        )
+
+        return toBase64(spki)
+    }
+
     get publicSignKey ():CryptoKey {
         return this.signKey.publicKey
     }
@@ -109,8 +125,8 @@ export class Keys {
             KeyUse.Sign
         )
 
-        const publicKey = await getPublicKeyAsArrayBuffer(signingKeypair)
-        const did = publicKeyToDid(new Uint8Array(publicKey), 'rsa')
+        const publicSigningKey = await getPublicKeyAsArrayBuffer(signingKeypair)
+        const did = publicKeyToDid(new Uint8Array(publicSigningKey), 'rsa')
 
         const constructorOpts:ConstructorOpts = {
             keys: { encrypt: encryptionKeypair, sign: signingKeypair },
@@ -275,23 +291,20 @@ export async function verify (
  */
 export async function encryptTo (opts:{
     content:string|Uint8Array;
-    publicKey?:CryptoKey|string;
-    did?:DID;
+    publicKey:CryptoKey|string;
 }, aesKey?:SymmKey|Uint8Array|string):Promise<{
     content:Uint8Array;
     key:Uint8Array;
 }> {
-    const { content, publicKey, did } = opts
+    const { content, publicKey } = opts
     const key = aesKey || await AES.create()
     const encryptedContent = await AES.encrypt(
         typeof content === 'string' ? fromString(content) : content,
         typeof key === 'string' ? await AES.import(key) : key
     )
-    const _publicKey = (publicKey || didToPublicKey(did!).publicKey)
-
     const encryptedKey = await encryptKeyTo({
         key,
-        publicKey: _publicKey
+        publicKey
     })
 
     return { content: encryptedContent, key: encryptedKey }
@@ -302,8 +315,7 @@ export async function encryptTo (opts:{
  */
 encryptTo.asString = async function (opts:{
     content:string|Uint8Array;
-    publicKey?:CryptoKey|string;
-    did?:DID;
+    publicKey:CryptoKey|string;
 }, aesKey?:SymmKey|Uint8Array|string):Promise<{ content:string; key:string }> {
     const encrypted = await encryptTo(opts, aesKey)
     return {
@@ -390,10 +402,9 @@ export const AES = {
  * to encrypt it to.
  * @returns {Promise<Uint8Array>}
  */
-export async function encryptKeyTo ({ key, publicKey, did }:{
+export async function encryptKeyTo ({ key, publicKey }:{
     key:string|Uint8Array|CryptoKey;
-    publicKey?:CryptoKey|Uint8Array|string;
-    did?:DID
+    publicKey:CryptoKey|Uint8Array|string;
 }):Promise<Uint8Array> {
     let _key:Uint8Array|string
     if (key instanceof CryptoKey) {
@@ -402,26 +413,15 @@ export async function encryptKeyTo ({ key, publicKey, did }:{
         _key = key
     }
 
-    let _publicKey:CryptoKey|Uint8Array|string
-    if (did) {
-        _publicKey = didToPublicKey(did).publicKey
-    } else {
-        if (!publicKey) {
-            throw new Error('Public key or DID required as encryption target.')
-        }
-        _publicKey = publicKey
-    }
-
-    const buf = await rsaOperations.encrypt(_key, _publicKey)
+    const buf = await rsaOperations.encrypt(_key, publicKey)
     return new Uint8Array(buf)
 }
 
-encryptKeyTo.asString = async function ({ key, publicKey, did }:{
+encryptKeyTo.asString = async function ({ key, publicKey }:{
     key:string|Uint8Array|CryptoKey;
-    publicKey?:CryptoKey|string|Uint8Array;
-    did?:DID;
+    publicKey:CryptoKey|string|Uint8Array;
 }):Promise<string> {
-    const asArr = await encryptKeyTo({ key, publicKey, did })
+    const asArr = await encryptKeyTo({ key, publicKey })
     return toBase64(asArr)
 }
 

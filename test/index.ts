@@ -56,7 +56,6 @@ test('verify the signature as a buffer', async t => {
 let sig:string
 test('.signAsString', async t => {
     sig = await keys.signAsString('hello string')
-    console.log('**string sig**', sig)
     t.equal(typeof sig, 'string', 'should return the signature as a string')
 })
 
@@ -90,20 +89,20 @@ test('encrypt a key to a keypair, return a string', async t => {
     t.equal(typeof encrypted, 'string', 'should return the AES key as a string')
 })
 
-test('encrypt a key to a DID, return a string', async t => {
+test('encrypt a key to a public key, return a string', async t => {
     const aes = await AES.create()
     const enc = await encryptKeyTo.asString({
         key: aes,
-        did: keys.DID
+        publicKey: await keys.getPublicEncryptKey()
     })
 
     t.equal(typeof enc, 'string', 'should encrypt the key and return a string')
 })
 
-test('Use a DID as a target for encryption', async t => {
+test('encrypt some content to a public key', async t => {
     const encrypted = await encryptTo.asString({
-        content: 'hello DIDs',
-        did: keys.DID
+        content: 'hello public key',
+        publicKey: await keys.getPublicEncryptKey()
     })
 
     t.equal(typeof encrypted.content, 'string', 'content is a string')
@@ -158,6 +157,12 @@ test('AES decrypt', async t => {
     t.ok(decryptedText instanceof Uint8Array, 'should return a Uint8Array')
     t.equal(toString(decryptedText), 'hello AES',
         'should decrypt to the right value')
+})
+
+test('getPublicEncryptKey', async t => {
+    const pubKey = await keys.getPublicEncryptKey()
+    t.ok(pubKey, 'should return something')
+    t.equal(typeof pubKey, 'string', 'should return a string')
 })
 
 let bob:Keys
