@@ -360,11 +360,10 @@ export const AES = {
         )
 
         // prefix the `iv` into the cipher text
-        const encrypted = (iv ? await webcrypto.subtle.encrypt(
-            { name: AES_GCM, iv },
-            key,
-            data
-        ) : await encryptBytes(data, key))
+        const encrypted = (iv ?
+            await webcrypto.subtle.encrypt({ name: AES_GCM, iv }, key, data) :
+            await encryptBytes(data, key)
+        )
 
         return new Uint8Array(encrypted)
     },
@@ -373,7 +372,7 @@ export const AES = {
         encryptedData:Uint8Array|string,
         cryptoKey:CryptoKey|Uint8Array|ArrayBuffer,
         iv?:Uint8Array
-    ) {
+    ):Promise<Uint8Array> {
         const key = isCryptoKey(cryptoKey) ? cryptoKey : await importAesKey(cryptoKey)
         // the `iv` is prefixed to the cipher text
         const decrypted = (iv ?
@@ -425,13 +424,16 @@ encryptKeyTo.asString = async function ({ key, publicKey }:{
     return toBase64(asArr)
 }
 
-function importAesKey (key:Uint8Array|ArrayBuffer):Promise<CryptoKey> {
+function importAesKey (
+    key:Uint8Array|ArrayBuffer,
+    length?:number
+):Promise<CryptoKey> {
     return webcrypto.subtle.importKey(
         'raw',
         key,
         {
             name: AES_GCM,
-            length: SymmKeyLength.B256,
+            length: length || SymmKeyLength.B256,
         },
         true,
         ['encrypt', 'decrypt']

@@ -45,6 +45,9 @@ npm i -S @bicycle-codes/keys
 
 ## API
 
+### see also
+[The API docs generated from typescript](https://bicycle-codes.github.io/keys/)
+
 This exposes ESM and common JS via [package.json `exports` field](https://nodejs.org/api/packages.html#exports).
 
 ### ESM
@@ -284,4 +287,82 @@ class Keys {
 ```js
 const decrypted = await keys.decryptToString(encryptedMsg)
 // => 'hello encryption'
+```
+
+## AES
+Expose several AES functions with nice defaults.
+
+* algorithm: `AES-GCM`
+* key size: `256`
+* [`iv` size](https://crypto.stackexchange.com/questions/41601/aes-gcm-recommended-iv-size-why-12-bytes): `12` bytes (96 bits)
+
+```js
+import { AES } from '@bicycle-codes/keys'
+
+const key = await AES.create(/* ... */)
+```
+
+### `create`
+Create a new AES key. By default uses 256 bits & GCM algorithm.
+
+```ts
+function create (opts:{ alg:string, length:number } = {
+    alg: DEFAULT_SYMM_ALGORITHM,  // AES-GCM
+    length: DEFAULT_SYMM_LENGTH  // 256
+}):Promise<CryptoKey>
+```
+
+```ts
+import { AES } from '@bicycle-codes/keys'
+const aesKey = await AES.create()
+```
+
+### `export`
+Get the AES key as a `Uint8Array`.
+
+```ts
+{
+  async export (key:CryptoKey):Promise<Uint8Array>
+}
+```
+
+```js
+const exported = await AES.export(aesKey)
+```
+
+### `exportAsString`
+Get the key as a string, `base64` encoded.
+
+```ts
+async function exportAsString (key:CryptoKey):Promise<string>
+```
+
+```js
+const exported = await AES.exportAsString(aesKey)
+```
+
+### `encrypt`
+```ts
+async function encrypt (
+  data:Uint8Array,
+  cryptoKey:CryptoKey|Uint8Array,
+  iv?:Uint8Array
+):Promise<Uint8Array>
+```
+
+```js
+const encryptedText = await AES.encrypt(fromString('hello AES'), aesKey)
+```
+
+### `decrypt`
+```ts
+async function decrypt (
+  encryptedData:Uint8Array|string,
+  cryptoKey:CryptoKey|Uint8Array|ArrayBuffer,
+  iv?:Uint8Array
+):Promise<Uint8Array>
+```
+
+```js
+const decryptedText = await AES.decrypt(encryptedText, aesKey)
 ```

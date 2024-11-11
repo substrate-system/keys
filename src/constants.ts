@@ -1,4 +1,4 @@
-import { RsaSize, HashAlg, CharSize, SymmKeyLength } from './types'
+import { RsaSize, HashAlg, CharSize } from './types'
 
 export const BASE58_DID_PREFIX = 'did:key:z'
 
@@ -15,7 +15,7 @@ export const SALT_LENGTH = 128
 // AES
 export const AES_GCM = 'AES-GCM' as const
 export const DEFAULT_SYMM_ALGORITHM = AES_GCM
-export const DEFAULT_SYMM_LENGTH = SymmKeyLength.B256
+export const DEFAULT_SYMM_LENGTH = 256
 export const IV_LENGTH = 12
 
 // Misc
