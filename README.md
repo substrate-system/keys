@@ -14,6 +14,9 @@ Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) 
 > [!TIP]
 > Use the [persist method](https://developer.mozilla.org/en-US/docs/Web/API/StorageManager/persist) to tell the browser not to delete from `indexedDB`.
 
+## see also
+[The API docs generated from typescript](https://bicycle-codes.github.io/keys/)
+
 <details><summary><h2>Contents</h2></summary>
 
 <!-- toc -->
@@ -123,9 +126,6 @@ const decrypted = await keys.decrypt(encryptedMsg)
 ----------------------------------------------------------------------
 
 ## API
-
-### see also
-[The API docs generated from typescript](https://bicycle-codes.github.io/keys/)
 
 ### `exports`
 
