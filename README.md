@@ -301,7 +301,7 @@ Expose several AES functions with nice defaults.
 
 * algorithm: `AES-GCM`
 * key size: `256`
-* [`iv` size](https://crypto.stackexchange.com/questions/41601/aes-gcm-recommended-iv-size-why-12-bytes): `12` bytes (96 bits)
+* `iv` size: [`12` bytes](https://crypto.stackexchange.com/questions/41601/aes-gcm-recommended-iv-size-why-12-bytes) (96 bits)
 
 ```js
 import { AES } from '@bicycle-codes/keys'
