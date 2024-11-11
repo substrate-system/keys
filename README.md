@@ -4,7 +4,7 @@
 [![module](https://img.shields.io/badge/module-ESM%2FCJS-blue?style=flat-square)](README.md)
 [![semantic versioning](https://img.shields.io/badge/semver-2.0.0-blue?logo=semver&style=flat-square)](https://semver.org/)
 [![Common Changelog](https://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
-[![install size](https://flat.badgen.net/packagephobia/install/@bicycle-codes/keys)](https://packagephobia.com/result?p=@bicycle-codes/keys)
+[![install size](https://flat.badgen.net/packagephobia/install/@bicycle-codes/keys&cache-control=no-cache)](https://packagephobia.com/result?p=@bicycle-codes/keys)
 [![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 
 Create and store keypairs in-browser with the [web crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API).
