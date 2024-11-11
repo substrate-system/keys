@@ -17,6 +17,7 @@ Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) 
 
 - [install](#install)
 - [API](#api)
+  * [see also](#see-also)
   * [ESM](#esm)
   * [Common JS](#common-js)
   * [pre-built JS](#pre-built-js)
@@ -32,6 +33,12 @@ Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) 
   * [Encrypt some arbitrary data](#encrypt-some-arbitrary-data)
   * [Decrypt a message](#decrypt-a-message)
   * [`decryptToString`](#decrypttostring)
+- [AES](#aes)
+  * [`create`](#create)
+  * [`export`](#export)
+  * [`exportAsString`](#exportasstring)
+  * [`encrypt`](#encrypt)
+  * [`decrypt`](#decrypt)
 
 <!-- tocstop -->
 
