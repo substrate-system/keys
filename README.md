@@ -50,10 +50,80 @@ Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) 
 npm i -S @bicycle-codes/keys
 ```
 
+## get started
+
+### indexedDB
+Create a new keypair, then save it in `indexedDB`.
+
+```js
+import { Keys } from '@bicycle-codes/keys'
+
+const keys = await Keys.create()
+
+// save the keys to indexedDB
+await keys.persist()
+
+// ... sometime in the future ...
+// get our keys from indexedDB
+const keysAgain = await Keys.load()
+
+console.assrt(keys.DID === keysAgain.DID)  // true
+```
+
+### sign and verify something
+
+>
+> [!NOTE]  
+> `verify` is exposed as a separate function, so you don't
+> have to include all of `Keys` just to verify a signature.
+>
+
+```js
+import { verify } from '@bicycle-codes/keys'
+
+// sign something
+const sig = await keys.signAsString('hello string')
+
+// verify the signature
+const isOk = await verify('hello string', sig, keys.DID)
+```
+
+### encrypt something
+Takes the public key we are encrypting to, return an object of `{ content, key }`, where `content` is the encrypted content as a string, and `key` is the AES key that was used to encrypt the content, encrypted to the given public key. (AES key is encrypted to the public key.)
+
+```js
+import { encryptTo } from '@bicycle-codes/keys'
+
+// need to know the public key we are encrypting for
+const publicKey = await keys.getPublicEncryptKey()
+
+const encrypted = await encryptTo.asString({
+  content: 'hello public key',
+  publicKey
+})
+
+// => { content, key }
+```
+
+### decrypt something
+A `Keys` instance has a method `decrypt`. The `encryptedMessage` argument is an object of `{ content, key }` as returned from `encryptTo`, above.
+
+```js
+import { Keys } from '@bicycle-codes/keys'
+
+const keys = await Keys.create()
+// ...
+const decrypted = await keys.decrypt(encryptedMsg)
+```
+
+----------------------------------------------------------------------
+
 ## API
 
 ### see also
 [The API docs generated from typescript](https://bicycle-codes.github.io/keys/)
+
+### `exports`
 
 This exposes ESM and common JS via [package.json `exports` field](https://nodejs.org/api/packages.html#exports).
 
