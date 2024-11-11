@@ -11,6 +11,9 @@ Create and store keypairs in-browser with the [web crypto API](https://developer
 
 Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) to store [non-extractable keypairs](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey#extractable) in the browser. "Non-extractable" means that the browser prevents you from ever reading the private key, but the keys can be persisted and re-used indefinitely.
 
+> [!TIP]
+> Use the [persist method](https://developer.mozilla.org/en-US/docs/Web/API/StorageManager/persist) to tell the browser not to delete from `indexedDB`.
+
 <details><summary><h2>Contents</h2></summary>
 
 <!-- toc -->
