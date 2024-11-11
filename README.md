@@ -77,7 +77,7 @@ cp ./node_modules/@bicycle-codes/keys/dist/index.min.js ./public/keys.min.js
 
 ### Create a new `Keys` instance
 
-Use the factory function `Keys.create` because `async`. The optional parameters, `encryptionKeyName` and `signingKeyName`, are added as properties to the `keys` instance -- `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. These are used as keys for saving the keys in `indexedDB`.
+Use the factory function `Keys.create` because `async`. The optional parameters, `encryptionKeyName` and `signingKeyName`, are added as properties to the `keys` instance -- `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. These are used as indexes for saving the keys in `indexedDB`.
 
 ```ts
 class Keys {
