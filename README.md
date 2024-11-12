@@ -21,8 +21,13 @@ See also, [the API docs generated from typescript](https://bicycle-codes.github.
 <!-- toc -->
 
 - [install](#install)
+- [get started](#get-started)
+  * [indexedDB](#indexeddb)
+  * [sign and verify something](#sign-and-verify-something)
+  * [encrypt something](#encrypt-something)
+  * [decrypt something](#decrypt-something)
 - [API](#api)
-  * [see also](#see-also)
+  * [`exports`](#exports)
   * [ESM](#esm)
   * [Common JS](#common-js)
   * [pre-built JS](#pre-built-js)
