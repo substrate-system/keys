@@ -81,7 +81,7 @@ console.assrt(keys.DID === keysAgain.DID)  // true
 ```
 
 ### sign and verify something
-Takes the content, the signature, and the DID for the public key used to sign. The DID is exposed as the property `.DID` on a `Keys` instance.
+`.verify` takes the content, the signature, and the DID for the public key used to sign. The DID is exposed as the property `.DID` on a `Keys` instance.
 
 >
 > [!NOTE]  
