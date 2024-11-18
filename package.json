@@ -50,7 +50,7 @@
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
-    "@bicycle-codes/debug": "^0.6.13",
+    "@bicycle-codes/debug": "^0.7.2",
     "@bicycle-codes/tapzero": "^0.10.3",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
