@@ -63,7 +63,7 @@
     "postcss-nesting": "^13.0.0",
     "tap-spec": "^5.0.0",
     "tape-run": "^11.0.0",
-    "typedoc": "^0.26.4",
+    "typedoc": "^0.27.1",
     "typescript": "^5.4.5"
   },
   "author": "nichoth <nichoth@nichoth.com> (https://nichoth.com)",
