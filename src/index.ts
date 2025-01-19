@@ -277,6 +277,8 @@ export async function verify (
     }
 }
 
+console.log('abc')
+
 /**
  * Encrypt the given message to the given public key. If an AES key is not
  * provided, one will be created. This uses an AES key to encrypt the given

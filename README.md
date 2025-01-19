@@ -437,6 +437,9 @@ async function encrypt (
 ```
 
 ```js
+import { AES } from '@bicycle-codes/keys'
+import { fromString } from 'uint8arrays'
+
 const encryptedText = await AES.encrypt(fromString('hello AES'), aesKey)
 ```
 
@@ -450,5 +453,7 @@ async function decrypt (
 ```
 
 ```js
+import { AES } from '@bicycle-codes/keys'
+
 const decryptedText = await AES.decrypt(encryptedText, aesKey)
 ```
