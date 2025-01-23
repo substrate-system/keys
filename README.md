@@ -69,7 +69,7 @@ npm i -S @bicycle-codes/keys
 
 ## get started
 
-### indexedDB
+### Create a keypair
 Create a new keypair, then save it in `indexedDB`.
 
 ```js
