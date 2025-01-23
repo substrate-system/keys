@@ -10,10 +10,16 @@
 
 Create and store keypairs in the browser with the [web crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API).
 
-Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) to store [non-extractable keypairs](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey#extractable) in the browser. "Non-extractable" means that the browser prevents you from ever reading the private key, but the keys can be persisted and re-used indefinitely.
+Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
+to store [non-extractable keypairs](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey#extractable)
+in the browser. "Non-extractable" means that the browser prevents you from ever
+reading the private key, but the keys can be persisted and re-used indefinitely.
 
+>
 > [!TIP]
-> Use the [persist method](https://developer.mozilla.org/en-US/docs/Web/API/StorageManager/persist) to tell the browser not to delete from `indexedDB`.
+> Use the [persist method](https://developer.mozilla.org/en-US/docs/Web/API/StorageManager/persist)
+> to tell the browser not to delete from `indexedDB`.
+>
 
 See also, [the API docs generated from typescript](https://bicycle-codes.github.io/keys/).
 
@@ -82,7 +88,8 @@ console.assrt(keys.DID === keysAgain.DID)  // true
 ```
 
 ### sign and verify something
-`.verify` takes the content, the signature, and the DID for the public key used to sign. The DID is exposed as the property `.DID` on a `Keys` instance.
+`.verify` takes the content, the signature, and the DID for the public key
+used to sign. The DID is exposed as the property `.DID` on a `Keys` instance.
 
 >
 > [!NOTE]  
@@ -101,7 +108,10 @@ const isOk = await verify('hello string', sig, keys.DID)
 ```
 
 ### encrypt something
-Takes the public key we are encrypting to, return an object of `{ content, key }`, where `content` is the encrypted content as a string, and `key` is the AES key that was used to encrypt the content, encrypted to the given public key. (AES key is encrypted to the public key.)
+Takes the public key we are encrypting to, return an object of
+`{ content, key }`, where `content` is the encrypted content as a string,
+and `key` is the AES key that was used to encrypt the content, encrypted to
+the given public key. (AES key is encrypted to the public key.)
 
 ```js
 import { encryptTo } from '@bicycle-codes/keys'
@@ -118,7 +128,8 @@ const encrypted = await encryptTo.asString({
 ```
 
 ### decrypt something
-A `Keys` instance has a method `decrypt`. The `encryptedMessage` argument is an object of `{ content, key }` as returned from `encryptTo`, above.
+A `Keys` instance has a method `decrypt`. The `encryptedMessage` argument is
+an object of `{ content, key }` as returned from `encryptTo`, above.
 
 ```js
 import { Keys } from '@bicycle-codes/keys'
@@ -166,7 +177,10 @@ cp ./node_modules/@bicycle-codes/keys/dist/index.min.js ./public/keys.min.js
 
 ### Create a new `Keys` instance
 
-Use the factory function `Keys.create` because `async`. The optional parameters, `encryptionKeyName` and `signingKeyName`, are added as properties to the `keys` instance -- `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. These are used as indexes for saving the keys in `indexedDB`.
+Use the factory function `Keys.create`. The optional parameters,
+`encryptionKeyName` and `signingKeyName`, are added as properties to the
+`keys` instance -- `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. These are
+used as indexes for saving the keys in `indexedDB`.
 
 ```ts
 class Keys {
@@ -188,7 +202,8 @@ const keys = await Keys.create()
 ```
 
 ### Get a hash of the DID
-Get a 32-character, DNS-friendly string of the hash of the given DID. Available as static or instance method.
+Get a 32-character, DNS-friendly string of the hash of the given DID.
+Available as static or instance method.
 
 #### static method
 
@@ -199,6 +214,8 @@ class Keys {
 ```
 
 #### instance method
+If used as an instance method, this will use the `DID` assigned to the instance.
+
 ```ts
 class Keys {
   async getDeviceName ():Promise<string>
@@ -206,7 +223,15 @@ class Keys {
 ```
 
 ### Persist the keys
-Save the keys to `indexedDB`. This depends on the values of class properties `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. Set them if you want to change the indexes under which the keys are saved to `indexedDB`.
+Save the keys to `indexedDB`. This depends on the values of class properties
+`ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. Set them if you want to change the
+indexes under which the keys are saved to `indexedDB`.
+
+By default we use these:
+```js
+const DEFAULT_ENC_NAME = 'encryption-key'
+const DEFAULT_SIG_NAME = 'signing-key'
+```
 
 #### `.persist`
 
@@ -216,8 +241,19 @@ class Keys {
 }
 ```
 
+#### `.persist` example
+```js
+import { Keys } from '@bicycle-codes/keys'
+
+const keys = await Keys.create()
+keys.ENCRYPTION_KEY_NAME = 'encryption-key-custom-name'
+keys.DEFAULT_SIG_NAME = 'signing-key-custom-name'
+keys.persist()
+```
+
 ### Restore from indexedDB
-Create a `Keys` instance from data saved to `indexedDB`. Pass in different `indexedDB` key names for the keys if you need to.
+Create a `Keys` instance from data saved to `indexedDB`. Pass in different
+`indexedDB` key names for the keys if you need to.
 
 #### `static .load`
 ```ts
@@ -255,7 +291,6 @@ class Keys {
 #### example
 ```js
 const sig = await keys.sign('hello signatures')
-
 ```
 
 ### Get a signature as a string
@@ -274,7 +309,10 @@ const sig = await keys.signAsString('hello string')
 ```
 
 ### Verify a signature
-Check if a given signature is valid. This is exposed as a stateless function so that it can be used independently from any keypairs. You need to pass in the data that was signed, the signature, and the `DID` string of the public key used to create the signature.
+Check if a given signature is valid. This is exposed as a stateless function so
+that it can be used independently from any keypairs. You need to pass in the
+data that was signed, the signature, and the `DID` string of the public key used
+to create the signature.
 
 ```ts
 async function verify (
@@ -291,7 +329,9 @@ const isOk = await verify('hello string', sig, keys.DID)
 ```
 
 ### Encrypt a key
-This method uses async (RSA) encryption, so it should be used to encrypt AES keys only, not arbitrary data. You must pass in either a DID or a public key as the encryption target.
+This method uses async (RSA) encryption, so it should be used to encrypt AES
+keys only, not arbitrary data. You must pass in either a DID or a public key as
+the encryption target.
 
 ```ts
 async function encryptKeyTo ({ key, publicKey, did }:{
@@ -316,7 +356,10 @@ const encryptedTwo = await encryptKeyTo({
 
 ### Encrypt some arbitrary data
 
-Take some arbitrary content and encrypt it. Will use either the given AES key, or will generate a new one if it is not passed in. The return value is the encrypted key and the given data. You must pass in either a DID or a public key to encrypt to.
+Take some arbitrary content and encrypt it. Will use either the given AES key,
+or will generate a new one if it is not passed in. The return value is the
+encrypted key and the given data. You must pass in either a DID or a public key
+to encrypt to.
 
 ```ts
 async function encryptTo (opts:{
