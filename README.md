@@ -202,8 +202,11 @@ const keys = await Keys.create()
 ```
 
 ### Get a hash of the DID
-Get a 32-character, DNS-friendly string of the hash of the given DID.
-Available as static or instance method.
+Get a 32-character, DNS-friendly string of the hash of the given `DID`.
+Available as static or instance method. If called as an instance method,
+this will use the `DID` assigned to the given `Keys` instance.
+
+The static method requires a `DID` string to be passed in.
 
 #### static method
 
