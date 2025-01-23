@@ -29,7 +29,7 @@ See also, [the API docs generated from typescript](https://bicycle-codes.github.
 
 - [install](#install)
 - [get started](#get-started)
-  * [indexedDB](#indexeddb)
+  * [Create a keypair](#create-a-keypair)
   * [sign and verify something](#sign-and-verify-something)
   * [encrypt something](#encrypt-something)
   * [decrypt something](#decrypt-something)
