@@ -108,7 +108,7 @@ const isOk = await verify('hello string', sig, keys.DID)
 ```
 
 ### encrypt something
-Takes the public key we are encrypting to, return an object of
+Take the public key we are encrypting to, return an object of
 `{ content, key }`, where `content` is the encrypted content as a string,
 and `key` is the AES key that was used to encrypt the content, encrypted to
 the given public key. (AES key is encrypted to the public key.)
