@@ -85,14 +85,19 @@ export async function sha256 (bytes:Uint8Array):Promise<Uint8Array> {
 /**
  * Convert a public key to a DID format string.
  *
- * @param {Uint8Array} publicKey Public key as Uint8Array
+ * @param {Uint8Array|CryptoKey|CryptoKeyPair} publicKey Public key as Uint8Array
  * @param {'rsa'} [keyType] 'rsa' only
  * @returns {DID} A DID format string
  */
-export function publicKeyToDid (
-    publicKey:Uint8Array,
+export async function publicKeyToDid (
+    _publicKey:Uint8Array|CryptoKey,
     keyType = 'rsa'
-):DID {
+):Promise<DID> {
+    const publicKey = ((_publicKey instanceof CryptoKey) ?
+        new Uint8Array(await getPublicKeyAsArrayBuffer(_publicKey)) :
+        _publicKey
+    )
+
     // Prefix public-write key
     const prefix = did.keyTypes[keyType]?.magicBytes
     if (!prefix) {
@@ -335,14 +340,27 @@ function hasProp<K extends PropertyKey> (
 }
 
 export async function getPublicKeyAsArrayBuffer (
-    keypair:CryptoKeyPair
+    keypair:CryptoKeyPair|CryptoKey
 ):Promise<ArrayBuffer> {
-    const spki = await webcrypto.subtle.exportKey(
-        'spki',
-        keypair.publicKey
+    const spki = (keypair instanceof CryptoKey ?
+        await webcrypto.subtle.exportKey(
+            'spki',
+            keypair
+        ) :
+        await webcrypto.subtle.exportKey(
+            'spki',
+            keypair.publicKey
+        )
     )
 
     return spki
+}
+
+export async function getPublicKeyAsUint8Array (
+    keypair:CryptoKeyPair|CryptoKey
+):Promise<Uint8Array> {
+    const arr = await getPublicKeyAsArrayBuffer(keypair)
+    return new Uint8Array(arr)
 }
 
 export function didToPublicKey (did:string):({

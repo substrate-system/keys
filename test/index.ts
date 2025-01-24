@@ -6,7 +6,9 @@ import {
     encryptKeyTo,
     encryptTo,
     AES,
-    verify
+    verify,
+    publicKeyToDid,
+    getPublicKeyAsUint8Array
 } from '../src/index.js'
 import type { EncryptedMessage } from '../src/types.js'
 
@@ -20,6 +22,17 @@ test('create a new Keys', async t => {
     t.equal(keys.SIGNING_KEY_NAME, 'signing-key',
         'should have the default signature key name')
     t.ok(keys.DID, 'should have a DID')
+})
+
+test('getPublicKeyAsUint8Array', async t => {
+    const arr = await getPublicKeyAsUint8Array(keys.publicEncryptKey)
+    t.ok(arr instanceof Uint8Array,
+        'should expose the util function `getPublicKeyAsUint8Array`')
+})
+
+test('publicKeyToDid method', async t => {
+    const did = await publicKeyToDid(keys.publicSignKey)
+    t.equal(did, keys.DID, 'should return the DID')
 })
 
 test('indexedDB', async t => {
@@ -100,9 +113,14 @@ test('encrypt a key to a public key, return a string', async t => {
     t.equal(typeof enc, 'string', 'should encrypt the key and return a string')
 })
 
-test('`getPublicEcnryptKey', async t => {
+test('`getPublicEncryptKey', async t => {
     const key = await keys.getPublicEncryptKey()
     t.equal(typeof key, 'string', 'should return a string')
+})
+
+test('`getPublicEncryptKey.uint8Array`', async t => {
+    const arr = await keys.getPublicEncryptKey.uint8Array()
+    t.ok(arr instanceof Uint8Array, 'should return a Uint8Array')
 })
 
 test('Can pass a format to `getPublicEncryptKey`', async t => {

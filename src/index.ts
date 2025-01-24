@@ -40,8 +40,14 @@ import {
     joinBufs,
     normalizeBase64ToBuf,
     base64ToArrBuf,
-    sha256
+    sha256,
+    getPublicKeyAsUint8Array
 } from './util'
+
+export { publicKeyToDid, getPublicKeyAsArrayBuffer }
+
+export { getPublicKeyAsUint8Array } from './util'
+
 // import Debug from '@bicycle-codes/debug'
 // const debug = Debug()
 
@@ -84,15 +90,25 @@ export class Keys {
      * @returns {string} Return a string b/c mostly would use this for
      * serializing the public encryption key.
      */
-    async getPublicEncryptKey (format?:SupportedEncodings):Promise<string> {
-        const { publicKey } = this.encryptKey
-        const spki = await webcrypto.subtle.exportKey(
-            'spki',
-            publicKey
-        )
+    getPublicEncryptKey = Object.assign(
+        async (format?:SupportedEncodings):Promise<string> => {
+            const { publicKey } = this.encryptKey
+            const spki = await webcrypto.subtle.exportKey(
+                'spki',
+                publicKey
+            )
 
-        return format ? toString(new Uint8Array(spki), format) : toBase64(spki)
-    }
+            return format ? toString(new Uint8Array(spki), format) : toBase64(spki)
+        },
+
+        {
+            uint8Array: async () => {
+                const { publicKey } = this.encryptKey
+                const arr = await getPublicKeyAsUint8Array(publicKey)
+                return arr
+            }
+        }
+    )
 
     get publicSignKey ():CryptoKey {
         return this.signKey.publicKey
@@ -131,7 +147,7 @@ export class Keys {
         )
 
         const publicSigningKey = await getPublicKeyAsArrayBuffer(signingKeypair)
-        const did = publicKeyToDid(new Uint8Array(publicSigningKey), 'rsa')
+        const did = await publicKeyToDid(new Uint8Array(publicSigningKey), 'rsa')
 
         const constructorOpts:ConstructorOpts = {
             keys: { encrypt: encryptionKeypair, sign: signingKeypair },
@@ -177,7 +193,7 @@ export class Keys {
         const sigKeys = await get(opts.signingKeyName)
 
         const publicKey = await getPublicKeyAsArrayBuffer(sigKeys)
-        const did = publicKeyToDid(new Uint8Array(publicKey), 'rsa')
+        const did = await publicKeyToDid(new Uint8Array(publicKey), 'rsa')
 
         const constructorOpts:ConstructorOpts = {
             keys: { encrypt: encKeys, sign: sigKeys },

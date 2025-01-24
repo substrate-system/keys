@@ -116,7 +116,6 @@ Get the public encryption key, as a `base64` string. For other formats,
 }
 ```
 
-
 #####  `keys.getPublicEncryptKey(format)`
 
 Get the public encryption key. The given format should be a
@@ -128,6 +127,16 @@ Get the public encryption key. The given format should be a
   async getPublicEncryptKey (
     format?:SupportedEncodings
   ):Promise<string>
+}
+```
+
+#### keys.getPublicEncryptKey.uint8Array
+
+Get the public encryption key as a `Uint8Array`.
+
+```ts
+{
+  uint8Array:()=>Promise<Uint8Array<ArrayBufferLike>>
 }
 ```
 
