@@ -280,14 +280,12 @@ export async function verify (
     }
 }
 
-console.log('abc')
-
 /**
  * Encrypt the given message to the given public key. If an AES key is not
  * provided, one will be created. This uses an AES key to encrypt the given
  * content, then we encrypt the AES key to the given public key.
  *
- * @param {{ content, publicKey?, did? }} params The content to encrypt and
+ * @param {{ content, publicKey }} opts The content to encrypt and
  * public key to encrypt to
  * @param {SymmKey|Uint8Array|string} [aesKey] An optional AES key to encrypt
  * to the given public key
@@ -307,10 +305,7 @@ export async function encryptTo (opts:{
         typeof content === 'string' ? fromString(content) : content,
         typeof key === 'string' ? await AES.import(key) : key
     )
-    const encryptedKey = await encryptKeyTo({
-        key,
-        publicKey
-    })
+    const encryptedKey = await encryptKeyTo({ key, publicKey })
 
     return { content: encryptedContent, key: encryptedKey }
 }

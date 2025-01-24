@@ -341,14 +341,13 @@ const isOk = await verify('hello string', sig, keys.DID)
 
 ### Encrypt a key
 This method uses async (RSA) encryption, so it should be used to encrypt AES
-keys only, not arbitrary data. You must pass in either a DID or a public key as
-the encryption target.
+keys only, not arbitrary data. You must pass in a public key as
+the encryption target, either as a base64 string or buffer or `CryptoKey`.
 
 ```ts
 async function encryptKeyTo ({ key, publicKey, did }:{
     key:string|Uint8Array|CryptoKey;
     publicKey?:CryptoKey|Uint8Array|string;
-    did?:DID
 }):Promise<Uint8Array>
 ```
 
@@ -366,7 +365,7 @@ const encrypted = await encryptKeyTo({
 const encryptedTwo = await encryptKeyTo({
   key: aesKey,
   publicKey: await keys.getPublicEncryptKey()
-})
+})  // => Uint8Array
 ```
 
 #### encrypt a key, return a string
@@ -392,12 +391,15 @@ encrypted key and the given data. You must pass in either a DID or a public key
 to encrypt to.
 
 ```ts
-async function encryptTo (opts:{
-    content:string|Uint8Array;
-    publicKey?:CryptoKey|string;
-}, aesKey?:SymmKey|Uint8Array|string):Promise<{
-    content:Uint8Array;
-    key:Uint8Array;
+async function encryptTo (
+    opts:{
+        content:string|Uint8Array;
+        publicKey:CryptoKey|string;
+    },
+    aesKey?:SymmKey|Uint8Array|string
+):Promise<{
+  content:Uint8Array;
+  key:Uint8Array;
 }>
 ```
 
@@ -414,6 +416,20 @@ const encrypted = await encryptTo({
 //   content:Uint8Array
 //   key: Uint8Array  <-- the encrypted AES key
 // }
+```
+
+### encrypt some content, return strings
+
+```js
+import { encryptTo } from '@bicycle-codes/keys'
+
+const encrypted = await encryptTo.asString({
+    content: 'hello public key',
+    publicKey: await keys.getPublicEncryptKey()
+})
+
+t.equal(typeof encrypted.content, 'string', 'content is a string')
+t.equal(typeof encrypted.key, 'string', 'key is a string')
 ```
 
 ### Decrypt a message
