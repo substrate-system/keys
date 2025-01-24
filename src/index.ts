@@ -42,8 +42,8 @@ import {
     base64ToArrBuf,
     sha256
 } from './util'
-import Debug from '@bicycle-codes/debug'
-const debug = Debug()
+// import Debug from '@bicycle-codes/debug'
+// const debug = Debug()
 
 type ConstructorOpts = {
     keys: { encrypt:CryptoKeyPair, sign:CryptoKeyPair }
@@ -79,7 +79,7 @@ export class Keys {
     }
 
     /**
-     * Get the public encryption key as a string.
+     * Get the public encryptioawait n key as a string.
      *
      * @returns {string} Return a string b/c mostly would use this for
      * serializing the public encryption key.
@@ -113,6 +113,11 @@ export class Keys {
         return toString(hashedUsername, 'base32').slice(0, 32)
     }
 
+    /**
+     * Create a new `Keys` instance.
+     *
+     * @returns {Keys}
+     */
     static async create ():Promise<Keys> {
         const encryptionKeypair = await makeRSAKeypair(
             DEFAULT_RSA_SIZE,
@@ -130,12 +135,10 @@ export class Keys {
 
         const constructorOpts:ConstructorOpts = {
             keys: { encrypt: encryptionKeypair, sign: signingKeypair },
-            did
+            did,
         }
 
         const keys = new Keys(constructorOpts)
-
-        debug('create new keys', keys)
 
         return keys
     }
@@ -337,10 +340,19 @@ export const AES = {
         }, true, ['encrypt', 'decrypt'])
     },
 
-    async export (key:CryptoKey):Promise<Uint8Array> {
-        const raw = await webcrypto.subtle.exportKey('raw', key)
-        return new Uint8Array(raw)
-    },
+    export: Object.assign(
+        async (key:CryptoKey):Promise<Uint8Array> => {
+            const raw = await webcrypto.subtle.exportKey('raw', key)
+            return new Uint8Array(raw)
+        },
+
+        {
+            asString: async (key:CryptoKey) => {
+                const raw = await AES.export(key)
+                return toBase64(raw)
+            }
+        }
+    ),
 
     import (key:Uint8Array|string):Promise<CryptoKey> {
         return importAesKey(typeof key === 'string' ? base64ToArrBuf(key) : key)
@@ -394,6 +406,11 @@ export const AES = {
         return new Uint8Array(decrypted)
     }
 }
+
+// AES.export.asString = async function (key:CryptoKey):Promise<string> {
+//     const raw = await AES.export(key)
+//     return toBase64(raw)
+// }
 
 /**
  * Encrypt the given content to the given public key. This is RSA encryption,

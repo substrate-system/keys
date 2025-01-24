@@ -87,6 +87,14 @@ const keysAgain = await Keys.load()
 console.assert(keys.DID === keysAgain.DID)  // true
 ```
 
+### some notes about the `keys` instance
+
+#### `keys.DID`
+
+This is the DID string for the signing key for this instance.
+
+--------------------------------------------------------------------------
+
 ### sign and verify something
 `.verify` takes the content, the signature, and the DID for the public key
 used to sign. The DID is exposed as the property `.DID` on a `Keys` instance.
@@ -346,16 +354,35 @@ async function encryptKeyTo ({ key, publicKey, did }:{
 
 #### example
 ```js
+import { encryptKeyTo } from '@bicycle-codes/keys'
+
+// pass in a CryptoKey
 const encrypted = await encryptKeyTo({
-    content: myAesKey,
+    key: myAesKey,
     publicKey: keys.publicEncryptKey
 })
 
+// pass in a base64 string
 const encryptedTwo = await encryptKeyTo({
-  content: aesKey,
-  did: keys.DID
+  key: aesKey,
+  publicKey: await keys.getPublicEncryptKey()
 })
 ```
+
+#### encrypt a key, return a string
+
+Encrypt the given key to the public key, and return the result as a
+base64 string.
+
+```ts
+import { encryptKeyTo } from '@bicycle-codes/keys'
+
+const encrypted = await encryptKeyTo.asString({
+    key: myAesKey,
+    publicKey: myPublicKey
+}) // string
+```
+
 
 ### Encrypt some arbitrary data
 
@@ -368,7 +395,6 @@ to encrypt to.
 async function encryptTo (opts:{
     content:string|Uint8Array;
     publicKey?:CryptoKey|string;
-    did?:DID;
 }, aesKey?:SymmKey|Uint8Array|string):Promise<{
     content:Uint8Array;
     key:Uint8Array;
@@ -380,10 +406,8 @@ async function encryptTo (opts:{
 import { encryptTo } from '@bicycle-codes/keys'
 
 const encrypted = await encryptTo({
-    key: 'hello encryption',
+    content: 'hello encryption',
     publicKey: keys.publicEncryptKey
-    // or pass in a DID
-    // did: keys.DID
 })
 
 // => {

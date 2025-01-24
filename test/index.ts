@@ -19,6 +19,7 @@ test('create a new Keys', async t => {
         'should have the default encryption key name')
     t.equal(keys.SIGNING_KEY_NAME, 'signing-key',
         'should have the default signature key name')
+    t.ok(keys.DID, 'should have a DID')
 })
 
 test('indexedDB', async t => {
@@ -70,7 +71,7 @@ test('verify an invalid signature', async t => {
 })
 
 let encrypted:Uint8Array
-test('encrypt something to a keys instance', async t => {
+test('encrypt a key to a keys instance', async t => {
     encrypted = await encryptKeyTo({
         key: 'hello',
         publicKey: keys.publicEncryptKey
@@ -114,7 +115,7 @@ test('decrypt a key', async t => {
     t.equal(toString(decrypted), 'hello', 'should decrypt the text')
 })
 
-test('decrypt a message with the wrong keys', async t => {
+test('decrypt a key with the wrong keys', async t => {
     const newKeys = await Keys.create()
     try {
         const decrypted = await newKeys.decryptKey(encrypted)
@@ -144,6 +145,9 @@ test('export an AES key', async t => {
 test('export an AES key as a string', async t => {
     const exported = await AES.exportAsString(aesKey)
     t.equal(typeof exported, 'string', 'should return a string version')
+
+    const again = await AES.export.asString(aesKey)
+    t.equal(again, exported, 'should export the same key')
 })
 
 let encryptedText:Uint8Array
