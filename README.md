@@ -110,15 +110,23 @@ Get the public encryption key, as a `base64` string. For other formats,
 
 ```ts
 {
-  async getPublicEncryptKey ():Promise<string>
+  async getPublicEncryptKey (format?:SupportedEncodings):Promise<string>
 }
 ```
+
 
 #####  `keys.getPublicEncryptKey(format)`
 
 Get the public encryption key. The given format should be a
 [supported encoding](https://github.com/achingbrain/uint8arrays/blob/26684d4fa1a78f3e5c16e74bf13192e881db4fcf/src/util/bases.ts#L46) in
 [uint8arrays](https://github.com/achingbrain/uint8arrays).
+
+```ts
+{
+  async getPublicEncryptKey (format?:SupportedEncodings):Promise<string>
+}
+```
+
 
 --------------------------------------------------------------------------
 
