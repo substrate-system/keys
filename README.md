@@ -110,7 +110,9 @@ Get the public encryption key, as a `base64` string. For other formats,
 
 ```ts
 {
-  async getPublicEncryptKey (format?:SupportedEncodings):Promise<string>
+  async getPublicEncryptKey (
+    format?:SupportedEncodings
+  ):Promise<string>
 }
 ```
 
@@ -123,7 +125,9 @@ Get the public encryption key. The given format should be a
 
 ```ts
 {
-  async getPublicEncryptKey (format?:SupportedEncodings):Promise<string>
+  async getPublicEncryptKey (
+    format?:SupportedEncodings
+  ):Promise<string>
 }
 ```
 
