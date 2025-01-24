@@ -106,7 +106,7 @@ The public encryption `CryptoKey`.
 #### `keys.getPublicEncryptKey`
 
 Get the public encryption key, as a `base64` string. For other formats,
-see below.
+[see below](#keysgetpublicencryptkeyformat).
 
 ```ts
 {
