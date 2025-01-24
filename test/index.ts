@@ -100,7 +100,28 @@ test('encrypt a key to a public key, return a string', async t => {
     t.equal(typeof enc, 'string', 'should encrypt the key and return a string')
 })
 
+test('`getPublicEcnryptKey', async t => {
+    const key = await keys.getPublicEncryptKey()
+    t.equal(typeof key, 'string', 'should return a string')
+})
+
+test('Can pass a format to `getPublicEncryptKey`', async t => {
+    const key = await keys.getPublicEncryptKey('base32')
+    t.equal(typeof key, 'string', 'should return a string')
+    t.equal(key, key.toLowerCase(), 'should be base32 encoded')
+})
+
 test('encrypt some content to a public key', async t => {
+    const encrypted = await encryptTo({
+        content: 'hello public key',
+        publicKey: await keys.getPublicEncryptKey()
+    })
+
+    t.ok(encrypted.content instanceof Uint8Array)
+    t.ok(encrypted.key instanceof Uint8Array)
+})
+
+test('encrypt some content to a public key, as string', async t => {
     const encrypted = await encryptTo.asString({
         content: 'hello public key',
         publicKey: await keys.getPublicEncryptKey()
@@ -185,6 +206,17 @@ test('encrypt content to a public key', async t => {
         'should return the content as a Uint8Array')
     t.ok(encryptedMsg.key instanceof Uint8Array,
         'should return the key as a Uint8Array')
+})
+
+test('encrypt arbitrary content, return a string', async t => {
+    const encrypted = await encryptTo.asString({
+        content: 'hello world',
+        publicKey: bob.publicEncryptKey
+    })
+
+    t.equal(typeof encrypted.content, 'string',
+        'should return content as string')
+    t.equal(typeof encrypted.key, 'string', 'should return key as string')
 })
 
 test('Bob can decrypt the message addressed to Bob', async t => {

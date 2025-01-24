@@ -1,5 +1,5 @@
 import { webcrypto } from '@bicycle-codes/one-webcrypto'
-import { fromString, toString } from 'uint8arrays'
+import { fromString, type SupportedEncodings, toString } from 'uint8arrays'
 import { get, set } from 'idb-keyval'
 import {
     RSA_ALGORITHM,
@@ -84,14 +84,14 @@ export class Keys {
      * @returns {string} Return a string b/c mostly would use this for
      * serializing the public encryption key.
      */
-    async getPublicEncryptKey ():Promise<string> {
+    async getPublicEncryptKey (format?:SupportedEncodings):Promise<string> {
         const { publicKey } = this.encryptKey
         const spki = await webcrypto.subtle.exportKey(
             'spki',
             publicKey
         )
 
-        return toBase64(spki)
+        return format ? toString(new Uint8Array(spki), format) : toBase64(spki)
     }
 
     get publicSignKey ():CryptoKey {
@@ -150,6 +150,11 @@ export class Keys {
         ])
     }
 
+    /**
+     * Return a 32-character, DNS friendly hash of this public singing key.
+     *
+     * @returns {string}
+     */
     async getDeviceName ():Promise<string> {
         return Keys.deviceName(this.DID)
     }
