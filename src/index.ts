@@ -189,14 +189,29 @@ export class Keys {
         encryptionKeyName: DEFAULT_ENC_NAME,
         signingKeyName: DEFAULT_SIG_NAME
     }):Promise<Keys> {
-        const encKeys = await get(opts.encryptionKeyName)
-        const sigKeys = await get(opts.signingKeyName)
+        let encKeys:CryptoKeyPair|undefined = await get(opts.encryptionKeyName)
+        let signKeys:CryptoKeyPair|undefined = await get(opts.signingKeyName)
 
-        const publicKey = await getPublicKeyAsArrayBuffer(sigKeys)
+        if (!encKeys) {
+            encKeys = await makeRSAKeypair(
+                DEFAULT_RSA_SIZE,
+                DEFAULT_HASH_ALGORITHM,
+                KeyUse.Encrypt
+            )
+        }
+        if (!signKeys) {
+            signKeys = await makeRSAKeypair(
+                DEFAULT_RSA_SIZE,
+                DEFAULT_HASH_ALGORITHM,
+                KeyUse.Sign
+            )
+        }
+
+        const publicKey = await getPublicKeyAsArrayBuffer(signKeys)
         const did = await publicKeyToDid(new Uint8Array(publicKey), 'rsa')
 
         const constructorOpts:ConstructorOpts = {
-            keys: { encrypt: encKeys, sign: sigKeys },
+            keys: { encrypt: encKeys, sign: signKeys },
             did
         }
 
