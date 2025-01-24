@@ -21,6 +21,12 @@ reading the private key, but the keys can be persisted and re-used indefinitely.
 > to tell the browser not to delete from `indexedDB`.
 >
 
+Each instance of `Keys` has two keypairs -- one for signing, and another for
+encrypting. We are **using RSA keys only** right now, because we are
+[waiting for all browsers to support ECC crypto](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey#browser_compatibility).
+
+-----------------------
+
 See also, [the API docs generated from typescript](https://bicycle-codes.github.io/keys/).
 
 <details><summary><h2>Contents</h2></summary>
