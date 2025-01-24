@@ -84,7 +84,7 @@ await keys.persist()
 // get our keys from indexedDB
 const keysAgain = await Keys.load()
 
-console.assrt(keys.DID === keysAgain.DID)  // true
+console.assert(keys.DID === keysAgain.DID)  // true
 ```
 
 ### sign and verify something
