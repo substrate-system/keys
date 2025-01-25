@@ -109,7 +109,7 @@ Return the 32 character, DNS fiendly hash of the signing public key.
 
 The public encryption `CryptoKey`.
 
-#### `keys.getPublicEncryptKey`
+#### `keys.getPublicEncryptKey()`
 
 Get the public encryption key, as a `base64` string. For other formats,
 [see below](#keysgetpublicencryptkeyformat).
