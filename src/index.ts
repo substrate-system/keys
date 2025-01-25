@@ -52,8 +52,9 @@ export { getPublicKeyAsUint8Array } from './util'
 // const debug = Debug()
 
 type ConstructorOpts = {
-    keys: { encrypt:CryptoKeyPair, sign:CryptoKeyPair }
-    did:DID
+    keys: { encrypt:CryptoKeyPair, sign:CryptoKeyPair };
+    did:DID;
+    persisted:boolean;
 }
 
 /**
@@ -65,6 +66,7 @@ type ConstructorOpts = {
 export class Keys {
     private encryptKey:CryptoKeyPair
     private signKey:CryptoKeyPair
+    persisted:boolean
     ENCRYPTION_KEY_NAME:string = DEFAULT_ENC_NAME
     SIGNING_KEY_NAME:string = DEFAULT_SIG_NAME
     DID:DID
@@ -74,6 +76,7 @@ export class Keys {
         this.encryptKey = keys.encrypt
         this.signKey = keys.sign
         this.DID = opts.did
+        this.persisted = opts.persisted
     }
 
     get privateKey ():CryptoKey {
@@ -152,6 +155,7 @@ export class Keys {
         const constructorOpts:ConstructorOpts = {
             keys: { encrypt: encryptionKeypair, sign: signingKeypair },
             did,
+            persisted: false
         }
 
         const keys = new Keys(constructorOpts)
@@ -164,6 +168,7 @@ export class Keys {
             set(this.ENCRYPTION_KEY_NAME, this.encryptKey),
             set(this.SIGNING_KEY_NAME, this.signKey)
         ])
+        this.persisted = true
     }
 
     /**
@@ -189,10 +194,12 @@ export class Keys {
         encryptionKeyName: DEFAULT_ENC_NAME,
         signingKeyName: DEFAULT_SIG_NAME
     }):Promise<Keys> {
+        let persisted = true
         let encKeys:CryptoKeyPair|undefined = await get(opts.encryptionKeyName)
         let signKeys:CryptoKeyPair|undefined = await get(opts.signingKeyName)
 
         if (!encKeys) {
+            persisted = false
             encKeys = await makeRSAKeypair(
                 DEFAULT_RSA_SIZE,
                 DEFAULT_HASH_ALGORITHM,
@@ -200,6 +207,7 @@ export class Keys {
             )
         }
         if (!signKeys) {
+            persisted = false
             signKeys = await makeRSAKeypair(
                 DEFAULT_RSA_SIZE,
                 DEFAULT_HASH_ALGORITHM,
@@ -212,7 +220,8 @@ export class Keys {
 
         const constructorOpts:ConstructorOpts = {
             keys: { encrypt: encKeys, sign: signKeys },
-            did
+            did,
+            persisted
         }
 
         const keys = new Keys(constructorOpts)

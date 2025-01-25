@@ -17,6 +17,8 @@ test('create a new Keys', async t => {
     keys = await Keys.create()
     t.ok(keys, 'should return something')
 
+    t.equal(keys.persisted, false,
+        'should not have persisted flag for newly created keys')
     t.equal(keys.ENCRYPTION_KEY_NAME, 'encryption-key',
         'should have the default encryption key name')
     t.equal(keys.SIGNING_KEY_NAME, 'signing-key',
@@ -37,6 +39,7 @@ test('publicKeyToDid method', async t => {
 
 test('indexedDB', async t => {
     await keys.persist()
+    t.ok(keys.persisted, 'should have persisted flag after calling .persist')
     const encryptionKey = await get(keys.ENCRYPTION_KEY_NAME)
     const signKey = await get(keys.SIGNING_KEY_NAME)
     t.ok(encryptionKey, 'should save an encryption key in indexedDB')
@@ -47,6 +50,7 @@ test('Create keys from indexedDB', async t => {
     const newKeys = await Keys.load()
     t.equal(newKeys.DID, keys.DID,
         'should create a new instance with the same keys')
+    t.equal(newKeys.persisted, true, 'should have `persisted` flag')
 })
 
 test('device name', async t => {
