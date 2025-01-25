@@ -105,6 +105,11 @@ This is the DID string for the signing key for this instance.
 
 Return the 32 character, DNS fiendly hash of the signing public key.
 
+#### `keys.persisted`
+
+A flag indicating whether `.persist` has been called, meaning that these keys
+are saved in `indexedDB`.
+
 #### `keys.publicEncryptKey`
 
 The public encryption `CryptoKey`.
