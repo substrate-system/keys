@@ -478,9 +478,9 @@ export async function encryptKeyTo ({ key, publicKey }:{
 encryptKeyTo.asString = async function ({ key, publicKey }:{
     key:string|Uint8Array|CryptoKey;
     publicKey:CryptoKey|string|Uint8Array;
-}):Promise<string> {
+}, format?:SupportedEncodings):Promise<string> {
     const asArr = await encryptKeyTo({ key, publicKey })
-    return toBase64(asArr)
+    return format ? toString(asArr, format) : toBase64(asArr)
 }
 
 function importAesKey (

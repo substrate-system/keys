@@ -105,6 +105,15 @@ test('encrypt a key to a keypair, return a string', async t => {
     })
 
     t.equal(typeof encrypted, 'string', 'should return the AES key as a string')
+
+    const encryptedTwo = await encryptKeyTo.asString({
+        key: aes,
+        publicKey: keys.publicEncryptKey
+    }, 'base32')
+
+    t.equal(typeof encryptedTwo, 'string', 'should retunr a string')
+    t.equal(encryptedTwo, encryptedTwo.toLocaleLowerCase(),
+        'should base32 encode the key')
 })
 
 test('encrypt a key to a public key, return a string', async t => {
