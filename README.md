@@ -441,7 +441,7 @@ encryptKeyTo.asString = async function ({ key, publicKey }:{
 ```
 
 #### format
-`encryptKeyTo.asString` takes an optional second argument for (the format)[https://github.com/achingbrain/uint8arrays/blob/26684d4fa1a78f3e5c16e74bf13192e881db4fcf/src/util/bases.ts#L46]
+`encryptKeyTo.asString` takes an optional second argument for [the format](https://github.com/achingbrain/uint8arrays/blob/26684d4fa1a78f3e5c16e74bf13192e881db4fcf/src/util/bases.ts#L46)
 of the returned string. Format is anything supported by [uint8arrays](https://github.com/achingbrain/uint8arrays). By default, if omitted, it is `base64`.
 
 
