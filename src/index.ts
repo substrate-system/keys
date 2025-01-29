@@ -46,6 +46,8 @@ import {
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
 
+export type { DID }
+
 export { getPublicKeyAsUint8Array } from './util'
 
 // import Debug from '@bicycle-codes/debug'
