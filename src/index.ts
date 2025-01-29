@@ -57,6 +57,11 @@ type ConstructorOpts = {
     persisted:boolean;
 }
 
+export type SerializedKeys = {
+    DID:DID;
+    publicEncryptKey:string;
+}
+
 /**
  * Expose RSA keys only for now, because we are
  * waiting for more browsers to support ECC.
