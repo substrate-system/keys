@@ -57,7 +57,7 @@ See also, [the API docs generated from typescript](https://bicycle-codes.github.
   * [Encrypt some arbitrary data](#encrypt-some-arbitrary-data)
   * [encrypt some content, return strings](#encrypt-some-content-return-strings)
   * [Decrypt a message](#decrypt-a-message)
-  * [`decryptToString`](#decrypttostring)
+  * [`.decrypt.asString`](#decryptasstring)
 - [AES](#aes)
   * [`create`](#create)
   * [`export`](#export)
