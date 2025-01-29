@@ -275,6 +275,16 @@ export class Keys {
         const decrypted = await rsaOperations.decrypt(msg, this.privateKey)
         return toString(decrypted)
     }
+
+    async toJson ():Promise<{ DID:DID; publicEncryptKey:string; }> {
+        const pubEnc = await this.getPublicEncryptKey()
+        const did = this.DID
+
+        return {
+            publicEncryptKey: pubEnc,
+            DID: did
+        }
+    }
 }
 
 async function makeRSAKeypair (

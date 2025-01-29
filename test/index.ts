@@ -97,6 +97,15 @@ test('encrypt a key to a keys instance', async t => {
     t.ok(encrypted instanceof Uint8Array, 'should return a Uint8Array')
 })
 
+test('get a serializable object from keys', async t => {
+    t.plan(2)
+    const keys = await Keys.create()
+    const obj = await keys.toJson()
+    t.equal(obj.DID, keys.DID, 'should return the DID')
+    t.equal(obj.publicEncryptKey, await keys.getPublicEncryptKey(),
+        'should return a string of the public encyrption key')
+})
+
 test('encrypt a key to a keypair, return a string', async t => {
     const aes = await AES.create()
     const encrypted = await encryptKeyTo.asString({
