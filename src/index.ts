@@ -276,6 +276,12 @@ export class Keys {
         return toString(decrypted)
     }
 
+    /**
+     * Serialize this keys instance. Will return an object of
+     * { DID, publicEncryptionKey }, where DID is the public signature key,
+     * and `publicEncryptKey` is the encryption key, `base64` encoded.
+     * @returns {Promise<{ DID:DID, publicEncryptKey:string }>}
+     */
     async toJson ():Promise<{ DID:DID; publicEncryptKey:string; }> {
         const pubEnc = await this.getPublicEncryptKey()
         const did = this.DID
