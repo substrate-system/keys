@@ -105,7 +105,7 @@ export class Keys {
         },
 
         {
-            uint8Array: async () => {
+            uint8Array: async ():Promise<Uint8Array> => {
                 const { publicKey } = this.encryptKey
                 const arr = await getPublicKeyAsUint8Array(publicKey)
                 return arr
@@ -228,53 +228,73 @@ export class Keys {
         return keys
     }
 
-    /**
-     * Sign a string. Return the signature as Uint8Array.
-     *
-     * @param msg The message to sign
-     * @returns {Promise<Uint8Array>} The signature
-     */
-    async sign (
-        msg:Msg,
-        charsize?:CharSize,
-    ):Promise<Uint8Array> {
-        const key = this.signKey
+    sign = Object.assign(
+        /**
+         * Sign the message, and return the signature as a `Uint8Array`.
+         */
+        async (msg:Msg, charsize?:CharSize):Promise<Uint8Array> => {
+            const key = this.signKey
+            const sig = await rsaOperations.sign(
+                msg,
+                key.privateKey,
+                charsize || DEFAULT_CHAR_SIZE
+            )
 
-        const sig = await rsaOperations.sign(
-            msg,
-            key.privateKey,
-            charsize || DEFAULT_CHAR_SIZE
-        )
+            return new Uint8Array(sig)
+        },
 
-        return new Uint8Array(sig)
-    }
+        {
+            /**
+             * Sign a message, return the signature as a base64 encoded string.
+             *
+             * @param {Msg} msg The message to sign
+             * @param {CharSize} [charsize] Character size
+             * @returns {Promise<string>}
+             */
+            asString: async (msg:Msg, charsize?:CharSize):Promise<string> => {
+                const sig = await this.sign(msg, charsize)
+                return toBase64(sig)
+            }
+        }
+    )
 
-    async signAsString (msg:Msg, charsize?:CharSize):Promise<string> {
-        const sig = await this.sign(msg, charsize)
-        return toBase64(sig)
-    }
+    decrypt = Object.assign(
+        async (msg:EncryptedMessage):Promise<Uint8Array> => {
+            const decryptedKey = await this.decryptKey(msg.key)
+            const decryptedContent = await AES.decrypt(msg.content, decryptedKey)
+            return decryptedContent
+        },
 
-    async decrypt (msg:EncryptedMessage):Promise<Uint8Array> {
-        const decryptedKey = await this.decryptKey(msg.key)
-        const decryptedContent = await AES.decrypt(msg.content, decryptedKey)
-        return decryptedContent
-    }
+        {
+            asString: async (msg:EncryptedMessage):Promise<string> => {
+                const decryptedKey = await this.decryptKey(msg.key)
+                const decryptedContent = await AES.decrypt(
+                    msg.content,
+                    decryptedKey
+                )
 
-    async decryptToString (msg:EncryptedMessage):Promise<string> {
-        const decryptedKey = await this.decryptKey(msg.key)
-        const decryptedContent = await AES.decrypt(msg.content, decryptedKey)
-        return toString(decryptedContent)
-    }
+                return toString(decryptedContent)
+            }
+        }
+    )
 
-    async decryptKey (key:string|Uint8Array):Promise<Uint8Array> {
-        const decrypted = await rsaOperations.decrypt(key, this.privateKey)
-        return decrypted
-    }
+    decryptKey = Object.assign(
+        async (key:string|Uint8Array):Promise<Uint8Array> => {
+            const decrypted = await rsaOperations.decrypt(key, this.privateKey)
+            return decrypted
+        },
 
-    async decryptKeyAsString (msg:string|Uint8Array):Promise<string> {
-        const decrypted = await rsaOperations.decrypt(msg, this.privateKey)
-        return toString(decrypted)
-    }
+        {
+            asString: async (msg:string|Uint8Array):Promise<string> => {
+                const decrypted = await rsaOperations.decrypt(
+                    msg,
+                    this.privateKey
+                )
+
+                return toString(decrypted)
+            }
+        }
+    )
 
     /**
      * Serialize this keys instance. Will return an object of

@@ -72,8 +72,8 @@ test('verify the signature as a buffer', async t => {
 })
 
 let sig:string
-test('.signAsString', async t => {
-    sig = await keys.signAsString('hello string')
+test('.sign.asString', async t => {
+    sig = await keys.sign.asString('hello string')
     t.equal(typeof sig, 'string', 'should return the signature as a string')
 })
 
@@ -188,7 +188,7 @@ test('decrypt a key with the wrong keys', async t => {
 })
 
 test('decrypt as string', async t => {
-    const decrypted = await keys.decryptKeyAsString(encrypted)
+    const decrypted = await keys.decryptKey.asString(encrypted)
     t.equal(decrypted, 'hello', 'should decrypt and return a string')
 })
 
@@ -264,7 +264,7 @@ test('Bob can decrypt the message addressed to Bob', async t => {
     t.equal(toString(decrypted), 'Hello bob', 'should decrypt the message')
 })
 
-test('keys.decryptToString', async t => {
-    const decrypted = await bob.decryptToString(encryptedMsg)
+test('keys.decrypt.asString', async t => {
+    const decrypted = await bob.decrypt.asString(encryptedMsg)
     t.equal(decrypted, 'Hello bob', 'should decrypt the message to a string')
 })

@@ -164,10 +164,12 @@ used to sign. The DID is exposed as the property `.DID` on a `Keys` instance.
 >
 
 ```js
-import { verify } from '@bicycle-codes/keys'
+import { Keys, verify } from '@bicycle-codes/keys'
+
+const keys = await Keys.create()
 
 // sign something
-const sig = await keys.signAsString('hello string')
+const sig = await keys.sign.asString('hello string')
 
 // verify the signature
 const isOk = await verify('hello string', sig, keys.DID)
@@ -363,17 +365,24 @@ const sig = await keys.sign('hello signatures')
 ```
 
 ### Get a signature as a string
+
+#### `keys.sign.asString(msg)`
+
 ```ts
-class Keys {
-  async signAsString (
-    msg:ArrayBuffer|string|Uint8Array,
-    charsize?:CharSize
-  ):Promise<string>
+{
+  /**
+   * Sign a message, return the signature as a base64 encoded string.
+   *
+   * @param {Msg} msg The message to sign
+   * @param {CharSize} [charsize] Character size
+   * @returns {Promise<string>}
+   */
+  asString: async (msg:Msg, charsize?:CharSize):Promise<string>
 }
 ```
 
 ```js
-const sig = await keys.signAsString('hello string')
+const sig = await keys.sign.asString('hello string')
 // => ubW9PIjb360v...
 ```
 
@@ -509,12 +518,12 @@ const decrypted = await keys.decrypt(encrypted)
 // => Uint8Array
 ```
 
-### `decryptToString`
+### `.decrypt.asString`
 Decrypt a message, and stringify the result.
 
 ```ts
-class Keys {
-  async decryptToString (msg:EncryptedMessage):Promise<string>
+{
+    asString: async (msg:EncryptedMessage):Promise<string>
 }
 ```
 
