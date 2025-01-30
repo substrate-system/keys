@@ -86,7 +86,29 @@ export class Keys {
         this.persisted = opts.persisted
     }
 
-    get privateKey ():CryptoKey {
+    get signKeypair ():CryptoKeyPair {
+        return {
+            privateKey: this.privateSignKey,
+            publicKey: this.publicSignKey
+        }
+    }
+
+    get encryptKeypair ():CryptoKeyPair {
+        return {
+            privateKey: this.privateEncryptKey,
+            publicKey: this.publicEncryptKey
+        }
+    }
+
+    get publicSignKey ():CryptoKey {
+        return this.signKey.publicKey
+    }
+
+    get privateSignKey ():CryptoKey {
+        return this.signKey.privateKey
+    }
+
+    get privateEncryptKey ():CryptoKey {
         return this.encryptKey.privateKey
     }
 
@@ -108,7 +130,9 @@ export class Keys {
                 publicKey
             )
 
-            return format ? toString(new Uint8Array(spki), format) : toBase64(spki)
+            return (format ?
+                toString(new Uint8Array(spki), format) :
+                toBase64(spki))
         },
 
         {
@@ -119,10 +143,6 @@ export class Keys {
             }
         }
     )
-
-    get publicSignKey ():CryptoKey {
-        return this.signKey.publicKey
-    }
 
     /**
      * Return a 32-character, DNS-friendly hash of the given DID.
@@ -170,6 +190,9 @@ export class Keys {
         return keys
     }
 
+    /**
+     * Save this keys instance to `indexedDB`.
+     */
     async persist ():Promise<void> {
         await Promise.all([
             set(this.ENCRYPTION_KEY_NAME, this.encryptKey),
@@ -179,7 +202,7 @@ export class Keys {
     }
 
     /**
-     * Return a 32-character, DNS friendly hash of this public singing key.
+     * Return a 32-character, DNS friendly hash of this public signing key.
      *
      * @returns {string}
      */
@@ -266,6 +289,13 @@ export class Keys {
     )
 
     decrypt = Object.assign(
+        /**
+         * Decrypt the given message. Message must have { content, key }
+         * properties.
+         *
+         * @param {EncryptedMessage} msg The message to decrypt.
+         * @returns {Uint8Array}
+         */
         async (msg:EncryptedMessage):Promise<Uint8Array> => {
             const decryptedKey = await this.decryptKey(msg.key)
             const decryptedContent = await AES.decrypt(msg.content, decryptedKey)
@@ -273,32 +303,52 @@ export class Keys {
         },
 
         {
-            asString: async (msg:EncryptedMessage):Promise<string> => {
+            /**
+             * Decrypt the given message, return the result as a string.
+             * @returns {string}
+             */
+            asString: async (
+                msg:EncryptedMessage,
+                format?:SupportedEncodings
+            ):Promise<string> => {
                 const decryptedKey = await this.decryptKey(msg.key)
                 const decryptedContent = await AES.decrypt(
                     msg.content,
                     decryptedKey
                 )
 
-                return toString(decryptedContent)
+                return toString(decryptedContent, format)
             }
         }
     )
 
+    /**
+     * Decrypt the given encrypted AES key.
+     * Return the key as `Uint8Array`.
+     */
     decryptKey = Object.assign(
         async (key:string|Uint8Array):Promise<Uint8Array> => {
-            const decrypted = await rsaOperations.decrypt(key, this.privateKey)
+            const decrypted = await rsaOperations.decrypt(
+                key,
+                this.privateEncryptKey
+            )
             return decrypted
         },
 
         {
-            asString: async (msg:string|Uint8Array):Promise<string> => {
+            /**
+             * Decrypt the given AES key, return the result as a string.
+             */
+            asString: async (
+                msg:string|Uint8Array,
+                format?:SupportedEncodings
+            ):Promise<string> => {
                 const decrypted = await rsaOperations.decrypt(
                     msg,
-                    this.privateKey
+                    this.privateEncryptKey
                 )
 
-                return toString(decrypted)
+                return toString(decrypted, format || 'utf-8')
             }
         }
     )
@@ -489,11 +539,6 @@ export const AES = {
         return new Uint8Array(decrypted)
     }
 }
-
-// AES.export.asString = async function (key:CryptoKey):Promise<string> {
-//     const raw = await AES.export(key)
-//     return toBase64(raw)
-// }
 
 /**
  * Encrypt the given content to the given public key. This is RSA encryption,
