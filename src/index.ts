@@ -73,6 +73,7 @@ export type SerializedKeys = {
 export class Keys {
     private encryptKey:CryptoKeyPair
     private signKey:CryptoKeyPair
+    static _instance  // a cache for indexedDB
     persisted:boolean
     ENCRYPTION_KEY_NAME:string = DEFAULT_ENC_NAME
     SIGNING_KEY_NAME:string = DEFAULT_SIG_NAME
@@ -84,6 +85,7 @@ export class Keys {
         this.signKey = keys.sign
         this.DID = opts.did
         this.persisted = opts.persisted
+        Keys._instance = this
     }
 
     get signKeypair ():CryptoKeyPair {
@@ -186,7 +188,6 @@ export class Keys {
         }
 
         const keys = new Keys(constructorOpts)
-
         return keys
     }
 
@@ -211,7 +212,8 @@ export class Keys {
     }
 
     /**
-     * Restore some keys from indexedDB.
+     * Restore some keys from indexedDB, or create a new keypair if it doesn't
+     * exist yet.
      *
      * @param {{ encryptionKeyName, signingKeyName }} opts Strings to use as
      * keys in indexedDB.
@@ -224,6 +226,8 @@ export class Keys {
         encryptionKeyName: DEFAULT_ENC_NAME,
         signingKeyName: DEFAULT_SIG_NAME
     }):Promise<Keys> {
+        if (Keys._instance) return Keys._instance  // cache
+
         let persisted = true
         let encKeys:CryptoKeyPair|undefined = await get(opts.encryptionKeyName)
         let signKeys:CryptoKeyPair|undefined = await get(opts.signingKeyName)

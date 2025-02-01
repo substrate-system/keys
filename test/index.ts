@@ -26,6 +26,11 @@ test('create a new Keys', async t => {
     t.ok(keys.DID, 'should have a DID')
 })
 
+test('cache the keys instance', async t => {
+    const newKeys = await Keys.load()
+    t.equal(newKeys, keys, 'should return the same isntance of Keys')
+})
+
 test('getPublicKeyAsUint8Array', async t => {
     const arr = await getPublicKeyAsUint8Array(keys.publicEncryptKey)
     t.ok(arr instanceof Uint8Array,
