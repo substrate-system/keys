@@ -10,7 +10,6 @@ import {
     publicKeyToDid,
     getPublicKeyAsUint8Array
 } from '../src/index.js'
-import type { EncryptedMessage } from '../src/types.js'
 
 let keys:Keys
 test('create a new Keys', async t => {
@@ -26,7 +25,19 @@ test('create a new Keys', async t => {
     t.ok(keys.DID, 'should have a DID')
 })
 
-test('`encryptTo.asString` and `keys.decrypt.fromString`', async t => {
+test('encrypt and decrypt a string', async t => {
+    const pubKey = keys.publicEncryptKey
+    const message = 'hello world'
+    const cipherText = await encryptTo.asString({
+        content: message,
+        publicKey: pubKey
+    })
+
+    const decrypted = await keys.decrypt.asString(cipherText)
+    t.equal(decrypted, 'hello world', 'should decrypt the text')
+})
+
+test('`encryptTo.asString` and `keys.decrypt`', async t => {
     const pubKey = keys.publicEncryptKey
     const message = 'hello encryption formats'
     const cipherText = await encryptTo.asString({
@@ -35,7 +46,8 @@ test('`encryptTo.asString` and `keys.decrypt.fromString`', async t => {
     })
 
     t.equal(typeof cipherText, 'string', 'should return a string')
-    const plainText = await keys.decrypt.fromString(cipherText)
+    const plainTextBuf = await keys.decrypt(cipherText)
+    const plainText = toString(plainTextBuf)
     t.equal(plainText, message, 'should decrypt the message to the original')
 })
 
@@ -50,7 +62,7 @@ test('An example use of to/from strings', async t => {
 
     t.equal(typeof cipherText, 'string', 'should return a string')
 
-    const text = await keys.decrypt.fromString(cipherText)
+    const text = await keys.decrypt.asString(cipherText)
     const data = JSON.parse(text)
     t.equal(data.content, 'hello', 'should get the original object')
 })
@@ -201,8 +213,7 @@ test('encrypt some content to a public key', async t => {
         publicKey: await keys.getPublicEncryptKey()
     })
 
-    t.ok(encrypted.content instanceof Uint8Array)
-    t.ok(encrypted.key instanceof Uint8Array)
+    t.ok(encrypted instanceof ArrayBuffer, 'should return an array buffer')
 })
 
 test('encrypt some content to a public key, as string', async t => {
@@ -279,7 +290,7 @@ test('getPublicEncryptKey', async t => {
 })
 
 let bob:Keys
-let encryptedMsg:EncryptedMessage
+let encryptedMsg:ArrayBuffer
 test('encrypt content to a public key', async t => {
     bob = await Keys.create()
 
@@ -290,10 +301,20 @@ test('encrypt content to a public key', async t => {
         publicKey: bob.publicEncryptKey
     })
 
-    t.ok(encryptedMsg.content instanceof Uint8Array,
-        'should return the content as a Uint8Array')
-    t.ok(encryptedMsg.key instanceof Uint8Array,
-        'should return the key as a Uint8Array')
+    t.ok(encryptedMsg instanceof ArrayBuffer, 'should return an array buffer')
+})
+
+let encryptedString:string
+test('encrypt and return a string', async t => {
+    const msg = 'hello strings'
+
+    encryptedString = await encryptTo.asString({
+        content: msg,
+        publicKey: bob.publicEncryptKey
+    })
+
+    t.equal(typeof encryptedString, 'string', 'should return an encrypted string')
+    t.ok(encryptedString !== msg)
 })
 
 test('Bob can decrypt the message addressed to Bob', async t => {
@@ -301,8 +322,14 @@ test('Bob can decrypt the message addressed to Bob', async t => {
     t.equal(toString(decrypted), 'Hello bob', 'should decrypt the message')
 })
 
-test('keys.decrypt.asString -- this uses the older format message, ' +
-    'an object with content & key fields', async t => {
-    const decrypted = await bob.decrypt.asString(encryptedMsg)
-    t.equal(decrypted, 'Hello bob', 'should decrypt the message to a string')
+test('keys.decrypt.asString', async t => {
+    const decrypted = await bob.decrypt.asString(encryptedString)
+    t.equal(decrypted, 'hello strings', 'should decrypt the message to a string')
+})
+
+test('AES.export with format argument', async t => {
+    const key = await AES.create()
+    const defaultExport = await AES.export.asString(key)
+    const exported = await AES.export.asString(key, 'base64url')
+    t.ok(defaultExport !== exported, 'should use the `format` argument')
 })

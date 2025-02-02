@@ -25,9 +25,16 @@ Each instance of `Keys` has two keypairs -- one for signing, and another for
 encrypting. We are **using RSA keys only** right now, because we are
 [waiting for all browsers to support ECC](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey#browser_compatibility).
 
------------------------
-
 See also, [the API docs generated from typescript](https://bicycle-codes.github.io/keys/).
+
+## Asymmetric Encryption
+
+Asymmetric encryption means using an AES key to encrypt the content, then
+encrypting the AES key to a public RSA key. If you encrypt something to Bob's
+public key, that means we create a new buffer of encrypted AES key +
+encrypted content, where the encrypted AES key can only be decrypted by Bob's
+private key.
+
 
 <details><summary><h2>Contents</h2></summary>
 
@@ -176,10 +183,9 @@ const isOk = await verify('hello string', sig, keys.DID)
 ```
 
 ### encrypt something
-Take the public key we are encrypting to, return an object of
-`{ content, key }`, where `content` is the encrypted content as a string,
-and `key` is the AES key that was used to encrypt the content, encrypted to
-the given public key. (AES key is encrypted to the public key.)
+Take the public key we are encrypting to, return an `ArrayBuffer`, containing
+the encrypted AES key concattenated with the `iv` and encrypted content.
+
 
 ```js
 import { encryptTo } from '@bicycle-codes/keys'
@@ -187,17 +193,21 @@ import { encryptTo } from '@bicycle-codes/keys'
 // need to know the public key we are encrypting for
 const publicKey = await keys.getPublicEncryptKey()
 
+const encrypted = await encryptTo({
+  content: 'hello public key',
+  publicKey
+})  // => ArrayBuffer
+
 const encrypted = await encryptTo.asString({
   content: 'hello public key',
   publicKey
 })
-
-// => { content, key }
+// => <encrypted text>
 ```
 
 ### decrypt something
 A `Keys` instance has a method `decrypt`. The `encryptedMessage` argument is
-an object of `{ content, key }` as returned from `encryptTo`, above.
+an `ArrayBuffer` as returned from `encryptTo`, above.
 
 ```js
 import { Keys } from '@bicycle-codes/keys'
@@ -263,6 +273,9 @@ class Keys {
 ```
 
 #### `.create()` example
+
+Use the factory function b/c async.
+
 ```js
 import { Keys } from '@bicycle-codes/keys'
 
@@ -285,6 +298,7 @@ class Keys {
 ```
 
 #### instance method
+
 If used as an instance method, this will use the `DID` assigned to the instance.
 
 ```ts
@@ -407,15 +421,14 @@ const isOk = await verify('hello string', sig, keys.DID)
 ```
 
 ### Encrypt a key
-This method uses async (RSA) encryption, so it should be used to encrypt AES
-keys only, not arbitrary data. You must pass in a public key as
-the encryption target, either as a base64 string or buffer or `CryptoKey`.
+
+Use asynchronous (RSA) encryption to encrypt an AES key to the given public key.
 
 ```ts
-async function encryptKeyTo ({ key, publicKey, did }:{
+async function encryptKeyTo ({ key, publicKey }:{
     key:string|Uint8Array|CryptoKey;
-    publicKey?:CryptoKey|Uint8Array|string;
-}):Promise<Uint8Array>
+    publicKey:CryptoKey|Uint8Array|string;
+}, format?:'uint8array'|'arraybuffer'):Promise<Uint8Array|ArrayBuffer>
 ```
 
 #### example
@@ -454,12 +467,17 @@ encryptKeyTo.asString = async function ({ key, publicKey }:{
 of the returned string. Format is anything supported by [uint8arrays](https://github.com/achingbrain/uint8arrays). By default, if omitted, it is `base64`.
 
 
-### Encrypt some arbitrary data
+### Asymmetrically encrypt some arbitrary data
 
-Take some arbitrary content and encrypt it. Will use either the given AES key,
-or will generate a new one if it is not passed in. The return value is the
-encrypted key and the given data. You must pass in either a DID or a public key
-to encrypt to.
+Encrypt the given message to the given public key. If an AES key is not
+provided, one will be created. Use an AES key to encrypt the given
+content, then encrypt the AES key to the given public key.
+
+The return value is an ArrayBuffer containing the encrypted AES key +
+the `iv` + the encrypted content.
+
+To decrypt, pass the returned value to `keys.decrypt`, where `keys` is an
+instance with the corresponding private key.
 
 ```ts
 async function encryptTo (
@@ -467,11 +485,8 @@ async function encryptTo (
         content:string|Uint8Array;
         publicKey:CryptoKey|string;
     },
-    aesKey?:SymmKey|Uint8Array|string
-):Promise<{
-  content:Uint8Array;
-  key:Uint8Array;
-}>
+    aesKey?:SymmKey|Uint8Array|string,
+):Promise<ArrayBuffer>
 ```
 
 #### example
@@ -483,20 +498,22 @@ const encrypted = await encryptTo({
     publicKey: keys.publicEncryptKey
 })
 
-// => {
-//   content:Uint8Array
-//   key: Uint8Array  <-- the encrypted AES key
-// }
+// => ArrayBuffer
 ```
 
-### asymmetricly encrypt a string, return a new string
+### Asymmetrically encrypt a string, return a new string
 
 Encrypt the given string, and return a new string that is the (encrypted) AES
 key concattenated with the `iv` and cipher text. The
-corresponding method `keys.decrypt.fromString` will know how to parse and
+corresponding method `keys.decrypt.asString` will know how to parse and
 decrypt the resulting text.
 
-Use the functions `encryptTo.asString` and `keys.decrypt.fromString`.
+Use the functions `encryptTo.asString` and `keys.decrypt.asString`.
+
+#### `keys.decrypt.asString`
+```ts
+async function asString (msg:string, keysize?:SymmKeyLength):Promise<string> 
+```
 
 ```js
 import { Keys, encryptTo } from '@bicycle-codes/keys'
@@ -510,35 +527,18 @@ const cipherText = await encryptTo.asString({
     publicKey: pubKey
 })  // => string
 
-const text = await keys.decrypt.fromString(cipherText)
+const text = await keys.decrypt.asString(cipherText)
 const data = JSON.parse(text)
 // => { type: 'test', content: 'hello' }
-```
-
-### encrypt some content, return strings
-
-This will return an object like `{ content:string, key:string }`, where
-`key` is the AES key, encrypted to the given public key.
-
-```js
-import { encryptTo } from '@bicycle-codes/keys'
-
-const encrypted = await encryptTo.asString({
-    content: 'hello public key',
-    publicKey: await keys.getPublicEncryptKey()
-})
-
-t.equal(typeof encrypted.content, 'string', 'content is a string')
-t.equal(typeof encrypted.key, 'string', 'key is a string')
 ```
 
 ### Decrypt a message
 ```ts
 class Keys {
-  async decrypt (msg:{
-      content:string|Uint8Array;
-      key:string|Uint8Array;
-  }):Promise<Uint8Array>
+  async decrypt (
+    msg:string|Uint8Array|ArrayBuffer,
+    keysize?:SymmKeyLength
+  ):Promise<Uint8Array>
 }
 ```
 
@@ -552,12 +552,12 @@ Decrypt a message, and stringify the result.
 
 ```ts
 {
-    asString: async (msg:EncryptedMessage):Promise<string>
+  async function asString (msg:EncryptedMessage):Promise<string>
 }
 ```
 
 ```js
-const decrypted = await keys.decryptToString(encryptedMsg)
+await keys.decrypt.asString(encryptedString)
 // => 'hello encryption'
 ```
 
@@ -571,7 +571,7 @@ Expose several AES functions with nice defaults.
 ```js
 import { AES } from '@bicycle-codes/keys'
 
-const key = await AES.create(/* ... */)
+const key = await AES.create(/* ... optional arguments ... */)
 ```
 
 ### `create`
@@ -593,12 +593,11 @@ const aesKey = await AES.create()
 Get the AES key as a `Uint8Array`.
 
 ```ts
-{
-  async export (key:CryptoKey):Promise<Uint8Array>
-}
+  async function export (key:CryptoKey):Promise<Uint8Array>
 ```
 
 ```js
+import { AES } from '@bicycle-codes/keys'
 const exported = await AES.export(aesKey)
 ```
 
@@ -606,14 +605,21 @@ const exported = await AES.export(aesKey)
 Get the key as a string, `base64` encoded.
 
 ```ts
-async function exportAsString (key:CryptoKey):Promise<string>
+async function asString (
+  key:CryptoKey,
+  format?:SupportedEncoding
+):Promise<string>
 ```
 
 ```js
-const exported = await AES.exportAsString(aesKey)
+import { AES } from '@bicycle-codes/keys'
+const exported = await AES.export.asString(aesKey)
 ```
 
-### `encrypt`
+### `AES.encrypt`
+
+Take a `Uint8Array`, return an encrypted `Uint8Array`.
+
 ```ts
 async function encrypt (
   data:Uint8Array,
@@ -629,7 +635,7 @@ import { fromString } from 'uint8arrays'
 const encryptedText = await AES.encrypt(fromString('hello AES'), aesKey)
 ```
 
-### `decrypt`
+### `AES.decrypt`
 ```ts
 async function decrypt (
   encryptedData:Uint8Array|string,

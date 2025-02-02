@@ -24,7 +24,6 @@ import {
     type Msg,
     type CharSize,
     type SymmKey,
-    type EncryptedMessage
 } from './types'
 import {
     publicKeyToDid,
@@ -41,7 +40,8 @@ import {
     normalizeBase64ToBuf,
     base64ToArrBuf,
     sha256,
-    getPublicKeyAsUint8Array
+    getPublicKeyAsUint8Array,
+    normalizeToBuf
 } from './util'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
@@ -118,6 +118,10 @@ export class Keys {
         return this._encryptKey.publicKey
     }
 
+    get deviceName ():Promise<string> {
+        return Keys.deviceName(this.DID)
+    }
+
     /**
      * Get the public encryption key as a string.
      *
@@ -166,7 +170,7 @@ export class Keys {
     /**
      * Create a new `Keys` instance.
      *
-     * @returns {Keys}
+     * @returns {Promise<Keys>}
      */
     static async create ():Promise<Keys> {
         const encryptionKeypair = await makeRSAKeypair(
@@ -207,7 +211,7 @@ export class Keys {
     /**
      * Return a 32-character, DNS friendly hash of this public signing key.
      *
-     * @returns {string}
+     * @returns {Promise<string>}
      */
     async getDeviceName ():Promise<string> {
         return Keys.deviceName(this.DID)
@@ -264,6 +268,32 @@ export class Keys {
         return keys
     }
 
+    decrypt = Object.assign(
+        /**
+         * Expect the given cipher content to be the format returned by
+         * encryptTo`. That is, encrypted AES key + `iv` + encrypted content.
+         */
+        async (
+            msg:string|Uint8Array|ArrayBuffer,
+            keysize?:SymmKeyLength
+        ):Promise<Uint8Array> => {
+            const length = keysize || DEFAULT_SYMM_LENGTH
+            const cipherText = normalizeToBuf(msg, base64ToArrBuf)
+            const key = cipherText.slice(0, length)
+            const data = cipherText.slice(length)
+            const decryptedKey = await this.decryptKey(key)
+            const decryptedContent = await AES.decrypt(data, decryptedKey)
+            return decryptedContent
+        },
+
+        {
+            asString: async (msg:string, keysize?:SymmKeyLength):Promise<string> => {
+                const dec = await this.decrypt(msg, keysize)
+                return toString(dec)
+            }
+        }
+    )
+
     sign = Object.assign(
         /**
          * Sign the message, and return the signature as a `Uint8Array`.
@@ -294,71 +324,12 @@ export class Keys {
         }
     )
 
-    decrypt = Object.assign(
-        /**
-         * Decrypt the given message. Use this RSA key to decrypt the given
-         * encrypted AES key. Message must have { content, key }
-         * properties, where `key` is the encrypted key.
-         *
-         * @param {EncryptedMessage} msg The message to decrypt.
-         * @returns {Uint8Array}
-         */
-        async (msg:EncryptedMessage):Promise<Uint8Array> => {
-            const decryptedKey = await this.decryptKey(msg.key)
-            const decryptedContent = await AES.decrypt(msg.content, decryptedKey)
-            return decryptedContent
-        },
-
-        {
-            /**
-             * Decrypt the given message, return the result as a string.
-             * @returns {string}
-             */
-            asString: async (
-                msg:EncryptedMessage,
-                format?:SupportedEncodings
-            ):Promise<string> => {
-                const decryptedKey = await this.decryptKey(msg.key)
-                const decryptedContent = await AES.decrypt(
-                    msg.content,
-                    decryptedKey
-                )
-
-                return toString(decryptedContent, format)
-            },
-
-            /**
-             * Handle the string format we're using for cipher text.
-             *
-             * @param {string} msg The cipher text, as `base64` string
-             * @param {SymmKeyLength} keysize The length of the symmetric key.
-             *   Defaults to `256`.
-             * @returns {Promise<string>} The decrypted text
-             */
-            fromString: async (
-                msg:string,
-                keysize?:SymmKeyLength
-            ):Promise<string> => {
-                const length = keysize || DEFAULT_SYMM_LENGTH
-                const cipherText = normalizeBase64ToBuf(msg)
-                const key = cipherText.slice(0, length)
-                const data = cipherText.slice(length)
-                const decrypted = await this.decrypt({
-                    content: new Uint8Array(data),
-                    key: new Uint8Array(key)
-                })
-
-                return toString(decrypted)
-            }
-        }
-    )
-
     /**
      * Decrypt the given encrypted AES key.
      * Return the key as `Uint8Array`.
      */
     decryptKey = Object.assign(
-        async (key:string|Uint8Array):Promise<Uint8Array> => {
+        async (key:string|Uint8Array|ArrayBuffer):Promise<Uint8Array> => {
             const decrypted = await rsaOperations.decrypt(
                 key,
                 this.privateEncryptKey
@@ -451,15 +422,15 @@ export async function verify (
 
 /**
  * Encrypt the given message to the given public key. If an AES key is not
- * provided, one will be created. This uses an AES key to encrypt the given
+ * provided, one will be created. Use an AES key to encrypt the given
  * content, then we encrypt the AES key to the given public key.
  *
  * @param {{ content, publicKey }} opts The content to encrypt and
  * public key to encrypt to
  * @param {SymmKey|Uint8Array|string} [aesKey] An optional AES key to encrypt
  * to the given public key
- *
- * @returns {Promise<{ content, key }>} The encrypted content and encrypted key
+ * @returns {Promise<ArrayBuffer>} The encrypted AES key, concattenated with
+ *   the encrypted content.
  */
 export async function encryptTo (
     opts:{
@@ -467,10 +438,7 @@ export async function encryptTo (
         publicKey:CryptoKey|string;
     },
     aesKey?:SymmKey|Uint8Array|string,
-):Promise<{
-    content:Uint8Array;
-    key:Uint8Array;
-}> {
+):Promise<ArrayBuffer> {
     const { content, publicKey } = opts
     const key = aesKey || await AES.create()
     const encryptedContent = await AES.encrypt(
@@ -479,7 +447,7 @@ export async function encryptTo (
     )
     const encryptedKey = await encryptKeyTo({ key, publicKey })
 
-    return { content: encryptedContent, key: encryptedKey }
+    return joinBufs(encryptedKey, encryptedContent)
 }
 
 /**
@@ -529,9 +497,9 @@ export const AES = {
         },
 
         {
-            asString: async (key:CryptoKey) => {
+            asString: async (key:CryptoKey, format?:SupportedEncodings) => {
                 const raw = await AES.export(key)
-                return toBase64(raw)
+                return format ? toString(raw, format) : toBase64(raw)
             }
         }
     ),
@@ -547,35 +515,32 @@ export const AES = {
 
     encrypt,
 
-    decrypt: Object.assign(
-        async function decrypt (
-            encryptedData:Uint8Array|string,
-            cryptoKey:CryptoKey|Uint8Array|ArrayBuffer,
-            iv?:Uint8Array
-        ):Promise<Uint8Array> {
-            const key = (isCryptoKey(cryptoKey) ?
-                cryptoKey :
-                await importAesKey(cryptoKey))
+    async decrypt (
+        encryptedData:Uint8Array|string|ArrayBuffer,
+        cryptoKey:CryptoKey|Uint8Array|ArrayBuffer,
+        iv?:Uint8Array
+    ):Promise<Uint8Array> {
+        const key = (isCryptoKey(cryptoKey) ?
+            cryptoKey :
+            await importAesKey(cryptoKey))
 
-            // the `iv` is prefixed to the cipher text
-            const decrypted = (iv ?
-                await webcrypto.subtle.decrypt(
-                    {
-                        name: AES_GCM,
-                        iv
-                    },
-                    key,
-                    (typeof encryptedData === 'string' ?
-                        fromString(encryptedData) :
-                        encryptedData)
-                ) :
+        // the `iv` is prefixed to the cipher text
+        const decrypted = (iv ?
+            await webcrypto.subtle.decrypt(
+                {
+                    name: AES_GCM,
+                    iv
+                },
+                key,
+                (typeof encryptedData === 'string' ?
+                    fromString(encryptedData) :
+                    encryptedData)
+            ) :
 
-                await decryptBytes(encryptedData, key))
+            await decryptBytes(encryptedData, key))
 
-            return new Uint8Array(decrypted)
-        },
-
-    ),
+        return new Uint8Array(decrypted)
+    },
 }
 
 export async function encryptKeyTo ({ key, publicKey }:{

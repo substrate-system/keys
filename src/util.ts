@@ -172,14 +172,14 @@ export const rsaOperations = {
      * Use RSA to decrypt the given data.
      */
     decrypt: async function rsaDecrypt (
-        _data:Uint8Array|string,
-        privateKey:CryptoKey|Uint8Array
+        _data:Uint8Array|string|ArrayBuffer,
+        privateKey:CryptoKey|Uint8Array|ArrayBuffer
     ):Promise<Uint8Array> {
         const key = isCryptoKey(privateKey) ?
             privateKey :
             await importRsaKey(privateKey, ['decrypt'])
 
-        let data:Uint8Array
+        let data:Uint8Array|ArrayBuffer
         if (typeof _data === 'string') {
             data = fromString(_data, 'base64pad')
         } else {
@@ -312,7 +312,7 @@ export function normalizeUnicodeToBuf (msg:Msg, charSize:CharSize) {
 }
 
 export function importRsaKey (
-    key:Uint8Array,
+    key:Uint8Array|ArrayBuffer,
     keyUsages:KeyUsage[]
 ):Promise<CryptoKey> {
     return webcrypto.subtle.importKey(
