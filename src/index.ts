@@ -44,7 +44,7 @@ import {
     getPublicKeyAsUint8Array
 } from './util'
 
-export { publicKeyToDid, getPublicKeyAsArrayBuffer, SymmKeyLength }
+export { publicKeyToDid, getPublicKeyAsArrayBuffer }
 
 export type { DID }
 
@@ -468,30 +468,10 @@ encryptTo.asString = async function (
     )
 
     const encryptedKey = await encryptKeyTo({ key, publicKey })
-    let pubKeyBuf:ArrayBuffer
-    if (typeof publicKey === 'string') {
-        pubKeyBuf = fromString(publicKey).buffer
-    } else {
-        pubKeyBuf = await getPublicKeyAsArrayBuffer(publicKey)
-    }
-    const joined = joinBufs(pubKeyBuf, encryptedContent)
+    const joined = joinBufs(encryptedKey, encryptedContent)
 
     return toString(new Uint8Array(joined), 'base64pad')
 }
-
-// /**
-//  * Encrypt a message, return everything as strings.
-//  */
-// encryptTo.asString = async function (opts:{
-//     content:string|Uint8Array;
-//     publicKey:CryptoKey|string;
-// }, aesKey?:SymmKey|Uint8Array|string):Promise<{ content:string; key:string }> {
-//     const encrypted = await encryptTo(opts, aesKey)
-//     return {
-//         content: toBase64(encrypted.content),
-//         key: toBase64(encrypted.key)
-//     }
-// }
 
 export const AES = {
     create (opts:{ alg:string, length:number } = {
@@ -557,24 +537,6 @@ export const AES = {
             return new Uint8Array(decrypted)
         },
 
-        {
-            /**
-             * Handle the case of encrypted AES key concatenated with
-             * iv and public key.
-             * @param encryptedData The cipher text
-             * @param {Uint8Array} [iv] The IV
-             */
-            fromString: async function (
-                encryptedData:string,
-                iv?:Uint8Array,
-                keysize?:SymmKeyLength
-            ) {
-                const length = DEFAULT_SYMM_LENGTH
-                const key = (isCryptoKey(cryptoKey) ?
-                    cryptoKey :
-                    await importAesKey(cryptoKey))
-            }
-        }
     ),
 }
 

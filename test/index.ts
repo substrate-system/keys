@@ -1,6 +1,6 @@
 import { get } from 'idb-keyval'
 import { test } from '@substrate-system/tapzero'
-import { fromString, toString } from 'uint8arrays'
+import { fromString, toString, equals } from 'uint8arrays'
 import {
     Keys,
     encryptKeyTo,
@@ -100,6 +100,16 @@ test('encrypt a key to a keys instance', async t => {
     })
 
     t.ok(encrypted instanceof Uint8Array, 'should return a Uint8Array')
+
+    const otherKey = await AES.create()
+    const otherArr = await AES.export(otherKey)
+    const otherEncrypted = await encryptKeyTo({
+        key: otherKey,
+        publicKey: keys.publicEncryptKey
+    })
+
+    const otherDecrypted = await keys.decryptKey(otherEncrypted)
+    t.ok(equals(otherArr, otherDecrypted), 'should decrypt to the same value')
 })
 
 test('get a serializable object from keys', async t => {
@@ -172,8 +182,7 @@ test('encrypt some content to a public key, as string', async t => {
         publicKey: await keys.getPublicEncryptKey()
     })
 
-    t.equal(typeof encrypted.content, 'string', 'content is a string')
-    t.equal(typeof encrypted.key, 'string', 'key is a string')
+    t.equal(typeof encrypted, 'string', 'returns a string')
 })
 
 test('decrypt a key', async t => {
@@ -258,16 +267,16 @@ test('encrypt content to a public key', async t => {
         'should return the key as a Uint8Array')
 })
 
-test('encrypt arbitrary content, return a string', async t => {
-    const encrypted = await encryptTo.asString({
-        content: 'hello world',
-        publicKey: bob.publicEncryptKey
-    })
+// test('encrypt arbitrary content, return a string', async t => {
+//     const encrypted = await encryptTo.asString({
+//         content: 'hello world',
+//         publicKey: bob.publicEncryptKey
+//     })
 
-    t.equal(typeof encrypted.content, 'string',
-        'should return content as string')
-    t.equal(typeof encrypted.key, 'string', 'should return key as string')
-})
+//     t.equal(typeof encrypted.content, 'string',
+//         'should return content as string')
+//     t.equal(typeof encrypted.key, 'string', 'should return key as string')
+// })
 
 test('Bob can decrypt the message addressed to Bob', async t => {
     const decrypted = await bob.decrypt(encryptedMsg)
