@@ -44,7 +44,7 @@ import {
     getPublicKeyAsUint8Array
 } from './util'
 
-export { publicKeyToDid, getPublicKeyAsArrayBuffer }
+export { publicKeyToDid, getPublicKeyAsArrayBuffer, SymmKeyLength }
 
 export type { DID }
 
@@ -467,6 +467,7 @@ encryptTo.asString = async function (
         'arraybuffer'
     )
 
+    const encryptedKey = await encryptKeyTo({ key, publicKey })
     let pubKeyBuf:ArrayBuffer
     if (typeof publicKey === 'string') {
         pubKeyBuf = fromString(publicKey).buffer
@@ -528,30 +529,69 @@ export const AES = {
 
     encrypt,
 
-    async decrypt (
-        encryptedData:Uint8Array|string,
-        cryptoKey:CryptoKey|Uint8Array|ArrayBuffer,
-        iv?:Uint8Array
-    ):Promise<Uint8Array> {
-        const key = isCryptoKey(cryptoKey) ? cryptoKey : await importAesKey(cryptoKey)
-        // the `iv` is prefixed to the cipher text
-        const decrypted = (iv ?
-            await webcrypto.subtle.decrypt(
-                {
-                    name: AES_GCM,
-                    iv
-                },
-                key,
-                (typeof encryptedData === 'string' ?
-                    fromString(encryptedData) :
-                    encryptedData)
-            ) :
+    decrypt: Object.assign(
+        async function decrypt (
+            encryptedData:Uint8Array|string,
+            cryptoKey:CryptoKey|Uint8Array|ArrayBuffer,
+            iv?:Uint8Array
+        ):Promise<Uint8Array> {
+            const key = (isCryptoKey(cryptoKey) ?
+                cryptoKey :
+                await importAesKey(cryptoKey))
 
-            await decryptBytes(encryptedData, key))
+            // the `iv` is prefixed to the cipher text
+            const decrypted = (iv ?
+                await webcrypto.subtle.decrypt(
+                    {
+                        name: AES_GCM,
+                        iv
+                    },
+                    key,
+                    (typeof encryptedData === 'string' ?
+                        fromString(encryptedData) :
+                        encryptedData)
+                ) :
 
-        return new Uint8Array(decrypted)
-    }
+                await decryptBytes(encryptedData, key))
+
+            return new Uint8Array(decrypted)
+        },
+
+        {
+            /**
+             * Handle the case of encrypted AES key concatenated with
+             * iv and public key.
+             * @param encryptedData The cipher text
+             * @param {Uint8Array} [iv] The IV
+             */
+            fromString: async function (
+                encryptedData:string,
+                iv?:Uint8Array,
+                keysize?:SymmKeyLength
+            ) {
+                const length = DEFAULT_SYMM_LENGTH
+                const key = (isCryptoKey(cryptoKey) ?
+                    cryptoKey :
+                    await importAesKey(cryptoKey))
+            }
+        }
+    ),
 }
+
+export async function encryptKeyTo ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey:CryptoKey|Uint8Array|string;
+}, format:'arraybuffer'):Promise<ArrayBuffer>
+
+export async function encryptKeyTo ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey:CryptoKey|Uint8Array|string;
+}, format:'uint8array'):Promise<Uint8Array>
+
+export async function encryptKeyTo ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey:CryptoKey|Uint8Array|string;
+}, format?:undefined):Promise<Uint8Array>
 
 /**
  * Encrypt the given content to the given public key. This is RSA encryption,
@@ -564,7 +604,7 @@ export const AES = {
 export async function encryptKeyTo ({ key, publicKey }:{
     key:string|Uint8Array|CryptoKey;
     publicKey:CryptoKey|Uint8Array|string;
-}):Promise<Uint8Array> {
+}, format?:'uint8array'|'arraybuffer'):Promise<Uint8Array|ArrayBuffer> {
     let _key:Uint8Array|string
     if (key instanceof CryptoKey) {
         _key = await AES.export(key)
@@ -573,6 +613,7 @@ export async function encryptKeyTo ({ key, publicKey }:{
     }
 
     const buf = await rsaOperations.encrypt(_key, publicKey)
+    if (format && format === 'arraybuffer') return buf
     return new Uint8Array(buf)
 }
 
