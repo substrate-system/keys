@@ -434,10 +434,13 @@ export async function verify (
  *
  * @returns {Promise<{content, key}>} The encrypted content and encrypted key
  */
-export async function encryptTo (opts:{
-    content:string|Uint8Array;
-    publicKey:CryptoKey|string;
-}, aesKey?:SymmKey|Uint8Array|string):Promise<{
+export async function encryptTo (
+    opts:{
+        content:string|Uint8Array;
+        publicKey:CryptoKey|string;
+    },
+    aesKey?:SymmKey|Uint8Array|string,
+):Promise<{
     content:Uint8Array;
     key:Uint8Array;
 }> {
@@ -445,26 +448,49 @@ export async function encryptTo (opts:{
     const key = aesKey || await AES.create()
     const encryptedContent = await AES.encrypt(
         typeof content === 'string' ? fromString(content) : content,
-        typeof key === 'string' ? await AES.import(key) : key
+        typeof key === 'string' ? await AES.import(key) : key,
     )
     const encryptedKey = await encryptKeyTo({ key, publicKey })
 
     return { content: encryptedContent, key: encryptedKey }
 }
 
-/**
- * Encrypt a message, return everything as strings.
- */
-encryptTo.asString = async function (opts:{
-    content:string|Uint8Array;
-    publicKey:CryptoKey|string;
-}, aesKey?:SymmKey|Uint8Array|string):Promise<{ content:string; key:string }> {
-    const encrypted = await encryptTo(opts, aesKey)
-    return {
-        content: toBase64(encrypted.content),
-        key: toBase64(encrypted.key)
+encryptTo.asString = async function (
+    opts:{ content:string|Uint8Array; publicKey:CryptoKey|string },
+    aesKey?:SymmKey|Uint8Array|string
+):Promise<string> {
+    const { content, publicKey } = opts
+    const key = aesKey || await AES.create()
+    const encryptedContent = await AES.encrypt(
+        typeof content === 'string' ? fromString(content) : content,
+        typeof key === 'string' ? await AES.import(key) : key,
+        'arraybuffer'
+    )
+
+    let pubKeyBuf:ArrayBuffer
+    if (typeof publicKey === 'string') {
+        pubKeyBuf = fromString(publicKey).buffer
+    } else {
+        pubKeyBuf = await getPublicKeyAsArrayBuffer(publicKey)
     }
+    const joined = joinBufs(pubKeyBuf, encryptedContent)
+
+    return toString(new Uint8Array(joined), 'base64pad')
 }
+
+// /**
+//  * Encrypt a message, return everything as strings.
+//  */
+// encryptTo.asString = async function (opts:{
+//     content:string|Uint8Array;
+//     publicKey:CryptoKey|string;
+// }, aesKey?:SymmKey|Uint8Array|string):Promise<{ content:string; key:string }> {
+//     const encrypted = await encryptTo(opts, aesKey)
+//     return {
+//         content: toBase64(encrypted.content),
+//         key: toBase64(encrypted.key)
+//     }
+// }
 
 export const AES = {
     create (opts:{ alg:string, length:number } = {
@@ -500,24 +526,7 @@ export const AES = {
         return toBase64(raw)
     },
 
-    async encrypt (
-        data:Uint8Array,
-        cryptoKey:CryptoKey|Uint8Array,
-        iv?:Uint8Array
-    ):Promise<Uint8Array> {
-        const key = (isCryptoKey(cryptoKey) ?
-            cryptoKey :
-            await importAesKey(cryptoKey)
-        )
-
-        // prefix the `iv` into the cipher text
-        const encrypted = (iv ?
-            await webcrypto.subtle.encrypt({ name: AES_GCM, iv }, key, data) :
-            await encryptBytes(data, key)
-        )
-
-        return new Uint8Array(encrypted)
-    },
+    encrypt,
 
     async decrypt (
         encryptedData:Uint8Array|string,
@@ -639,4 +648,47 @@ async function decryptBytes (
     }, importedKey, cipherBytes)
 
     return msgBuff
+}
+
+async function encrypt (
+    data:Uint8Array,
+    cryptoKey:CryptoKey|Uint8Array,
+    format?:undefined,
+    iv?:Uint8Array
+):Promise<Uint8Array>
+
+async function encrypt (
+    data:Uint8Array,
+    cryptoKey:CryptoKey|Uint8Array,
+    format:'uint8array',
+    iv?:Uint8Array
+):Promise<Uint8Array>
+
+async function encrypt (
+    data:Uint8Array,
+    cryptoKey:CryptoKey|Uint8Array,
+    format:'arraybuffer',
+    iv?:Uint8Array
+):Promise<ArrayBuffer>
+
+async function encrypt (
+    data:Uint8Array,
+    cryptoKey:CryptoKey|Uint8Array,
+    format?:'uint8array'|'arraybuffer',
+    iv?:Uint8Array
+):Promise<Uint8Array|ArrayBuffer> {
+    const key = (isCryptoKey(cryptoKey) ?
+        cryptoKey :
+        await importAesKey(cryptoKey)
+    )
+
+    // prefix the `iv` into the cipher text
+    const encrypted = (iv ?
+        await webcrypto.subtle.encrypt({ name: AES_GCM, iv }, key, data) :
+        await encryptBytes(data, key)
+    )
+
+    if (format && format === 'arraybuffer') return encrypted
+
+    return new Uint8Array(encrypted)
 }

@@ -219,7 +219,12 @@ test('export an AES key as a string', async t => {
 let encryptedText:Uint8Array
 test('AES encrypt', async t => {
     encryptedText = await AES.encrypt(fromString('hello AES'), aesKey)
-    t.ok(encrypted instanceof Uint8Array, 'should return a new Uint8Array')
+    t.ok(encryptedText instanceof Uint8Array, 'should return a new Uint8Array')
+})
+
+test('AES encrypt with format', async t => {
+    const encrypted = await AES.encrypt(fromString('hello AES'), aesKey, 'arraybuffer')
+    t.ok(encrypted instanceof ArrayBuffer, 'should return an array buffer')
 })
 
 test('AES decrypt', async t => {
