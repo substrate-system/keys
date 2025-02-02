@@ -9,7 +9,7 @@ import {
     verify,
     publicKeyToDid,
     getPublicKeyAsUint8Array
-} from '../src/index.js'
+} from '../dist/index.js'
 import type { EncryptedMessage } from '../src/types.js'
 
 let keys:Keys
