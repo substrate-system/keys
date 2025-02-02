@@ -61,16 +61,16 @@ private key.
   * [Get a signature as a string](#get-a-signature-as-a-string)
   * [Verify a signature](#verify-a-signature)
   * [Encrypt a key](#encrypt-a-key)
-  * [Encrypt some arbitrary data](#encrypt-some-arbitrary-data)
-  * [encrypt some content, return strings](#encrypt-some-content-return-strings)
+  * [Asymmetrically encrypt some arbitrary data](#asymmetrically-encrypt-some-arbitrary-data)
+  * [Asymmetrically encrypt a string, return a new string](#asymmetrically-encrypt-a-string-return-a-new-string)
   * [Decrypt a message](#decrypt-a-message)
   * [`.decrypt.asString`](#decryptasstring)
 - [AES](#aes)
   * [`create`](#create)
   * [`export`](#export)
   * [`exportAsString`](#exportasstring)
-  * [`encrypt`](#encrypt)
-  * [`decrypt`](#decrypt)
+  * [`AES.encrypt`](#aesencrypt)
+  * [`AES.decrypt`](#aesdecrypt)
 
 <!-- tocstop -->
 
