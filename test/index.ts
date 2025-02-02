@@ -26,6 +26,35 @@ test('create a new Keys', async t => {
     t.ok(keys.DID, 'should have a DID')
 })
 
+test('`encryptTo.asString` and `keys.decrypt.fromString`', async t => {
+    const pubKey = keys.publicEncryptKey
+    const message = 'hello encryption formats'
+    const cipherText = await encryptTo.asString({
+        content: message,
+        publicKey: pubKey
+    })
+
+    t.equal(typeof cipherText, 'string', 'should return a string')
+    const plainText = await keys.decrypt.fromString(cipherText)
+    t.equal(plainText, message, 'should decrypt the message to the original')
+})
+
+test('An example use of to/from strings', async t => {
+    const pubKey = await keys.getPublicEncryptKey()
+    const msg = { type: 'test', content: 'hello' }
+    const cipherText = await encryptTo.asString({
+        content: JSON.stringify(msg),
+        // pass in a string public key
+        publicKey: pubKey
+    })
+
+    t.equal(typeof cipherText, 'string', 'should return a string')
+
+    const text = await keys.decrypt.fromString(cipherText)
+    const data = JSON.parse(text)
+    t.equal(data.content, 'hello', 'should get the original object')
+})
+
 test('cache the keys instance', async t => {
     const newKeys = await Keys.load()
     t.equal(newKeys, keys, 'should return the same isntance of Keys')
@@ -267,23 +296,13 @@ test('encrypt content to a public key', async t => {
         'should return the key as a Uint8Array')
 })
 
-// test('encrypt arbitrary content, return a string', async t => {
-//     const encrypted = await encryptTo.asString({
-//         content: 'hello world',
-//         publicKey: bob.publicEncryptKey
-//     })
-
-//     t.equal(typeof encrypted.content, 'string',
-//         'should return content as string')
-//     t.equal(typeof encrypted.key, 'string', 'should return key as string')
-// })
-
 test('Bob can decrypt the message addressed to Bob', async t => {
     const decrypted = await bob.decrypt(encryptedMsg)
     t.equal(toString(decrypted), 'Hello bob', 'should decrypt the message')
 })
 
-test('keys.decrypt.asString', async t => {
+test('keys.decrypt.asString -- this uses the older format message, ' +
+    'an object with content & key fields', async t => {
     const decrypted = await bob.decrypt.asString(encryptedMsg)
     t.equal(decrypted, 'Hello bob', 'should decrypt the message to a string')
 })

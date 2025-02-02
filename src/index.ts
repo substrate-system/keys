@@ -119,8 +119,10 @@ export class Keys {
     }
 
     /**
-     * Get the public encryptioawait n key as a string.
+     * Get the public encryption key as a string.
      *
+     * @param {SupportedEncodings} [format] Optional string format for
+     * `uint8arrays`. Defaults to base64.
      * @returns {string} Return a string b/c mostly would use this for
      * serializing the public encryption key.
      */
@@ -294,8 +296,9 @@ export class Keys {
 
     decrypt = Object.assign(
         /**
-         * Decrypt the given message. Message must have { content, key }
-         * properties.
+         * Decrypt the given message. Use this RSA key to decrypt the given
+         * encrypted AES key. Message must have { content, key }
+         * properties, where `key` is the encrypted key.
          *
          * @param {EncryptedMessage} msg The message to decrypt.
          * @returns {Uint8Array}
@@ -322,6 +325,30 @@ export class Keys {
                 )
 
                 return toString(decryptedContent, format)
+            },
+
+            /**
+             * Handle the string format we're using for cipher text.
+             *
+             * @param {string} msg The cipher text, as `base64` string
+             * @param {SymmKeyLength} keysize The length of the symmetric key.
+             *   Defaults to `256`.
+             * @returns {Promise<string>} The decrypted text
+             */
+            fromString: async (
+                msg:string,
+                keysize?:SymmKeyLength
+            ):Promise<string> => {
+                const length = keysize || DEFAULT_SYMM_LENGTH
+                const cipherText = normalizeBase64ToBuf(msg)
+                const key = cipherText.slice(0, length)
+                const data = cipherText.slice(length)
+                const decrypted = await this.decrypt({
+                    content: new Uint8Array(data),
+                    key: new Uint8Array(key)
+                })
+
+                return toString(decrypted)
             }
         }
     )
@@ -432,7 +459,7 @@ export async function verify (
  * @param {SymmKey|Uint8Array|string} [aesKey] An optional AES key to encrypt
  * to the given public key
  *
- * @returns {Promise<{content, key}>} The encrypted content and encrypted key
+ * @returns {Promise<{ content, key }>} The encrypted content and encrypted key
  */
 export async function encryptTo (
     opts:{
@@ -455,6 +482,17 @@ export async function encryptTo (
     return { content: encryptedContent, key: encryptedKey }
 }
 
+/**
+ * Encrypt the given AES key to the given public key. Return the encrypted AES
+ * key concattenated with the cipher text.
+ *
+ * @param { content, publicKey } opts The content to encrypt and key to
+ *   encrypt to.
+ * @param {SymmKey|Uint8Array|string} [aesKey] Optional -- the AES key. One will
+ *   be created if not passed in.
+ * @returns {Promise<string>} The encrypted AES key concattenated with the
+ *   cipher text.
+ */
 encryptTo.asString = async function (
     opts:{ content:string|Uint8Array; publicKey:CryptoKey|string },
     aesKey?:SymmKey|Uint8Array|string

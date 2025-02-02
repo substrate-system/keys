@@ -489,7 +489,36 @@ const encrypted = await encryptTo({
 // }
 ```
 
+### asymmetricly encrypt a string, return a new string
+
+Encrypt the given string, and return a new string that is the (encrypted) AES
+key concattenated with the `iv` and cipher text. The
+corresponding method `keys.decrypt.fromString` will know how to parse and
+decrypt the resulting text.
+
+Use the functions `encryptTo.asString` and `keys.decrypt.fromString`.
+
+```js
+import { Keys, encryptTo } from '@bicycle-codes/keys'
+
+const keys = await Keys.create()
+const pubKey = await keys.getPublicEncryptKey()
+const msg = { type: 'test', content: 'hello' }
+const cipherText = await encryptTo.asString({
+    content: JSON.stringify(msg),
+    // pass in a string public key or crypto key or Uint8Array
+    publicKey: pubKey
+})  // => string
+
+const text = await keys.decrypt.fromString(cipherText)
+const data = JSON.parse(text)
+// => { type: 'test', content: 'hello' }
+```
+
 ### encrypt some content, return strings
+
+This will return an object like `{ content:string, key:string }`, where
+`key` is the AES key, encrypted to the given public key.
 
 ```js
 import { encryptTo } from '@bicycle-codes/keys'
