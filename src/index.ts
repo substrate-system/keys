@@ -71,8 +71,8 @@ export type SerializedKeys = {
  * Create an instance with `Keys.create` b/c async.
  */
 export class Keys {
-    private encryptKey:CryptoKeyPair
-    private signKey:CryptoKeyPair
+    private _encryptKey:CryptoKeyPair
+    private _signKey:CryptoKeyPair
     static _instance  // a cache for indexedDB
     persisted:boolean
     ENCRYPTION_KEY_NAME:string = DEFAULT_ENC_NAME
@@ -81,8 +81,8 @@ export class Keys {
 
     constructor (opts:ConstructorOpts) {
         const { keys } = opts
-        this.encryptKey = keys.encrypt
-        this.signKey = keys.sign
+        this._encryptKey = keys.encrypt
+        this._signKey = keys.sign
         this.DID = opts.did
         this.persisted = opts.persisted
         Keys._instance = this
@@ -103,19 +103,19 @@ export class Keys {
     }
 
     get publicSignKey ():CryptoKey {
-        return this.signKey.publicKey
+        return this._signKey.publicKey
     }
 
     get privateSignKey ():CryptoKey {
-        return this.signKey.privateKey
+        return this._signKey.privateKey
     }
 
     get privateEncryptKey ():CryptoKey {
-        return this.encryptKey.privateKey
+        return this._encryptKey.privateKey
     }
 
     get publicEncryptKey ():CryptoKey {
-        return this.encryptKey.publicKey
+        return this._encryptKey.publicKey
     }
 
     /**
@@ -126,7 +126,7 @@ export class Keys {
      */
     getPublicEncryptKey = Object.assign(
         async (format?:SupportedEncodings):Promise<string> => {
-            const { publicKey } = this.encryptKey
+            const { publicKey } = this._encryptKey
             const spki = await webcrypto.subtle.exportKey(
                 'spki',
                 publicKey
@@ -139,7 +139,7 @@ export class Keys {
 
         {
             uint8Array: async ():Promise<Uint8Array> => {
-                const { publicKey } = this.encryptKey
+                const { publicKey } = this._encryptKey
                 const arr = await getPublicKeyAsUint8Array(publicKey)
                 return arr
             }
@@ -196,8 +196,8 @@ export class Keys {
      */
     async persist ():Promise<void> {
         await Promise.all([
-            set(this.ENCRYPTION_KEY_NAME, this.encryptKey),
-            set(this.SIGNING_KEY_NAME, this.signKey)
+            set(this.ENCRYPTION_KEY_NAME, this._encryptKey),
+            set(this.SIGNING_KEY_NAME, this._signKey)
         ])
         this.persisted = true
     }
@@ -267,7 +267,7 @@ export class Keys {
          * Sign the message, and return the signature as a `Uint8Array`.
          */
         async (msg:Msg, charsize?:CharSize):Promise<Uint8Array> => {
-            const key = this.signKey
+            const key = this._signKey
             const sig = await rsaOperations.sign(
                 msg,
                 key.privateKey,
