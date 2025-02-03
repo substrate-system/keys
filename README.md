@@ -108,9 +108,16 @@ console.assert(keys.DID === keysAgain.DID)  // true
 
 This is the DID string for the signing key for this instance.
 
-#### `keys.getDeviceName`
+#### `keys.getDeviceName` / `keys.deviceName`
 
-Return the 32 character, DNS fiendly hash of the signing public key.
+Return the 32 character, DNS friendly hash of the signing public key.
+
+```js
+const name = await keys.getDeviceName()
+
+// a promise is exposed as property `deviceName`
+const name = await keys.deviceName
+```
 
 #### `keys.persisted`
 
