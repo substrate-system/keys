@@ -27,27 +27,24 @@ encrypting. We are **using RSA keys only** right now, because we are
 
 See also, [the API docs generated from typescript](https://bicycle-codes.github.io/keys/).
 
-## Asymmetric Encryption
+## install
 
-Asymmetric encryption means using an AES key to encrypt the content, then
-encrypting the AES key to a public RSA key. If you encrypt something to Bob's
-public key, that means we create a new buffer of encrypted AES key +
-encrypted content, where the encrypted AES key can only be decrypted by Bob's
-private key.
-
+```sh
+npm i -S @bicycle-codes/keys
+```
 
 <details><summary><h2>Contents</h2></summary>
 
 <!-- toc -->
 
-- [install](#install)
+- [Asymmetric Encryption](#asymmetric-encryption)
 - [get started](#get-started)
   * [Create a keypair](#create-a-keypair)
   * [some notes about the `keys` instance](#some-notes-about-the-keys-instance)
   * [sign and verify something](#sign-and-verify-something)
   * [encrypt something](#encrypt-something)
   * [decrypt something](#decrypt-something)
-- [API](#api)
+- [Modules](#modules)
   * [`exports`](#exports)
   * [ESM](#esm)
   * [Common JS](#common-js)
@@ -76,11 +73,15 @@ private key.
 
 </details>
 
-## install
 
-```sh
-npm i -S @bicycle-codes/keys
-```
+## Asymmetric Encryption
+
+Asymmetric encryption means using an AES key to encrypt the content, then
+encrypting the AES key to a public RSA key. If you encrypt something to Bob's
+public key, that means we create a new buffer of encrypted AES key +
+encrypted content, where the encrypted AES key can only be decrypted by Bob's
+private key.
+
 
 ## get started
 
@@ -226,7 +227,7 @@ const decrypted = await keys.decrypt(encryptedMsg)
 
 ----------------------------------------------------------------------
 
-## API
+## Modules
 
 ### `exports`
 
@@ -477,7 +478,7 @@ of the returned string. Format is anything supported by [uint8arrays](https://gi
 ### Asymmetrically encrypt some arbitrary data
 
 Encrypt the given message to the given public key. If an AES key is not
-provided, one will be created. Use an AES key to encrypt the given
+provided, one will be created. Use the AES key to encrypt the given
 content, then encrypt the AES key to the given public key.
 
 The return value is an ArrayBuffer containing the encrypted AES key +
