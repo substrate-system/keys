@@ -37,14 +37,14 @@ npm i -S @bicycle-codes/keys
 
 <!-- toc -->
 
-- [Asymmetric Encryption](#asymmetric-encryption)
+- [install](#install)
 - [get started](#get-started)
   * [Create a keypair](#create-a-keypair)
   * [some notes about the `keys` instance](#some-notes-about-the-keys-instance)
   * [sign and verify something](#sign-and-verify-something)
   * [encrypt something](#encrypt-something)
   * [decrypt something](#decrypt-something)
-- [Modules](#modules)
+- [API](#api)
   * [`exports`](#exports)
   * [ESM](#esm)
   * [Common JS](#common-js)
@@ -70,7 +70,6 @@ npm i -S @bicycle-codes/keys
   * [`AES.decrypt`](#aesdecrypt)
 
 <!-- tocstop -->
-
 </details>
 
 
@@ -81,6 +80,38 @@ encrypting the AES key to a public RSA key. If you encrypt something to Bob's
 public key, that means we create a new buffer of encrypted AES key +
 encrypted content, where the encrypted AES key can only be decrypted by Bob's
 private key.
+
+## Modules
+
+### `exports`
+
+This exposes ESM and common JS via [package.json `exports` field](https://nodejs.org/api/packages.html#exports).
+
+### ESM
+```js
+import { Keys } from '@bicycle-codes/keys'
+```
+
+### Common JS
+```js
+const { Keys } = require('@bicycle-codes/keys')
+```
+
+### pre-built JS
+This package exposes minified JS files too. Copy them to a location that is
+accessible to your web server, then link to them in HTML.
+
+#### copy
+```sh
+cp ./node_modules/@bicycle-codes/keys/dist/index.min.js ./public/keys.min.js
+```
+
+#### HTML
+```html
+<script type="module" src="./keys.min.js"></script>
+```
+
+------------------------------------------------------
 
 
 ## get started
@@ -226,38 +257,6 @@ const decrypted = await keys.decrypt(encryptedMsg)
 ```
 
 ----------------------------------------------------------------------
-
-## Modules
-
-### `exports`
-
-This exposes ESM and common JS via [package.json `exports` field](https://nodejs.org/api/packages.html#exports).
-
-### ESM
-```js
-import '@bicycle-codes/keys'
-```
-
-### Common JS
-```js
-require('@bicycle-codes/keys')
-```
-
-### pre-built JS
-This package exposes minified JS files too. Copy them to a location that is
-accessible to your web server, then link to them in HTML.
-
-#### copy
-```sh
-cp ./node_modules/@bicycle-codes/keys/dist/index.min.js ./public/keys.min.js
-```
-
-#### HTML
-```html
-<script type="module" src="./keys.min.js"></script>
-```
-
-------------------------------------------------------
 
 ## examples
 
