@@ -37,18 +37,18 @@ npm i -S @bicycle-codes/keys
 
 <!-- toc -->
 
-- [install](#install)
+- [Asymmetric Encryption](#asymmetric-encryption)
+- [Modules](#modules)
+  * [`exports`](#exports)
+  * [ESM](#esm)
+  * [Common JS](#common-js)
+  * [pre-built JS](#pre-built-js)
 - [get started](#get-started)
   * [Create a keypair](#create-a-keypair)
   * [some notes about the `keys` instance](#some-notes-about-the-keys-instance)
   * [sign and verify something](#sign-and-verify-something)
   * [encrypt something](#encrypt-something)
   * [decrypt something](#decrypt-something)
-- [API](#api)
-  * [`exports`](#exports)
-  * [ESM](#esm)
-  * [Common JS](#common-js)
-  * [pre-built JS](#pre-built-js)
 - [examples](#examples)
   * [Create a new `Keys` instance](#create-a-new-keys-instance)
   * [Get a hash of the DID](#get-a-hash-of-the-did)
@@ -70,6 +70,7 @@ npm i -S @bicycle-codes/keys
   * [`AES.decrypt`](#aesdecrypt)
 
 <!-- tocstop -->
+
 </details>
 
 
