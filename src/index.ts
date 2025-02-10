@@ -158,13 +158,8 @@ export class Keys {
      * @param {DID} did a DID format string
      * @returns {string} 32 character, base32 hash of the DID
      */
-    static async deviceName (did:DID):Promise<string> {
-        const normalizedDid = did.normalize('NFD')
-        const hashedUsername = await sha256(
-            new TextEncoder().encode(normalizedDid)
-        )
-
-        return toString(hashedUsername, 'base32').slice(0, 32)
+    static deviceName (did:DID):Promise<string> {
+        return getDeviceName(did)
     }
 
     /**
@@ -298,12 +293,15 @@ export class Keys {
         /**
          * Sign the message, and return the signature as a `Uint8Array`.
          */
-        async (msg:Msg, charsize?:CharSize):Promise<Uint8Array> => {
+        async (
+            msg:Msg,
+            charsize:CharSize = DEFAULT_CHAR_SIZE
+        ):Promise<Uint8Array> => {
             const key = this._signKey
             const sig = await rsaOperations.sign(
                 msg,
                 key.privateKey,
-                charsize || DEFAULT_CHAR_SIZE
+                charsize
             )
 
             return new Uint8Array(sig)
@@ -350,7 +348,7 @@ export class Keys {
                     this.privateEncryptKey
                 )
 
-                return toString(decrypted, format || 'utf-8')
+                return toString(decrypted, format)
             }
         }
     )
@@ -697,4 +695,13 @@ async function encrypt (
     if (format && format === 'arraybuffer') return encrypted
 
     return new Uint8Array(encrypted)
+}
+
+export async function getDeviceName (did:DID|string) {
+    const normalizedDid = did.normalize('NFD')
+    const hashedUsername = await sha256(
+        new TextEncoder().encode(normalizedDid)
+    )
+
+    return toString(hashedUsername, 'base32').slice(0, 32)
 }

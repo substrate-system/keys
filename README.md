@@ -341,7 +341,7 @@ import { Keys } from '@bicycle-codes/keys'
 const keys = await Keys.create()
 keys.ENCRYPTION_KEY_NAME = 'encryption-key-custom-name'
 keys.SIGNING_KEY_NAME = 'signing-key-custom-name'
-keys.persist()
+await keys.persist()
 ```
 
 ### Restore from indexedDB
