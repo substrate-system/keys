@@ -140,7 +140,11 @@ console.assert(keys.DID === keysAgain.DID)  // true
 #### `keys.DID`
 
 This is the [DID string](https://www.w3.org/TR/did-1.0/) for the signing key for
-this instance.
+this instance. The DID looks like this:
+
+```js
+'did:key:z13V3Sog2YaUKhdGCmgx9UZuW...'
+```
 
 #### `keys.getDeviceName` / `keys.deviceName`
 
