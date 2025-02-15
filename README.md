@@ -139,7 +139,8 @@ console.assert(keys.DID === keysAgain.DID)  // true
 
 #### `keys.DID`
 
-This is the DID string for the signing key for this instance.
+This is the [DID string](https://www.w3.org/TR/did-1.0/) for the signing key for
+this instance.
 
 #### `keys.getDeviceName` / `keys.deviceName`
 
