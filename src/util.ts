@@ -6,11 +6,11 @@ import type {
     HashAlg,
     SymmKeyOpts,
     SymmKey
-} from './types'
+} from './types.js'
 import {
     KeyUse,
     CharSize,
-} from './types'
+} from './types.js'
 import {
     BASE58_DID_PREFIX,
     RSA_SIGN_ALGORITHM,
@@ -25,7 +25,7 @@ import {
     BLS_DID_PREFIX,
     DEFAULT_SYMM_ALGORITHM,
     DEFAULT_SYMM_LENGTH
-} from './constants'
+} from './constants.js'
 
 /**
  * Using the key type as the record property name (ie. string = key type)
