@@ -1,4 +1,4 @@
-import { RsaSize, HashAlg, CharSize } from './types'
+import { RsaSize, HashAlg, CharSize } from './types.js'
 
 export const BASE58_DID_PREFIX = 'did:key:z'
 
