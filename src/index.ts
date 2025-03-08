@@ -13,7 +13,7 @@ import {
     DEFAULT_ENC_NAME,
     DEFAULT_SIG_NAME,
     IV_LENGTH,
-} from './constants'
+} from './constants.js'
 import {
     SymmKeyLength,
     type SymmAlgorithm,
@@ -24,7 +24,7 @@ import {
     type Msg,
     type CharSize,
     type SymmKey,
-} from './types'
+} from './types.js'
 import {
     publicKeyToDid,
     getPublicKeyAsArrayBuffer,
@@ -42,13 +42,13 @@ import {
     sha256,
     getPublicKeyAsUint8Array,
     normalizeToBuf
-} from './util'
+} from './util.js'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
 
 export type { DID }
 
-export { getPublicKeyAsUint8Array } from './util'
+export { getPublicKeyAsUint8Array } from './util.js'
 
 // import Debug from '@bicycle-codes/debug'
 // const debug = Debug()
