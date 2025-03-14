@@ -46,6 +46,7 @@ npm i -S @bicycle-codes/keys
 - [get started](#get-started)
   * [Create a keypair](#create-a-keypair)
   * [some notes about the `keys` instance](#some-notes-about-the-keys-instance)
+  * [Delete a keypair](#delete-a-keypair)
   * [sign and verify something](#sign-and-verify-something)
   * [encrypt something](#encrypt-something)
   * [decrypt something](#decrypt-something)
