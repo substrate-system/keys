@@ -201,6 +201,13 @@ Get the public encryption key as a `Uint8Array`.
 }
 ```
 
+### Delete a keypair
+
+Delete the keys from `indexedDB`.
+
+```js
+await keys.delete()
+```
 
 --------------------------------------------------------------------------
 

@@ -99,6 +99,15 @@ test('Create keys from indexedDB', async t => {
     t.equal(newKeys.persisted, true, 'should have `persisted` flag')
 })
 
+test('Delete the keys from indexedDB', async t => {
+    t.ok(keys.persisted, 'should start with persisted keys')
+    t.ok(await get(keys.ENCRYPTION_KEY_NAME), 'Should return key from indexedDB')
+    await keys.delete()
+    t.ok(!keys.persisted, 'now keys.persisted is false')
+    const res = await get(keys.ENCRYPTION_KEY_NAME)
+    t.ok(!res, 'should not return keys from indexedDB')
+})
+
 test('device name', async t => {
     const name = await Keys.deviceName(keys.DID)
     const name2 = await keys.getDeviceName()

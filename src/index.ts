@@ -1,6 +1,6 @@
 import { webcrypto } from '@bicycle-codes/one-webcrypto'
 import { fromString, type SupportedEncodings, toString } from 'uint8arrays'
-import { get, set } from 'idb-keyval'
+import { get, set, delMany } from 'idb-keyval'
 import {
     RSA_ALGORITHM,
     DEFAULT_RSA_SIZE,
@@ -120,6 +120,14 @@ export class Keys {
 
     get deviceName ():Promise<string> {
         return Keys.deviceName(this.DID)
+    }
+
+    /**
+     * Delete the keys stored in indexedDB.
+     */
+    async delete ():Promise<void> {
+        await delMany([this.ENCRYPTION_KEY_NAME, this.SIGNING_KEY_NAME])
+        this.persisted = false
     }
 
     /**
@@ -698,9 +706,8 @@ async function encrypt (
 }
 
 export async function getDeviceName (did:DID|string) {
-    const normalizedDid = did.normalize('NFD')
     const hashedUsername = await sha256(
-        new TextEncoder().encode(normalizedDid)
+        new TextEncoder().encode(did.normalize('NFD'))
     )
 
     return toString(hashedUsername, 'base32').slice(0, 32)
