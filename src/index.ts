@@ -233,11 +233,11 @@ export class Keys {
      * keys in indexedDB.
      * @returns {Promise<Keys>}
      */
-    static async load (opts:{
-        encryptionKeyName,
-        signingKeyName,
-        session,
-    } = {
+    static async load (opts:Partial<{
+        encryptionKeyName:string,
+        signingKeyName:string,
+        session:boolean,
+    }> = {
         encryptionKeyName: DEFAULT_ENC_NAME,
         signingKeyName: DEFAULT_SIG_NAME,
         session: false
@@ -245,8 +245,12 @@ export class Keys {
         if (Keys._instance) return Keys._instance  // cache
 
         let persisted = true
-        let encKeys:CryptoKeyPair|undefined = await get(opts.encryptionKeyName)
-        let signKeys:CryptoKeyPair|undefined = await get(opts.signingKeyName)
+        let encKeys:CryptoKeyPair|undefined = await get(
+            opts.encryptionKeyName || DEFAULT_ENC_NAME
+        )
+        let signKeys:CryptoKeyPair|undefined = await get(
+            opts.signingKeyName || DEFAULT_SIG_NAME
+        )
 
         if (!encKeys) {
             persisted = false
@@ -272,7 +276,7 @@ export class Keys {
             keys: { encrypt: encKeys, sign: signKeys },
             did,
             persisted,
-            session: opts.session
+            session: opts.session ?? false
         })
 
         return keys
