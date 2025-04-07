@@ -45,19 +45,11 @@ import {
 } from './util.js'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
+export * from './constants.js'
 
 export type { DID }
 
 export { getPublicKeyAsUint8Array } from './util.js'
-
-// import Debug from '@bicycle-codes/debug'
-// const debug = Debug()
-
-type ConstructorOpts = {
-    keys: { encrypt:CryptoKeyPair, sign:CryptoKeyPair };
-    did:DID;
-    persisted:boolean;
-}
 
 export type SerializedKeys = {
     DID:DID;
@@ -78,13 +70,20 @@ export class Keys {
     ENCRYPTION_KEY_NAME:string = DEFAULT_ENC_NAME
     SIGNING_KEY_NAME:string = DEFAULT_SIG_NAME
     DID:DID
+    session:boolean  // in memory only?
 
-    constructor (opts:ConstructorOpts) {
+    constructor (opts:{
+        keys:{ encrypt:CryptoKeyPair, sign:CryptoKeyPair };
+        did:DID;
+        persisted:boolean;
+        session:boolean;  // in memory only?
+    }) {
         const { keys } = opts
         this._encryptKey = keys.encrypt
         this._signKey = keys.sign
         this.DID = opts.did
         this.persisted = opts.persisted
+        this.session = opts.session ?? false
         Keys._instance = this
     }
 
@@ -175,7 +174,9 @@ export class Keys {
      *
      * @returns {Promise<Keys>}
      */
-    static async create ():Promise<Keys> {
+    static async create (
+        opts:{ session:boolean } = { session: false }
+    ):Promise<Keys> {
         const encryptionKeypair = await makeRSAKeypair(
             DEFAULT_RSA_SIZE,
             DEFAULT_HASH_ALGORITHM,
@@ -187,16 +188,17 @@ export class Keys {
             KeyUse.Sign
         )
 
+        const { session } = opts
         const publicSigningKey = await getPublicKeyAsArrayBuffer(signingKeypair)
         const did = await publicKeyToDid(new Uint8Array(publicSigningKey), 'rsa')
 
-        const constructorOpts:ConstructorOpts = {
+        const keys = new Keys({
             keys: { encrypt: encryptionKeypair, sign: signingKeypair },
             did,
-            persisted: false
-        }
+            persisted: false,
+            session
+        })
 
-        const keys = new Keys(constructorOpts)
         return keys
     }
 
@@ -204,15 +206,18 @@ export class Keys {
      * Save this keys instance to `indexedDB`.
      */
     async persist ():Promise<void> {
+        if (this.session) return
+
         await Promise.all([
             set(this.ENCRYPTION_KEY_NAME, this._encryptKey),
             set(this.SIGNING_KEY_NAME, this._signKey)
         ])
+
         this.persisted = true
     }
 
     /**
-     * Return a 32-character, DNS friendly hash of this public signing key.
+     * Return a 32-character, DNS friendly hash of the public signing key.
      *
      * @returns {Promise<string>}
      */
@@ -230,11 +235,13 @@ export class Keys {
      */
     static async load (opts:{
         encryptionKeyName,
-        signingKeyName
+        signingKeyName,
+        session,
     } = {
         encryptionKeyName: DEFAULT_ENC_NAME,
-        signingKeyName: DEFAULT_SIG_NAME
-    }):Promise<Keys> {
+        signingKeyName: DEFAULT_SIG_NAME,
+        session: false
+    }):Promise<InstanceType<typeof Keys>> {
         if (Keys._instance) return Keys._instance  // cache
 
         let persisted = true
@@ -261,13 +268,13 @@ export class Keys {
         const publicKey = await getPublicKeyAsArrayBuffer(signKeys)
         const did = await publicKeyToDid(new Uint8Array(publicKey), 'rsa')
 
-        const constructorOpts:ConstructorOpts = {
+        const keys = new Keys({
             keys: { encrypt: encKeys, sign: signKeys },
             did,
-            persisted
-        }
+            persisted,
+            session: opts.session
+        })
 
-        const keys = new Keys(constructorOpts)
         return keys
     }
 
