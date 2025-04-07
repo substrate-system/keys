@@ -342,3 +342,13 @@ test('AES.export with format argument', async t => {
     const exported = await AES.export.asString(key, 'base64url')
     t.ok(defaultExport !== exported, 'should use the `format` argument')
 })
+
+test('in memory only', async t => {
+    const keys = await Keys.create({ session: true })
+    await keys.persist()
+    delete Keys._instance  // rm the cached copy
+    t.equal(keys.persisted, false, 'should not have `persisted` flag')
+    const keysTwo = await Keys.load()
+    t.ok(keysTwo.DID !== keys.DID,
+        'should not load the same keypair from indexedDB')
+})
