@@ -351,4 +351,25 @@ test('in memory only', async t => {
     const keysTwo = await Keys.load()
     t.ok(keysTwo.DID !== keys.DID,
         'should not load the same keypair from indexedDB')
+    delete Keys._instance
+})
+
+test('in memory, using the .load method', async t => {
+    const keys = await Keys.load({
+        session: true,
+        // need different keys here, b/c previous tests have used
+        // the defaults
+        encryptionKeyName: 'memory_test',
+        signingKeyName: 'memory_test_sig'
+    })
+    await keys.persist()
+    t.ok(!(keys.persisted), 'should not be persisted')
+
+    delete Keys._instance
+    const keysTwo = await Keys.load({
+        encryptionKeyName: 'memory_test',
+        signingKeyName: 'memory_test_sig'
+    })
+
+    t.ok(keysTwo.DID !== keys.DID, 'should not use the same instance')
 })

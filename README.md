@@ -582,6 +582,19 @@ await keys.decrypt.asString(encryptedString)
 // => 'hello encryption'
 ```
 
+### In memory only
+Create a keypair, but do not save it in `indexedDB`, even if you call `persist`.
+Pass an option `.session` to `.create` or `.load`.
+
+```js
+import { Keys } from '@bicycle-codes/keys'
+
+const keys = await Keys.create({ session: true })
+
+// or pass it to `.load`
+const keysTwo = await Keys.load({ session: true })
+```
+
 ## AES
 Expose several AES functions with nice defaults.
 
