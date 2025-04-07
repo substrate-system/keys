@@ -63,6 +63,7 @@ npm i -S @bicycle-codes/keys
   * [Asymmetrically encrypt a string, return a new string](#asymmetrically-encrypt-a-string-return-a-new-string)
   * [Decrypt a message](#decrypt-a-message)
   * [`.decrypt.asString`](#decryptasstring)
+  * [In memory only](#in-memory-only)
 - [AES](#aes)
   * [`create`](#create)
   * [`export`](#export)
