@@ -27,12 +27,6 @@ encrypting. We are **using RSA keys only** right now, because we are
 
 See also, [the API docs generated from typescript](https://bicycle-codes.github.io/keys/).
 
-## install
-
-```sh
-npm i -S @bicycle-codes/keys
-```
-
 <details><summary><h2>Contents</h2></summary>
 
 <!-- toc -->
@@ -75,6 +69,12 @@ npm i -S @bicycle-codes/keys
 
 </details>
 
+
+## install
+
+```sh
+npm i -S @bicycle-codes/keys
+```
 
 ## Asymmetric Encryption
 
