@@ -31,6 +31,7 @@ See also, [the API docs generated from typescript](https://bicycle-codes.github.
 
 <!-- toc -->
 
+- [install](#install)
 - [Asymmetric Encryption](#asymmetric-encryption)
 - [Modules](#modules)
   * [`exports`](#exports)
