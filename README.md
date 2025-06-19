@@ -9,8 +9,6 @@
 [![license](https://img.shields.io/badge/license-Polyform_Non_Commercial-26bc71?style=flat-square)](LICENSE)
 
 
-https://flat.badgen.net/bundlephobia/minzip/@material-ui/core?style=flatsquare
-
 Create and store keypairs in the browser with the [web crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API).
 
 Use [indexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
