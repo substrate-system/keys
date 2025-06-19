@@ -5,9 +5,9 @@
 [![semantic versioning](https://img.shields.io/badge/semver-2.0.0-blue?logo=semver&style=flat-square)](https://semver.org/)
 [![Common Changelog](https://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
 [![install size](https://flat.badgen.net/packagephobia/install/@bicycle-codes/keys?cache-control=no-cache)](https://packagephobia.com/result?p=@bicycle-codes/keys)
-[![GZip size](https://flat.badgen.net/bundlephobia/minzip/@bicycle-codes/keys?color=green)](https://bundlephobia.com/package/@bicycle-codes/keys)
+[![GZip size](https://flat.badgen.net/bundlephobia/minzip/@bicycle-codes/keys)](https://bundlephobia.com/package/@bicycle-codes/keys)
+[![GZip size](https://img.badgesize.io/https%3A%2F%2Fesm.sh%2F%40bicycle-codes%2Fkeys%2Fes2022%2Findex.mjs%3Fstyle%3Dflat%26compression%3Dgzip?compression=gzip&style=flat-square)](https://esm.sh/@substrate-system/button/es2022/button.mjs)
 [![license](https://img.shields.io/badge/license-Polyform_Non_Commercial-26bc71?style=flat-square)](LICENSE)
-
 
 Create and store keypairs in the browser with the [web crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API).
 
