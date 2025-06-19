@@ -5,6 +5,7 @@
 [![semantic versioning](https://img.shields.io/badge/semver-2.0.0-blue?logo=semver&style=flat-square)](https://semver.org/)
 [![Common Changelog](https://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
 [![install size](https://flat.badgen.net/packagephobia/install/@bicycle-codes/keys?cache-control=no-cache)](https://packagephobia.com/result?p=@bicycle-codes/keys)
+[![GZip size](https://flat.badgen.net/bundlephobia/minzip/@bicycle-codes/keys?color=green)](https://bundlephobia.com/package/@bicycle-codes/keys)
 [![license](https://img.shields.io/badge/license-Polyform_Non_Commercial-26bc71?style=flat-square)](LICENSE)
 
 
