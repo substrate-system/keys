@@ -1,5 +1,5 @@
 {
-  "name": "@bicycle-codes/keys",
+  "name": "@substrate-system/keys",
   "version": "0.1.15",
   "description": "Create keys with the webcrypto API",
   "directories": {
@@ -49,7 +49,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@bicycle-codes/one-webcrypto": "^1.1.2",
+    "@substrate-system/one-webcrypto": "^1.1.2",
     "idb-keyval": "^6.2.1",
     "uint8arrays": "^5.1.0"
   },
@@ -71,7 +71,7 @@
   "author": "nichoth <nichoth@nichoth.com> (https://nichoth.com)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bicycle-codes/keys.git"
+    "url": "git+https://github.com/substrate-system/keys.git"
   },
   "keywords": [
     "keys",
@@ -79,8 +79,8 @@
     "browser"
   ],
   "bugs": {
-    "url": "https://github.com/bicycle-codes/keys/issues"
+    "url": "https://github.com/substrate-system/keys/issues"
   },
-  "homepage": "https://github.com/bicycle-codes/keys",
+  "homepage": "https://github.com/substrate-system/keys",
   "license": "SEE LICENSE IN LICENSE"
 }
