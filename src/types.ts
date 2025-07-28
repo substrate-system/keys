@@ -12,6 +12,11 @@ export enum SymmKeyLength {
     B256 = 256,
 }
 
+export enum CryptoSystem {
+    ECC = 'ecc',
+    RSA = 'rsa',
+}
+
 export type EncryptedMessage = {
     content:string|Uint8Array;
     key:string|Uint8Array;
@@ -24,12 +29,24 @@ export enum HashAlg {
     SHA_512 = 'SHA-512',
 }
 
+export enum EccCurve {
+    P_256 = 'P-256',
+    P_384 = 'P-384',
+    P_521 = 'P-521',
+}
+
+/**
+ * Uses for asymmetric keys.
+ */
 export enum KeyUse {
-    Encrypt = 'encryption',  // encrypt/decrypt
     Sign = 'signing',  // sign
+    Exchange = 'exchange',  // encrypt
+    Write = 'write',
 }
 
 export type SymmKey = CryptoKey
+export type PublicKey = CryptoKey
+export type PrivateKey = CryptoKey
 
 export enum CharSize {
     B8 = 8,

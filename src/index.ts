@@ -180,7 +180,7 @@ export class Keys {
         const encryptionKeypair = await makeRSAKeypair(
             DEFAULT_RSA_SIZE,
             DEFAULT_HASH_ALGORITHM,
-            KeyUse.Encrypt
+            KeyUse.Exchange
         )
         const signingKeypair = await makeRSAKeypair(
             DEFAULT_RSA_SIZE,
@@ -257,7 +257,7 @@ export class Keys {
             encKeys = await makeRSAKeypair(
                 DEFAULT_RSA_SIZE,
                 DEFAULT_HASH_ALGORITHM,
-                KeyUse.Encrypt
+                KeyUse.Exchange
             )
         }
         if (!signKeys) {
@@ -397,8 +397,8 @@ async function makeRSAKeypair (
     if (!(Object.values(KeyUse).includes(use))) {
         throw new Error('invalid key use')
     }
-    const alg = use === KeyUse.Encrypt ? RSA_ALGORITHM : RSA_SIGN_ALGORITHM
-    const uses:KeyUsage[] = (use === KeyUse.Encrypt ?
+    const alg = use === KeyUse.Exchange ? RSA_ALGORITHM : RSA_SIGN_ALGORITHM
+    const uses:KeyUsage[] = (use === KeyUse.Exchange ?
         ['encrypt', 'decrypt'] :
         ['sign', 'verify'])
 

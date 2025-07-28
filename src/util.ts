@@ -154,10 +154,10 @@ export const rsaOperations = {
     ):Promise<ArrayBuffer> {
         let pubKey:CryptoKey
         if (typeof publicKey === 'string') {
-            pubKey = await importPublicKey(publicKey, hashAlg, KeyUse.Encrypt)
+            pubKey = await importPublicKey(publicKey, hashAlg, KeyUse.Exchange)
         } else {
             pubKey = publicKey instanceof Uint8Array ?
-                await importPublicKey(publicKey, hashAlg, KeyUse.Encrypt) :
+                await importPublicKey(publicKey, hashAlg, KeyUse.Exchange) :
                 publicKey
         }
 
@@ -227,8 +227,8 @@ export async function importPublicKey (
     use:KeyUse
 ):Promise<CryptoKey> {
     checkValidKeyUse(use)
-    const alg = (use === KeyUse.Encrypt ? RSA_ALGORITHM : RSA_SIGN_ALGORITHM)
-    const uses:KeyUsage[] = use === KeyUse.Encrypt ?
+    const alg = (use === KeyUse.Exchange ? RSA_ALGORITHM : RSA_SIGN_ALGORITHM)
+    const uses:KeyUsage[] = use === KeyUse.Exchange ?
         ['encrypt'] :
         ['verify']
     const buf = typeof base64Key === 'string' ?
@@ -245,7 +245,7 @@ export const InvalidKeyUse = new Error("Invalid key use. Please use 'encryption'
 export const InvalidMaxValue = new Error('Max must be less than 256 and greater than 0')
 
 export function checkValidKeyUse (use:KeyUse):void {
-    checkValid(use, [KeyUse.Sign, KeyUse.Encrypt], InvalidKeyUse)
+    checkValid(use, [KeyUse.Sign, KeyUse.Exchange], InvalidKeyUse)
 }
 
 function checkValid<T> (toCheck: T, opts: T[], error: Error): void {

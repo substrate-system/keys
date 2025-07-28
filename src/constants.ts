@@ -18,6 +18,10 @@ export const DEFAULT_SYMM_ALGORITHM = AES_GCM
 export const DEFAULT_SYMM_LENGTH = 256
 export const IV_LENGTH = 12
 
+// ECC
+export const ECC_EXCHANGE_ALG = 'ECDH'
+export const ECC_WRITE_ALG = 'ECDSA'
+
 // Misc
 export const BLS_DID_PREFIX = new Uint8Array([0xea, 0x01])
 export const EDWARDS_DID_PREFIX = new Uint8Array([0xed, 0x01])
