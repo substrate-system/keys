@@ -1,4 +1,4 @@
-import { webcrypto } from '@bicycle-codes/one-webcrypto'
+import { webcrypto } from '@substrate-system/one-webcrypto'
 import { fromString, concat, toString as uToString } from 'uint8arrays'
 import type {
     DID,

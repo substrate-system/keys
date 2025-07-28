@@ -1,4 +1,4 @@
-import { webcrypto } from '@bicycle-codes/one-webcrypto'
+import { webcrypto } from '@substrate-system/one-webcrypto'
 import { fromString, type SupportedEncodings, toString } from 'uint8arrays'
 import { get, set, delMany } from 'idb-keyval'
 import {
