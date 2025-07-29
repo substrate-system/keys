@@ -36,13 +36,18 @@ export enum EccCurve {
     X25519 = 'X25519',
 }
 
+// export enum KEY_USE {
+//     sign = '',
+//     encrypt = ['deriveKey', 'deriveBits']
+// }
+
 /**
- * Uses for asymmetric keys.
+ * Use for asymmetric keys.
  */
 export enum KeyUse {
     Sign = 'signing',  // sign
     Exchange = 'exchange',  // encrypt
-    Write = 'write',
+    Write = 'write',  // sign
 }
 
 export type SymmKey = CryptoKey

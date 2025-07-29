@@ -2,6 +2,16 @@ import { RsaSize, HashAlg, CharSize } from './types.js'
 
 export const BASE58_DID_PREFIX = 'did:key:z'
 
+// ECC
+// export const ECC_EXCHANGE_ALG = 'ECDH'
+export const ECC_EXCHANGE_ALG = 'X25519'
+export const ECC_WRITE_ALG = 'ECDSA'
+
+export const KEY_USE = {
+    sign: ['sign', 'verify'],
+    encrypt: ['deriveKey', 'deriveBits']
+}
+
 // RSA
 export const RSA_ALGORITHM = 'RSA-OAEP'
 export const RSA_SIGN_ALGORITHM = 'RSASSA-PKCS1-v1_5'
@@ -17,10 +27,6 @@ export const AES_GCM = 'AES-GCM' as const
 export const DEFAULT_SYMM_ALGORITHM = AES_GCM
 export const DEFAULT_SYMM_LENGTH = 256
 export const IV_LENGTH = 12
-
-// ECC
-export const ECC_EXCHANGE_ALG = 'ECDH'
-export const ECC_WRITE_ALG = 'ECDSA'
 
 // Misc
 export const BLS_DID_PREFIX = new Uint8Array([0xea, 0x01])

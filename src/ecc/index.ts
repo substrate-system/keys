@@ -1,64 +1,76 @@
 import { webcrypto } from '@substrate-system/one-webcrypto'
-import { base64ToArrBuf } from '../util.js'
+import {
+    getPublicKeyAsArrayBuffer,
+    publicKeyToDid,
+    base64ToArrBuf,
+    makeEccKeypair
+} from '../util.js'
 import { ECC_EXCHANGE_ALG, ECC_WRITE_ALG } from '../constants.js'
-import { KeyUse, EccCurve, type PublicKey, DID } from '../types.js'
+import { KeyUse, type EccCurve, type PublicKey, type DID } from '../types.js'
 import { checkValidKeyUse } from '../errors.js'
 
-// // Step 1: Bob generates ECDH key pair (this could be long-term)
-// async function generateUserKeyPair () {
-//     return crypto.subtle.generateKey(
-//         { name: 'ECDH', namedCurve: 'X25519' },
-//         true,
-//         ['deriveKey']
-//     )
-// }
-
+/**
+ * Class for ECC keys
+ */
 export class Keys {
     DID:DID
+    exchangeKey:CryptoKeyPair
+    writeKey:CryptoKeyPair
+    isPersisted:boolean
+    isSessionOnly:boolean
 
+    /**
+     * Use `.create`, not the constructor.
+     */
     constructor (opts:{
-        keys:{ encrypt:CryptoKeyPair, sign:CryptoKeyPair };
+        keys:{ exchange:CryptoKeyPair, write:CryptoKeyPair };
         did:DID;
-        persisted:boolean;
-        session:boolean;  // in memory only?
+        isPersisted:boolean;
+        isSessionOnly:boolean;  // in memory only?
     }) {
         this.DID = opts.did
+        this.exchangeKey = opts.keys.exchange
+        this.writeKey = opts.keys.write
+        this.isPersisted = opts.isPersisted
+        this.isSessionOnly = opts.isSessionOnly
     }
 
-    get signKeypair ():CryptoKeyPair {
-        return {
-            privateKey: this.privateSignKey,
-            publicKey: this.publicSignKey
-        }
+    get publicExchangeKey ():CryptoKey {
+        return this.exchangeKey.publicKey
     }
-}
 
-/**
- * Create a new ECC keypair.
- * Default type is X25519 key, and encryption uses.
- *
- * @param {EccCurve} curve Curve, e.g. X25519
- * @param {KeyUse} use Signing, encryption, etc
- * @returns {Promise<CryptoKeyPair>} New keypair
- */
-export async function create (
-    curve:EccCurve = EccCurve.X25519,
-    use:KeyUse = KeyUse.Exchange
-):Promise<CryptoKeyPair> {
-    checkValidKeyUse(use)
-    const alg = (use === KeyUse.Exchange ? ECC_EXCHANGE_ALG : ECC_WRITE_ALG)
-    const uses:KeyUsage[] = (use === KeyUse.Exchange ?
-        ['deriveKey', 'deriveBits'] :
-        ['sign', 'verify'])
+    get publicWriteKey ():CryptoKey {
+        return this.writeKey.publicKey
+    }
 
-    return await webcrypto.subtle.generateKey(
-        {
-            name: alg,  // 'ECDH' or 'ECDSA' -- encryption or signatures
-            namedCurve: curve  // 'X25519' or 'P-256',
-        },
-        false,  // extractable
-        uses  // derive or sign
-    )
+    /**
+     * Factory function because async.
+     * Create new ECC keypairs for signing and encrypting.
+     *
+     * @param {boolean} session In memory only, not persisted?
+     */
+    static async create (session?:boolean):Promise<Keys> {
+        // encryption
+        const exchange = await makeEccKeypair(ECC_EXCHANGE_ALG, 'encyrpt')
+
+        // signatures
+        const sign = await makeEccKeypair(ECC_WRITE_ALG, 'sign')
+
+        const publicSigningKey = await getPublicKeyAsArrayBuffer(sign)
+        const did = await publicKeyToDid(
+            new Uint8Array(publicSigningKey),
+            'ed25519'
+        )
+
+        const keys = new Keys({
+            keys: { exchange, write: sign },
+            did,
+            isPersisted: false,
+            isSessionOnly: !!session
+        })
+
+        return keys
+    }
 }
 
 /**
@@ -93,7 +105,7 @@ export async function importPublicKey (
 }
 
 export default {
-    create,
+    Keys,
     importPublicKey
 }
 

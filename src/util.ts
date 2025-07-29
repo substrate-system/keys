@@ -1,5 +1,6 @@
 import { webcrypto } from '@substrate-system/one-webcrypto'
 import { fromString, concat, toString as uToString } from 'uint8arrays'
+import tweetnacl from 'tweetnacl'
 import type {
     DID,
     Msg,
@@ -13,6 +14,7 @@ import {
 } from './types.js'
 import {
     BASE58_DID_PREFIX,
+    KEY_USE,
     RSA_SIGN_ALGORITHM,
     RSA_ALGORITHM,
     DEFAULT_HASH_ALGORITHM,
@@ -26,6 +28,12 @@ import {
     DEFAULT_SYMM_ALGORITHM,
     DEFAULT_SYMM_LENGTH
 } from './constants.js'
+
+export type VerifyArgs = {
+    message:Uint8Array
+    publicKey:Uint8Array
+    signature:Uint8Array
+}
 
 /**
  * Using the key type as the record property name (ie. string = key type)
@@ -44,11 +52,7 @@ import {
  */
 type KeyTypes = Record<string, {
     magicBytes:Uint8Array
-    verify:(args:{
-        message: Uint8Array
-        publicKey: Uint8Array
-        signature: Uint8Array
-    }) => Promise<boolean>
+    verify:(args:VerifyArgs)=>Promise<boolean>
 }>
 
 export const did:{ keyTypes:KeyTypes } = {
@@ -61,7 +65,19 @@ export const did:{ keyTypes:KeyTypes } = {
             magicBytes: new Uint8Array([0x00, 0xf5, 0x02]),
             verify: rsaVerify,
         },
+        ed25519: {
+            magicBytes: new Uint8Array([0xed, 0x01]),
+            verify: ed25519Verify
+        },
     }
+}
+
+export async function ed25519Verify ({
+    message,
+    publicKey,
+    signature
+}:VerifyArgs):Promise<boolean> {
+    return tweetnacl.sign.detached.verify(message, signature, publicKey)
 }
 
 /**
@@ -86,12 +102,12 @@ export async function sha256 (bytes:Uint8Array):Promise<Uint8Array> {
  * Convert a public key to a DID format string.
  *
  * @param {Uint8Array|CryptoKey|CryptoKeyPair} publicKey Public key as Uint8Array
- * @param {'rsa'} [keyType] 'rsa' only
+ * @param {'rsa'} [keyType] 'rsa' or 'ecc'
  * @returns {DID} A DID format string
  */
 export async function publicKeyToDid (
     _publicKey:Uint8Array|CryptoKey,
-    keyType = 'rsa'
+    keyType:'rsa'|'ed25519' = 'rsa'
 ):Promise<DID> {
     const publicKey = ((_publicKey instanceof CryptoKey) ?
         new Uint8Array(await getPublicKeyAsArrayBuffer(_publicKey)) :
@@ -495,4 +511,17 @@ export function joinBufs (fst:ArrayBuffer, snd:ArrayBuffer):ArrayBuffer {
     joined.set(view1)
     joined.set(view2, view1.length)
     return joined.buffer
+}
+
+export async function makeEccKeypair (
+    curve:'X25519'|'ECDSA',
+    uses:'encyrpt'|'sign'
+):Promise<CryptoKeyPair> {
+    const keys = await webcrypto.subtle.generateKey(
+        { name: curve },  // X25519 or ECDSA
+        false,  // extractable
+        KEY_USE[uses]
+    ) as CryptoKeyPair
+
+    return keys
 }
