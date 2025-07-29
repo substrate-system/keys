@@ -170,6 +170,7 @@ export class Keys {
     }
 
     /**
+     * Factory function b/c async.
      * Create a new `Keys` instance.
      *
      * @returns {Promise<Keys>}

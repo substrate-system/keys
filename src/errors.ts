@@ -11,7 +11,7 @@ export const ECCNotEnabled = new Error('ECC is not enabled for this browser.' +
 export const UnsupportedCrypto = new Error('Cryptosystem not supported. ' +
     'Please use ECC or RSA')
 export const InvalidKeyUse = new Error('Invalid key use. Please use ' +
-    "'exchange' or 'write")
+    "'exchange' or 'write'")
 export const InvalidMaxValue = new Error('Max must be less than 256 and ' +
     ' greater than 0')
 
@@ -33,15 +33,15 @@ export function checkIsKey (key: any): CryptoKey {
     return key
 }
 
-export function checkValidCryptoSystem (type: CryptoSystem): void {
+export function checkValidCryptoSystem (type:CryptoSystem): void {
     checkValid(type, [CryptoSystem.ECC, CryptoSystem.RSA], UnsupportedCrypto)
 }
 
-export function checkValidKeyUse (use: KeyUse): void {
-    checkValid(use, [KeyUse.Exchange, KeyUse.Write], InvalidKeyUse)
+export function checkValidKeyUse (use:KeyUse): void {
+    checkValid(use, [KeyUse.Exchange, KeyUse.Write, KeyUse.Sign], InvalidKeyUse)
 }
 
-function checkValid<T> (toCheck: T, opts: T[], error: Error): void {
+function checkValid<T> (toCheck:T, opts:T[], error:Error):void {
     const match = opts.some(opt => opt === toCheck)
     if (!match) {
         throw error

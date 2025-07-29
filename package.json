@@ -33,8 +33,10 @@
   },
   "scripts": {
     "lint": "eslint \"./**/*.{ts,js}\"",
+    "start": "vite",
     "build-tests": "esbuild test/index.ts --target=es2020 --bundle --keep-names > test/test-bundle.js",
     "test": "npm run build && npm run build-tests && npm run test-tape-run",
+    "test-ecc": "esbuild ./test/ecc.ts --platform=node --format=esm --bundle | node --input-type=module",
     "test-tape-run": "cat test/index.html | tape-run --input=html --static=test | tap-spec",
     "build-cjs": "esbuild src/*.ts --target=es2020 --format=cjs --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.cjs --sourcemap",
     "build-cjs:min": "esbuild src/*.ts --target=es2020 --format=cjs --minify --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.min.cjs --sourcemap",
@@ -54,6 +56,7 @@
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
+    "@preact/preset-vite": "^2.10.2",
     "@substrate-system/debug": "^0.9.0",
     "@substrate-system/tapzero": "^0.10.15",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
@@ -62,11 +65,15 @@
     "esbuild": "^0.25.8",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
+    "htm": "^3.1.1",
     "markdown-toc": "^1.2.0",
+    "postcss-nesting": "^13.0.2",
+    "preact": "^10.27.0",
     "tap-spec": "^5.0.0",
     "tape-run": "^11.0.0",
     "typedoc": "^0.28.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
   },
   "author": "nichoth <nichoth@nichoth.com> (https://nichoth.com)",
   "repository": {
