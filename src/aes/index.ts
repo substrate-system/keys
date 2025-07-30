@@ -20,13 +20,16 @@ import {
 } from '../constants'
 
 export const AES = {
-    create (opts:{ alg:string, length:number } = {
+    create (opts:{ alg?:string, length?:number } = {
         alg: DEFAULT_SYMM_ALGORITHM,
         length: DEFAULT_SYMM_LENGTH
     }):Promise<CryptoKey> {
+        const length = opts.length || DEFAULT_SYMM_LENGTH
+        const alg = opts.alg || DEFAULT_SYMM_ALGORITHM
+
         return webcrypto.subtle.generateKey({
-            name: opts.alg,
-            length: opts.length
+            name: alg,
+            length
         }, true, ['encrypt', 'decrypt'])
     },
 

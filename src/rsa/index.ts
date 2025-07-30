@@ -77,6 +77,25 @@ export class RsaKeys extends AbstractKeys {
         }
     )
 
+    encrypt = Object.assign(
+        async (
+            content:string|Uint8Array,
+            recipient?:CryptoKey|string,
+            aesKey?:SymmKey|Uint8Array|string,
+            keysize?:SymmKeyLength
+        ) => {
+            const publicKey = recipient || this.exchangeKey.publicKey
+            const key = aesKey || await AES.create({ length: keysize })
+            const encryptedContent = await AES.encrypt(
+                typeof content === 'string' ? fromString(content) : content,
+                typeof key === 'string' ? await AES.import(key) : key,
+            )
+            const encryptedKey = await encryptKeyTo({ key, publicKey })
+
+            return joinBufs(encryptedKey, encryptedContent)
+        }
+    )
+
     decrypt = Object.assign(
         /**
          * Expect the given cipher content to be the format returned by

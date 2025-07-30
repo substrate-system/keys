@@ -36,6 +36,27 @@ export interface Decryptor {
     asString:(msg:string, keysize?:SymmKeyLength)=>Promise<string>
 }
 
+export interface Encryptor {
+    (
+        opts:{
+            content:string|Uint8Array;
+            publicKey:CryptoKey|string;
+        },
+        recipient?:CryptoKey|Uint8Array,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:SymmKeyLength
+    ):Promise<Uint8Array>;
+    asString:(
+        msg:string,
+        keysize?:SymmKeyLength
+    )=>Promise<string>
+}
+
+export interface Signer {
+    (msg:string|Uint8Array):Promise<Uint8Array>;
+    asString: (msg:string, keysize?:SymmKeyLength)=>Promise<string>
+}
+
 /**
  * Args to constructor.
  */
@@ -83,9 +104,12 @@ export abstract class AbstractKeys {
         this.type = opts.type
     }
 
+    /**
+     * By default, encrypt the given data to yourself, as a "note to self".
+     */
+    abstract encrypt:Encryptor
     abstract decrypt:Decryptor
-    abstract sign
-    abstract encrypt
+    abstract sign:Signer
 
     get publicWriteKey ():CryptoKey {
         return this.writeKey.publicKey
