@@ -4,8 +4,8 @@ export const BASE58_DID_PREFIX = 'did:key:z'
 
 // ECC
 // export const ECC_EXCHANGE_ALG = 'ECDH'
-export const ECC_EXCHANGE_ALG = 'X25519'
 export const ECC_WRITE_ALG = 'ECDSA'
+export const ECC_EXCHANGE_ALG = 'X25519'
 
 export const KEY_USE = {
     sign: ['sign', 'verify'],
@@ -38,5 +38,7 @@ export const KEY_TYPE = {
 } as const
 
 // app specific
-export const DEFAULT_ENC_NAME = 'encryption-key'
-export const DEFAULT_SIG_NAME = 'signing-key'
+export const DEFAULT_RSA_EXCHANGE = 'rsa-encryption-key'
+export const DEFAULT_RSA_WRITE = 'rsa-signing-key'
+export const DEFAULT_ECC_EXCHANGE = 'ecc-exchange'
+export const DEFAULT_ECC_WRITE = 'ecc-write'

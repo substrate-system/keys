@@ -2,35 +2,25 @@ import { webcrypto } from '@substrate-system/one-webcrypto'
 import { fromString, type SupportedEncodings, toString } from 'uint8arrays'
 import { get, set, delMany } from 'idb-keyval'
 import {
-    RSA_ALGORITHM,
-    DEFAULT_RSA_SIZE,
-    DEFAULT_HASH_ALGORITHM,
-    RSA_SIGN_ALGORITHM,
     DEFAULT_CHAR_SIZE,
     DEFAULT_SYMM_ALGORITHM,
     DEFAULT_SYMM_LENGTH,
     AES_GCM,
-    DEFAULT_ENC_NAME,
-    DEFAULT_SIG_NAME,
     IV_LENGTH,
+    DEFAULT_RSA_EXCHANGE,
+    DEFAULT_RSA_WRITE,
 } from './constants.js'
 import {
     SymmKeyLength,
     type SymmAlgorithm,
-    KeyUse,
-    type RsaSize,
-    HashAlg,
     type DID,
     type Msg,
-    type CharSize,
     type SymmKey,
 } from './types.js'
 import {
     publicKeyToDid,
     getPublicKeyAsArrayBuffer,
     rsaOperations,
-    didToPublicKey,
-    importPublicKey,
     toBase64,
     isCryptoKey,
     normalizeUnicodeToBuf,
@@ -40,7 +30,6 @@ import {
     normalizeBase64ToBuf,
     base64ToArrBuf,
     sha256,
-    getPublicKeyAsUint8Array,
     normalizeToBuf
 } from './util.js'
 
@@ -57,61 +46,251 @@ export type SerializedKeys = {
 }
 
 /**
- * Expose RSA keys only for now, because we are
- * waiting for more browsers to support ECC.
- *
- * Create an instance with `Keys.create` b/c async.
+ * Args to constructor.
  */
-export class Keys {
-
-}
-
-async function makeRSAKeypair (
-    size:RsaSize,
-    hashAlg:HashAlg,
-    use:KeyUse
-):Promise<CryptoKeyPair> {
-    if (!(Object.values(KeyUse).includes(use))) {
-        throw new Error('invalid key use')
-    }
-    const alg = use === KeyUse.Exchange ? RSA_ALGORITHM : RSA_SIGN_ALGORITHM
-    const uses:KeyUsage[] = (use === KeyUse.Exchange ?
-        ['encrypt', 'decrypt'] :
-        ['sign', 'verify'])
-
-    return webcrypto.subtle.generateKey({
-        name: alg,
-        modulusLength: size,
-        publicExponent: publicExponent(),
-        hash: { name: hashAlg }
-    }, false, uses)
-}
-
-function publicExponent ():Uint8Array {
-    return new Uint8Array([0x01, 0x00, 0x01])
+export type KeyArgs = {
+    type:'ecc'|'rsa'
+    keys:{ exchange:CryptoKeyPair, write:CryptoKeyPair };
+    did:DID;
+    hasPersisted:boolean;
+    isSessionOnly?:boolean;  // in memory only?
+    exchangeKeyName?:string;
+    writeKeyName?:string;
 }
 
 /**
- * Check that the given signature is valid with the given message.
+ * The class that extends AbstractKeys
  */
-export async function verify (
-    msg:string|Uint8Array,
-    sig:string|Uint8Array,
-    signingDid:DID
-):Promise<boolean> {
-    const _key = didToPublicKey(signingDid)
-    const key = await importPublicKey(
-        _key.publicKey.buffer,
-        HashAlg.SHA_256,
-        KeyUse.Sign
-    )
+interface ChildKeys<T extends AbstractKeys = AbstractKeys> {
+    new (opts:KeyArgs):T;
+    _instance:T;
+    _createExchangeKeys():Promise<CryptoKeyPair>
+    _createWriteKeys():Promise<CryptoKeyPair>
+}
 
-    try {
-        const isOk = rsaOperations.verify(msg, sig, key)
-        return isOk
-    } catch (_err) {
-        return false
+/**
+ * The parent key. Doesn't implement the encrypt/sign functions.
+ */
+export abstract class AbstractKeys {
+    DID:DID
+    exchangeKey:CryptoKeyPair
+    writeKey:CryptoKeyPair
+    hasPersisted:boolean
+    isSessionOnly:boolean
+    type:'ecc'|'rsa'
+    static EXCHANGE_KEY_NAME:string  // needs to be defined by child class
+    static WRITE_KEY_NAME:string
+    static _instance  // a cache for indexedDB
+
+    constructor (opts:KeyArgs) {
+        const { keys } = opts
+        this.DID = opts.did
+        this.exchangeKey = keys.exchange
+        this.writeKey = keys.write
+        this.hasPersisted = opts.hasPersisted
+        this.isSessionOnly = !!opts.isSessionOnly
+        this.type = opts.type
+
+        // if (opts.type === 'ecc') {
+        //     this.EXCHANGE_KEY_NAME = DEFAULT_ECC_EXCHANGE
+        //     this.WRITE_KEY_NAME = DEFAULT_ECC_WRITE
+        // } else {  // is 'rsa'
+        //     this.EXCHANGE_KEY_NAME = DEFAULT_RSA_EXCHANGE
+        //     this.WRITE_KEY_NAME = DEFAULT_RSA_WRITE
+        // }
     }
+
+    get publicWriteKey ():CryptoKey {
+        return this.writeKey.publicKey
+    }
+
+    get publicExchangeKey ():CryptoKey {
+        return this.exchangeKey.publicKey
+    }
+
+    get privateWriteKey ():CryptoKey {
+        return this.writeKey.privateKey
+    }
+
+    get privateExchangeKey ():CryptoKey {
+        return this.exchangeKey.privateKey
+    }
+
+    /**
+     * The machine-readable name for this keypair.
+     */
+    get deviceName ():Promise<string> {
+        return AbstractKeys.deviceName(this.DID)
+    }
+
+    /**
+     * Return a 32-character, DNS-friendly hash of the given DID.
+     *
+     * @param {DID} did A DID format string
+     * @returns {string} 32 character, base32 hash of the DID
+     */
+    static deviceName (did:DID):Promise<string> {
+        return getDeviceName(did)
+    }
+
+    /**
+     * Save this keys instance to `indexedDB`.
+     */
+    async persist ():Promise<void> {
+        if (this.isSessionOnly) return
+
+        const exchange = (this.constructor as typeof AbstractKeys).EXCHANGE_KEY_NAME
+        const write = (this.constructor as typeof AbstractKeys).WRITE_KEY_NAME
+
+        await Promise.all([
+            set(exchange, this.exchangeKey),
+            set(write, this.writeKey)
+        ])
+
+        this.hasPersisted = true
+    }
+
+    /**
+     * Delete the keys stored in indexedDB.
+     */
+    async delete ():Promise<void> {
+        await delMany([
+            (this.constructor as typeof AbstractKeys).EXCHANGE_KEY_NAME,
+            (this.constructor as typeof AbstractKeys).WRITE_KEY_NAME,
+        ])
+        this.hasPersisted = false
+    }
+
+    /**
+     * Return a 32-character, DNS friendly hash of the public signing key.
+     *
+     * @returns {Promise<string>}
+     */
+    async getDeviceName ():Promise<string> {
+        return AbstractKeys.deviceName(this.DID)
+    }
+
+    static _createExchangeKeys ():Promise<CryptoKeyPair> {
+        throw new Error('The child should implement this')
+    }
+
+    static _createWriteKeys ():Promise<CryptoKeyPair> {
+        throw new Error('The child should implement this')
+    }
+
+    static async create<T extends AbstractKeys> (
+        this:ChildKeys,
+        session:boolean,
+        type:'ecc'|'rsa'
+    ):Promise<T> {
+        // encryption
+        const exchange = await this._createExchangeKeys()
+        // signatures
+        const write = await this._createWriteKeys()
+
+        const publicSigningKey = await getPublicKeyAsArrayBuffer(write)
+        const did = await publicKeyToDid(
+            new Uint8Array(publicSigningKey),
+            type === 'ecc' ? 'ed25519' : 'rsa'
+        )
+
+        const keys = new this({
+            keys: { exchange, write },
+            type,
+            did,
+            hasPersisted: false,
+            isSessionOnly: !!session
+        })
+
+        return keys as T
+    }
+
+    /**
+     * Restore some keys from indexedDB, or create a new keypair if it doesn't
+     * exist yet.
+     *
+     * @param {{ encryptionKeyName, signingKeyName, session }} opts Strings to
+     *   use as keys in indexedDB, and a session boolean, is this in memory
+     *   only? Or can it be persisted.
+     * @returns {Promise<AbstractKeys>}
+     */
+    static async load<T extends AbstractKeys = AbstractKeys> (
+        this:ChildKeys & typeof AbstractKeys,
+        opts:Partial<{
+            encryptionKeyName:string,
+            signingKeyName:string,
+            session:boolean,
+            type:'ecc'|'rsa'
+        }> = {
+            session: false,
+            type: 'rsa'
+        }
+    ):Promise<T> {
+        if (this._instance) return this._instance  // cache
+        const type = opts.type || 'rsa'
+
+        let hasPersisted = true
+        let exchangeKeys:CryptoKeyPair|undefined = await get(
+            opts.encryptionKeyName || DEFAULT_RSA_EXCHANGE
+        )
+        let writeKeys:CryptoKeyPair|undefined = await get(
+            opts.signingKeyName || DEFAULT_RSA_WRITE
+        )
+
+        if (!exchangeKeys) {
+            hasPersisted = false
+            exchangeKeys = await this._createExchangeKeys()
+        }
+        if (!writeKeys) {
+            hasPersisted = false
+            writeKeys = await this._createWriteKeys()
+        }
+
+        const publicSigningKey = await getPublicKeyAsArrayBuffer(writeKeys)
+        const did = await publicKeyToDid(
+            new Uint8Array(publicSigningKey),
+            type === 'ecc' ? 'ed25519' : 'rsa'
+        )
+
+        const keys = new this({
+            keys: { exchange: exchangeKeys, write: writeKeys },
+            did,
+            type,
+            hasPersisted,
+            isSessionOnly: !!opts.session
+        }) as T
+
+        return keys
+    }
+
+    /**
+     * Decrypt the given message.
+     */
+    decrypt = Object.assign(
+        /**
+         * Expect the given cipher content to be the format returned by
+         * encryptTo`. That is, encrypted AES key + `iv` + encrypted content.
+         */
+        async (
+            msg:string|Uint8Array|ArrayBuffer,
+            keysize?:SymmKeyLength
+        ):Promise<Uint8Array> => {
+            const length = keysize || DEFAULT_SYMM_LENGTH
+            const cipherText = normalizeToBuf(msg, base64ToArrBuf)
+            const key = cipherText.slice(0, length)
+            const data = cipherText.slice(length)
+            const decryptedKey = await this.decryptKey(key)
+            const decryptedContent = await AES.decrypt(data, decryptedKey)
+            return decryptedContent
+        },
+
+        {
+            asString: async (msg:string, keysize?:SymmKeyLength):Promise<string> => {
+                const dec = await this.decrypt(msg, keysize)
+                return toString(dec)
+            }
+        }
+    )
 }
 
 /**

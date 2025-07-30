@@ -6,13 +6,16 @@ import type {
     Msg,
     HashAlg,
     SymmKeyOpts,
-    SymmKey
+    SymmKey,
+    RsaSize
 } from './types.js'
 import {
     KeyUse,
     CharSize,
 } from './types.js'
 import {
+    IV_LENGTH,
+    AES_GCM,
     BASE58_DID_PREFIX,
     KEY_USE,
     RSA_SIGN_ALGORITHM,
@@ -26,7 +29,7 @@ import {
     EDWARDS_DID_PREFIX,
     BLS_DID_PREFIX,
     DEFAULT_SYMM_ALGORITHM,
-    DEFAULT_SYMM_LENGTH
+    DEFAULT_SYMM_LENGTH,
 } from './constants.js'
 
 export type VerifyArgs = {
@@ -524,4 +527,77 @@ export async function makeEccKeypair (
     ) as CryptoKeyPair
 
     return keys
+}
+
+export async function makeRSAKeypair (
+    size:RsaSize,
+    hashAlg:HashAlg,
+    use:KeyUse
+):Promise<CryptoKeyPair> {
+    if (!(Object.values(KeyUse).includes(use))) {
+        throw new Error('invalid key use')
+    }
+    const alg = use === KeyUse.Exchange ? RSA_ALGORITHM : RSA_SIGN_ALGORITHM
+    const uses:KeyUsage[] = (use === KeyUse.Exchange ?
+        ['encrypt', 'decrypt'] :
+        ['sign', 'verify'])
+
+    return webcrypto.subtle.generateKey({
+        name: alg,
+        modulusLength: size,
+        publicExponent: publicExponent(),
+        hash: { name: hashAlg }
+    }, false, uses)
+}
+
+function publicExponent ():Uint8Array {
+    return new Uint8Array([0x01, 0x00, 0x01])
+}
+
+async function encryptBytes (
+    msg:Msg,
+    key:CryptoKey|string,
+    opts?:Partial<{ iv:ArrayBuffer, charsize:number }>
+):Promise<ArrayBuffer> {
+    const data = normalizeUnicodeToBuf(msg, opts?.charsize ?? DEFAULT_CHAR_SIZE)
+    const importedKey = typeof key === 'string' ?
+        await importKey(key, opts) :
+        key
+    const iv:ArrayBuffer = opts?.iv || randomBuf(IV_LENGTH)
+    const cipherBuf = await webcrypto.subtle.encrypt({
+        name: AES_GCM,
+        iv
+    }, importedKey, data)
+
+    return joinBufs(iv, cipherBuf)
+}
+
+async function encrypt (
+    data:Uint8Array,
+    cryptoKey:CryptoKey|Uint8Array,
+    format?:'uint8array'|'arraybuffer',
+    iv?:Uint8Array
+):Promise<Uint8Array|ArrayBuffer> {
+    const key = (isCryptoKey(cryptoKey) ?
+        cryptoKey :
+        await importAesKey(cryptoKey)
+    )
+
+    // prefix the `iv` into the cipher text
+    const encrypted = (iv ?
+        await webcrypto.subtle.encrypt({ name: AES_GCM, iv }, key, data) :
+        await encryptBytes(data, key)
+    )
+
+    if (format && format === 'arraybuffer') return encrypted
+
+    return new Uint8Array(encrypted)
+}
+
+export async function getDeviceName (did:DID|string) {
+    const hashedUsername = await sha256(
+        new TextEncoder().encode(did.normalize('NFD'))
+    )
+
+    return toString(hashedUsername, 'base32').slice(0, 32)
 }

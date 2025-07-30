@@ -1,38 +1,18 @@
 import { webcrypto } from '@substrate-system/one-webcrypto'
-import {
-    getPublicKeyAsArrayBuffer,
-    publicKeyToDid,
-    base64ToArrBuf,
-    makeEccKeypair
-} from '../util.js'
-import { ECC_EXCHANGE_ALG, ECC_WRITE_ALG } from '../constants.js'
-import { KeyUse, type EccCurve, type PublicKey, type DID } from '../types.js'
+import { DEFAULT_ECC_EXCHANGE, DEFAULT_ECC_WRITE, ECC_EXCHANGE_ALG, ECC_WRITE_ALG } from '../constants.js'
+import { KeyUse, type EccCurve, type PublicKey } from '../types.js'
+import { base64ToArrBuf, } from '../util.js'
 import { checkValidKeyUse } from '../errors.js'
+import { AbstractKeys, type KeyArgs } from '../_base.js'
 
 /**
  * Class for ECC keys
  */
-export class Keys {
-    DID:DID
-    exchangeKey:CryptoKeyPair
-    writeKey:CryptoKeyPair
-    isPersisted:boolean
-    isSessionOnly:boolean
-
-    /**
-     * Use `.create`, not the constructor.
-     */
-    constructor (opts:{
-        keys:{ exchange:CryptoKeyPair, write:CryptoKeyPair };
-        did:DID;
-        isPersisted:boolean;
-        isSessionOnly:boolean;  // in memory only?
-    }) {
-        this.DID = opts.did
-        this.exchangeKey = opts.keys.exchange
-        this.writeKey = opts.keys.write
-        this.isPersisted = opts.isPersisted
-        this.isSessionOnly = opts.isSessionOnly
+export class EccKeys extends AbstractKeys {
+    constructor (opts:KeyArgs) {
+        super(opts)
+        EccKeys.EXCHANGE_KEY_NAME = opts.exchangeKeyName || DEFAULT_ECC_EXCHANGE
+        EccKeys.WRITE_KEY_NAME = opts.writeKeyName || DEFAULT_ECC_WRITE
     }
 
     get publicExchangeKey ():CryptoKey {
@@ -41,35 +21,6 @@ export class Keys {
 
     get publicWriteKey ():CryptoKey {
         return this.writeKey.publicKey
-    }
-
-    /**
-     * Factory function because async.
-     * Create new ECC keypairs for signing and encrypting.
-     *
-     * @param {boolean} session In memory only, not persisted?
-     */
-    static async create (session?:boolean):Promise<Keys> {
-        // encryption
-        const exchange = await makeEccKeypair(ECC_EXCHANGE_ALG, 'encyrpt')
-
-        // signatures
-        const sign = await makeEccKeypair(ECC_WRITE_ALG, 'sign')
-
-        const publicSigningKey = await getPublicKeyAsArrayBuffer(sign)
-        const did = await publicKeyToDid(
-            new Uint8Array(publicSigningKey),
-            'ed25519'
-        )
-
-        const keys = new Keys({
-            keys: { exchange, write: sign },
-            did,
-            isPersisted: false,
-            isSessionOnly: !!session
-        })
-
-        return keys
     }
 }
 
@@ -105,7 +56,7 @@ export async function importPublicKey (
 }
 
 export default {
-    Keys,
+    EccKeys,
     importPublicKey
 }
 
