@@ -44,18 +44,17 @@ export interface Decryptor {
 
 export interface Encryptor {
     (
-        opts:{
-            content:string|Uint8Array;
-            publicKey:CryptoKey|string;
-        },
-        recipient?:CryptoKey|Uint8Array,
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,
         aesKey?:SymmKey|Uint8Array|string,
         keysize?:SymmKeyLength
     ):Promise<Uint8Array>;
     asString:(
-        msg:string,
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,
+        aesKey?:SymmKey|Uint8Array|string,
         keysize?:SymmKeyLength
-    )=>Promise<string>
+    )=>Promise<string>;
 }
 
 export interface Signer {
@@ -323,10 +322,7 @@ export abstract class AbstractKeys {
  *   the encrypted content.
  */
 export async function encryptTo (
-    opts:{
-        content:string|Uint8Array;
-        publicKey:CryptoKey|string;
-    },
+    opts:{ content:string|Uint8Array; publicKey:CryptoKey|string; },
     aesKey?:SymmKey|Uint8Array|string,
 ):Promise<ArrayBuffer> {
     const { content, publicKey } = opts
@@ -355,17 +351,7 @@ encryptTo.asString = async function (
     opts:{ content:string|Uint8Array; publicKey:CryptoKey|string },
     aesKey?:SymmKey|Uint8Array|string
 ):Promise<string> {
-    const { content, publicKey } = opts
-    const key = aesKey || await AES.create()
-    const encryptedContent = await AES.encrypt(
-        typeof content === 'string' ? fromString(content) : content,
-        typeof key === 'string' ? await AES.import(key) : key,
-        'arraybuffer'
-    )
-
-    const encryptedKey = await encryptKeyTo({ key, publicKey })
-    const joined = joinBufs(encryptedKey, encryptedContent)
-
+    const joined = await encryptTo(opts, aesKey)
     return toString(new Uint8Array(joined), 'base64pad')
 }
 

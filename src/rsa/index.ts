@@ -135,8 +135,8 @@ export class RsaKeys extends AbstractKeys {
                 aesKey?:SymmKey|Uint8Array|string,
                 keysize?:SymmKeyLength
             ) => {
-                const encrytped = this.encrypt(content, recipient, aesKey, keysize)
-                return 
+                const encrypted = await this.encrypt(content, recipient, aesKey, keysize)
+                return toString(new Uint8Array(encrypted), 'base64pad')
             }
         }
     )
