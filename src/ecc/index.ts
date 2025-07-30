@@ -4,7 +4,8 @@ import {
     DEFAULT_ECC_WRITE,
     ECC_EXCHANGE_ALG,
     ECC_WRITE_ALG,
-    DEFAULT_SYMM_LENGTH
+    DEFAULT_SYMM_LENGTH,
+    DEFAULT_SYMM_ALGORITHM
 } from '../constants.js'
 import {
     KeyUse,
@@ -17,7 +18,7 @@ import {
     normalizeToBuf
 } from '../util.js'
 import { checkValidKeyUse } from '../errors.js'
-import { AbstractKeys, type KeyArgs } from '../_base.js'
+import { AbstractKeys, Encryptor, type KeyArgs } from '../_base.js'
 import { toString } from 'uint8arrays'
 
 /**
@@ -37,6 +38,27 @@ export class EccKeys extends AbstractKeys {
     get publicWriteKey ():CryptoKey {
         return this.writeKey.publicKey
     }
+
+    encrypt = Object.assign(
+        async (
+            content:string|Uint8Array,
+            recipient?:CryptoKey|string,
+            aesKey?:SymmKey|Uint8Array|string,
+            keysize?:SymmKeyLength
+        ) => {
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: DEFAULT_SYMM_ALGORITHM, iv },
+                key,
+                encoder.encode(message)
+            )
+        },
+
+        {
+            asString: () => {
+
+            }
+        }
+    )
 
     decrypt = Object.assign(
         /**
@@ -141,6 +163,28 @@ async function deriveKey (
         },
         hkdfBaseKey,
         { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    )
+}
+
+/**
+ * Derive a symmetric key via HKDF.
+ */
+async function deriveSymmetricKey (
+    sharedSecret:CryptoKey,
+    salt:Uint8Array,
+    length = DEFAULT_SYMM_LENGTH
+):Promise<CryptoKey> {
+    return crypto.subtle.deriveKey(
+        {
+            name: 'HKDF',
+            salt,
+            info: new Uint8Array([]),
+            hash: 'SHA-256',
+        },
+        sharedSecret,
+        { name: DEFAULT_SYMM_ALGORITHM, length },
         false,
         ['encrypt', 'decrypt']
     )

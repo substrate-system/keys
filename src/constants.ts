@@ -6,6 +6,7 @@ export const BASE58_DID_PREFIX = 'did:key:z'
 // export const ECC_EXCHANGE_ALG = 'ECDH'
 export const ECC_WRITE_ALG = 'ECDSA'
 export const ECC_EXCHANGE_ALG = 'X25519'
+export const ECC_SALT_LENGTH = 128
 
 export const KEY_USE = {
     sign: ['sign', 'verify'],
