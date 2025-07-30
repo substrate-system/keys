@@ -14,15 +14,13 @@ import {
     CharSize,
 } from './types.js'
 import {
-    IV_LENGTH,
-    AES_GCM,
     BASE58_DID_PREFIX,
     KEY_USE,
     RSA_SIGN_ALGORITHM,
     RSA_ALGORITHM,
     DEFAULT_HASH_ALGORITHM,
     DEFAULT_CHAR_SIZE,
-    SALT_LENGTH,
+    RSA_SALT_LENGTH,
     RSA_HASHING_ALGORITHM,
     RSA_DID_PREFIX,
     KEY_TYPE,
@@ -140,7 +138,7 @@ export const rsaOperations = {
         return webcrypto.subtle.verify(
             {
                 name: RSA_SIGN_ALGORITHM,
-                saltLength: SALT_LENGTH
+                saltLength: RSA_SALT_LENGTH
             },
             (typeof publicKey === 'string' ?
                 await importPublicKey(publicKey, hashAlg, KeyUse.Sign) :
@@ -156,7 +154,7 @@ export const rsaOperations = {
         charSize:CharSize = DEFAULT_CHAR_SIZE
     ):Promise<ArrayBuffer> {
         return webcrypto.subtle.sign(
-            { name: RSA_SIGN_ALGORITHM, saltLength: SALT_LENGTH },
+            { name: RSA_SIGN_ALGORITHM, saltLength: RSA_SALT_LENGTH },
             privateKey,
             normalizeUnicodeToBuf(msg, charSize)
         )
@@ -554,50 +552,10 @@ function publicExponent ():Uint8Array {
     return new Uint8Array([0x01, 0x00, 0x01])
 }
 
-async function encryptBytes (
-    msg:Msg,
-    key:CryptoKey|string,
-    opts?:Partial<{ iv:ArrayBuffer, charsize:number }>
-):Promise<ArrayBuffer> {
-    const data = normalizeUnicodeToBuf(msg, opts?.charsize ?? DEFAULT_CHAR_SIZE)
-    const importedKey = typeof key === 'string' ?
-        await importKey(key, opts) :
-        key
-    const iv:ArrayBuffer = opts?.iv || randomBuf(IV_LENGTH)
-    const cipherBuf = await webcrypto.subtle.encrypt({
-        name: AES_GCM,
-        iv
-    }, importedKey, data)
-
-    return joinBufs(iv, cipherBuf)
-}
-
-async function encrypt (
-    data:Uint8Array,
-    cryptoKey:CryptoKey|Uint8Array,
-    format?:'uint8array'|'arraybuffer',
-    iv?:Uint8Array
-):Promise<Uint8Array|ArrayBuffer> {
-    const key = (isCryptoKey(cryptoKey) ?
-        cryptoKey :
-        await importAesKey(cryptoKey)
-    )
-
-    // prefix the `iv` into the cipher text
-    const encrypted = (iv ?
-        await webcrypto.subtle.encrypt({ name: AES_GCM, iv }, key, data) :
-        await encryptBytes(data, key)
-    )
-
-    if (format && format === 'arraybuffer') return encrypted
-
-    return new Uint8Array(encrypted)
-}
-
 export async function getDeviceName (did:DID|string) {
     const hashedUsername = await sha256(
         new TextEncoder().encode(did.normalize('NFD'))
     )
 
-    return toString(hashedUsername, 'base32').slice(0, 32)
+    return uToString(hashedUsername, 'base32').slice(0, 32)
 }

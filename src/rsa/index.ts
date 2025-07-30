@@ -1,53 +1,43 @@
-import { AbstractKeys } from './_base'
+import { AbstractKeys } from '../_base.js'
 import { webcrypto } from '@substrate-system/one-webcrypto'
-import { fromString, type SupportedEncodings, toString } from 'uint8arrays'
+import { fromString, toString, type SupportedEncodings } from 'uint8arrays'
+import { AES, importAesKey } from '../aes/index.js'
 import {
     DEFAULT_CHAR_SIZE,
-    DEFAULT_SYMM_ALGORITHM,
+    DEFAULT_SYMM_LENGTH,
     AES_GCM,
     IV_LENGTH,
-} from './constants.js'
+} from '../constants.js'
 import {
-    type SymmKeyLength,
-    type SymmAlgorithm,
     type DID,
     type Msg,
-} from './types.js'
+    type SymmKeyLength,
+    type SymmKey
+} from '../types.js'
 import {
     publicKeyToDid,
     getPublicKeyAsArrayBuffer,
-    rsaOperations,
-    didToPublicKey,
-    importPublicKey,
-    toBase64,
     isCryptoKey,
     normalizeUnicodeToBuf,
     importKey,
     randomBuf,
     joinBufs,
-    normalizeBase64ToBuf,
+    normalizeToBuf,
+    rsaOperations,
     base64ToArrBuf,
-    sha256,
-    getPublicKeyAsUint8Array,
-    normalizeToBuf
-} from './util.js'
+    toBase64
+} from '../util.js'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
-export * from './constants.js'
-
+export * from '../constants.js'
 export type { DID }
-
-export { getPublicKeyAsUint8Array } from './util.js'
-
+export { getPublicKeyAsUint8Array } from '../util.js'
 export type SerializedKeys = {
     DID:DID;
     publicEncryptKey:string;
 }
 
-/**
- * Class for ECC keys
- */
-export class EccKeys extends AbstractKeys {
+export class RsaKeys extends AbstractKeys {
     get publicExchangeKey ():CryptoKey {
         return this.exchangeKey.publicKey
     }
@@ -55,7 +45,77 @@ export class EccKeys extends AbstractKeys {
     get publicWriteKey ():CryptoKey {
         return this.writeKey.publicKey
     }
+
+    /**
+     * Decrypt the given encrypted AES key.
+     * Return the key as `Uint8Array`.
+     */
+    decryptKey = Object.assign(
+        async (key:string|Uint8Array|ArrayBuffer):Promise<Uint8Array> => {
+            const decrypted = await rsaOperations.decrypt(
+                key,
+                this.exchangeKey.privateKey
+            )
+            return decrypted
+        },
+
+        {
+            /**
+             * Decrypt the given AES key, return the result as a string.
+             */
+            asString: async (
+                msg:string|Uint8Array,
+                format?:SupportedEncodings
+            ):Promise<string> => {
+                const decrypted = await rsaOperations.decrypt(
+                    msg,
+                    this.exchangeKey.privateKey
+                )
+
+                return toString(decrypted, format)
+            }
+        }
+    )
+
+    decrypt = Object.assign(
+        /**
+         * Expect the given cipher content to be the format returned by
+         * encryptTo`. That is, encrypted AES key + `iv` + encrypted content.
+         */
+        async (
+            msg:string|Uint8Array|ArrayBuffer,
+            keysize?:SymmKeyLength
+        ):Promise<Uint8Array> => {
+            const length = keysize || DEFAULT_SYMM_LENGTH
+            const cipherText = normalizeToBuf(msg, base64ToArrBuf)
+            const key = cipherText.slice(0, length)
+            const data = cipherText.slice(length)
+            const decryptedKey = await this.decryptKey(key)
+            const decryptedContent = await AES.decrypt(data, decryptedKey)
+            return decryptedContent
+        },
+
+        {
+            asString: async (msg:string, keysize?:SymmKeyLength):Promise<string> => {
+                const dec = await this.decrypt(msg, keysize)
+                return toString(dec)
+            }
+        }
+    )
 }
+
+/**
+//  * Class for ECC keys
+//  */
+// export class EccKeys extends AbstractKeys {
+//     get publicExchangeKey ():CryptoKey {
+//         return this.exchangeKey.publicKey
+//     }
+
+//     get publicWriteKey ():CryptoKey {
+//         return this.writeKey.publicKey
+//     }
+// }
 
 // /**
 //  * Expose RSA keys only for now, because we are
@@ -428,35 +488,35 @@ export class EccKeys extends AbstractKeys {
 //     }
 // }
 
-// /**
-//  * Encrypt the given message to the given public key. If an AES key is not
-//  * provided, one will be created. Use an AES key to encrypt the given
-//  * content, then we encrypt the AES key to the given public key.
-//  *
-//  * @param {{ content, publicKey }} opts The content to encrypt and
-//  * public key to encrypt to
-//  * @param {SymmKey|Uint8Array|string} [aesKey] An optional AES key to encrypt
-//  * to the given public key
-//  * @returns {Promise<ArrayBuffer>} The encrypted AES key, concattenated with
-//  *   the encrypted content.
-//  */
-// export async function encryptTo (
-//     opts:{
-//         content:string|Uint8Array;
-//         publicKey:CryptoKey|string;
-//     },
-//     aesKey?:SymmKey|Uint8Array|string,
-// ):Promise<ArrayBuffer> {
-//     const { content, publicKey } = opts
-//     const key = aesKey || await AES.create()
-//     const encryptedContent = await AES.encrypt(
-//         typeof content === 'string' ? fromString(content) : content,
-//         typeof key === 'string' ? await AES.import(key) : key,
-//     )
-//     const encryptedKey = await encryptKeyTo({ key, publicKey })
+/**
+ * Encrypt the given message to the given public key. If an AES key is not
+ * provided, one will be created. Use an AES key to encrypt the given
+ * content, then we encrypt the AES key to the given public key.
+ *
+ * @param {{ content, publicKey }} opts The content to encrypt and
+ * public key to encrypt to
+ * @param {SymmKey|Uint8Array|string} [aesKey] An optional AES key to encrypt
+ * to the given public key
+ * @returns {Promise<ArrayBuffer>} The encrypted AES key, concattenated with
+ *   the encrypted content.
+ */
+export async function encryptTo (
+    opts:{
+        content:string|Uint8Array;
+        publicKey:CryptoKey|string;
+    },
+    aesKey?:SymmKey|Uint8Array|string,
+):Promise<ArrayBuffer> {
+    const { content, publicKey } = opts
+    const key = aesKey || await AES.create()
+    const encryptedContent = await AES.encrypt(
+        typeof content === 'string' ? fromString(content) : content,
+        typeof key === 'string' ? await AES.import(key) : key,
+    )
+    const encryptedKey = await encryptKeyTo({ key, publicKey })
 
-//     return joinBufs(encryptedKey, encryptedContent)
-// }
+    return joinBufs(encryptedKey, encryptedContent)
+}
 
 // /**
 //  * Encrypt the given AES key to the given public key. Return the encrypted AES
@@ -551,146 +611,84 @@ export class EccKeys extends AbstractKeys {
 //     },
 // }
 
-// export async function encryptKeyTo ({ key, publicKey }:{
-//     key:string|Uint8Array|CryptoKey;
-//     publicKey:CryptoKey|Uint8Array|string;
-// }, format:'arraybuffer'):Promise<ArrayBuffer>
+export async function encryptKeyTo ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey:CryptoKey|Uint8Array|string;
+}, format:'arraybuffer'):Promise<ArrayBuffer>
 
-// export async function encryptKeyTo ({ key, publicKey }:{
-//     key:string|Uint8Array|CryptoKey;
-//     publicKey:CryptoKey|Uint8Array|string;
-// }, format:'uint8array'):Promise<Uint8Array>
+export async function encryptKeyTo ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey:CryptoKey|Uint8Array|string;
+}, format:'uint8array'):Promise<Uint8Array>
 
-// export async function encryptKeyTo ({ key, publicKey }:{
-//     key:string|Uint8Array|CryptoKey;
-//     publicKey:CryptoKey|Uint8Array|string;
-// }, format?:undefined):Promise<Uint8Array>
-
-// /**
-//  * Encrypt the given content to the given public key. This is RSA encryption,
-//  * and should be used only to encrypt AES keys.
-//  *
-//  * @param {{ content, publicKey }} params The content to encrypt, and public key
-//  * to encrypt it to.
-//  * @returns {Promise<Uint8Array>}
-//  */
-// export async function encryptKeyTo ({ key, publicKey }:{
-//     key:string|Uint8Array|CryptoKey;
-//     publicKey:CryptoKey|Uint8Array|string;
-// }, format?:'uint8array'|'arraybuffer'):Promise<Uint8Array|ArrayBuffer> {
-//     let _key:Uint8Array|string
-//     if (key instanceof CryptoKey) {
-//         _key = await AES.export(key)
-//     } else {
-//         _key = key
-//     }
-
-//     const buf = await rsaOperations.encrypt(_key, publicKey)
-//     if (format && format === 'arraybuffer') return buf
-//     return new Uint8Array(buf)
-// }
-
-// encryptKeyTo.asString = async function ({ key, publicKey }:{
-//     key:string|Uint8Array|CryptoKey;
-//     publicKey:CryptoKey|string|Uint8Array;
-// }, format?:SupportedEncodings):Promise<string> {
-//     const asArr = await encryptKeyTo({ key, publicKey })
-//     return format ? toString(asArr, format) : toBase64(asArr)
-// }
-
-// function importAesKey (
-//     key:Uint8Array|ArrayBuffer,
-//     length?:number
-// ):Promise<CryptoKey> {
-//     return webcrypto.subtle.importKey(
-//         'raw',
-//         key,
-//         {
-//             name: AES_GCM,
-//             length: length || SymmKeyLength.B256,
-//         },
-//         true,
-//         ['encrypt', 'decrypt']
-//     )
-// }
-
-async function encryptBytes (
-    msg:Msg,
-    key:CryptoKey|string,
-    opts?:Partial<{ iv:ArrayBuffer, charsize:number }>
-):Promise<ArrayBuffer> {
-    const data = normalizeUnicodeToBuf(msg, opts?.charsize ?? DEFAULT_CHAR_SIZE)
-    const importedKey = typeof key === 'string' ?
-        await importKey(key, opts) :
-        key
-    const iv:ArrayBuffer = opts?.iv || randomBuf(IV_LENGTH)
-    const cipherBuf = await webcrypto.subtle.encrypt({
-        name: AES_GCM,
-        iv
-    }, importedKey, data)
-
-    return joinBufs(iv, cipherBuf)
-}
+export async function encryptKeyTo ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey:CryptoKey|Uint8Array|string;
+}, format?:undefined):Promise<Uint8Array>
 
 /**
- * Decrypt the given message with the given key. We expect the `iv` to be
- * prefixed to the encrypted message.
- * @param msg The message to decrypt
- * @param key The key to decrypt with
- * @param opts Optional args for algorithm and stuff
- * @returns {Promise<ArrayBuffer>}
+ * Encrypt the given content to the given public key. This is RSA encryption,
+ * and should be used only to encrypt AES keys.
+ *
+ * @param {{ content, publicKey }} params The content to encrypt, and public key
+ * to encrypt it to.
+ * @returns {Promise<Uint8Array>}
  */
-async function decryptBytes (
-    msg:Msg,
-    key:CryptoKey|string,
-    opts?:Partial<{
-        alg:SymmAlgorithm;
-        length: SymmKeyLength;
-        iv: ArrayBuffer;
-    }>
-):Promise<ArrayBuffer> {
-    const cipherText = normalizeBase64ToBuf(msg)
-    const importedKey = typeof key === 'string' ?
-        await importKey(key, opts) :
-        key
-    // `iv` is prefixed to the cypher text
-    const iv = cipherText.slice(0, IV_LENGTH)
-    const cipherBytes = cipherText.slice(IV_LENGTH)
-    const msgBuff = await webcrypto.subtle.decrypt({
-        name: DEFAULT_SYMM_ALGORITHM,
-        iv
-    }, importedKey, cipherBytes)
+export async function encryptKeyTo ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey:CryptoKey|Uint8Array|string;
+}, format?:'uint8array'|'arraybuffer'):Promise<Uint8Array|ArrayBuffer> {
+    let _key:Uint8Array|string
+    if (key instanceof CryptoKey) {
+        _key = await AES.export(key)
+    } else {
+        _key = key
+    }
 
-    return msgBuff
+    const buf = await rsaOperations.encrypt(_key, publicKey)
+    if (format && format === 'arraybuffer') return buf
+    return new Uint8Array(buf)
 }
 
-async function encrypt (
+encryptKeyTo.asString = async function ({ key, publicKey }:{
+    key:string|Uint8Array|CryptoKey;
+    publicKey:CryptoKey|string|Uint8Array;
+}, format?:SupportedEncodings):Promise<string> {
+    const asArr = await encryptKeyTo({ key, publicKey })
+    return format ? toString(asArr, format) : toBase64(asArr)
+}
+
+export async function encrypt (
     data:Uint8Array,
     cryptoKey:CryptoKey|Uint8Array,
     format?:undefined,
     iv?:Uint8Array
 ):Promise<Uint8Array>
 
-async function encrypt (
+export async function encrypt (
     data:Uint8Array,
     cryptoKey:CryptoKey|Uint8Array,
     format:'uint8array',
     iv?:Uint8Array
 ):Promise<Uint8Array>
 
-async function encrypt (
+export async function encrypt (
     data:Uint8Array,
     cryptoKey:CryptoKey|Uint8Array,
     format:'arraybuffer',
     iv?:Uint8Array
 ):Promise<ArrayBuffer>
 
-async function encrypt (
+/**
+ * Encrypt the given data
+ */
+export async function encrypt (
     data:Uint8Array,
     cryptoKey:CryptoKey|Uint8Array,
     format?:'uint8array'|'arraybuffer',
     iv?:Uint8Array
 ):Promise<Uint8Array|ArrayBuffer> {
+    // get a crypto key
     const key = (isCryptoKey(cryptoKey) ?
         cryptoKey :
         await importAesKey(cryptoKey)
@@ -707,10 +705,21 @@ async function encrypt (
     return new Uint8Array(encrypted)
 }
 
-export async function getDeviceName (did:DID|string) {
-    const hashedUsername = await sha256(
-        new TextEncoder().encode(did.normalize('NFD'))
-    )
+async function encryptBytes (
+    msg:Msg,
+    key:CryptoKey|string,
+    opts?:Partial<{ iv:ArrayBuffer, charsize:number }>
+):Promise<ArrayBuffer> {
+    const data = normalizeUnicodeToBuf(msg, opts?.charsize ?? DEFAULT_CHAR_SIZE)
+    const importedKey = typeof key === 'string' ?
+        await importKey(key, opts) :
+        key
+    const iv:ArrayBuffer = opts?.iv || randomBuf(IV_LENGTH)
+    const cipherBuf = await webcrypto.subtle.encrypt({
+        name: AES_GCM,
+        iv
+    }, importedKey, data)
 
-    return toString(hashedUsername, 'base32').slice(0, 32)
+    // prefix the `iv` to the ciphertext
+    return joinBufs(iv, cipherBuf)
 }

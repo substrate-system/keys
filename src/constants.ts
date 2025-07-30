@@ -20,7 +20,7 @@ export const RSA_DID_PREFIX = new Uint8Array([0x00, 0xf5, 0x02])
 export const DEFAULT_RSA_SIZE = RsaSize.B2048
 export const DEFAULT_HASH_ALGORITHM = HashAlg.SHA_256
 export const DEFAULT_CHAR_SIZE = CharSize.B8
-export const SALT_LENGTH = 128
+export const RSA_SALT_LENGTH = 128
 
 // AES
 export const AES_GCM = 'AES-GCM' as const

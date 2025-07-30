@@ -1,9 +1,24 @@
 import { webcrypto } from '@substrate-system/one-webcrypto'
-import { DEFAULT_ECC_EXCHANGE, DEFAULT_ECC_WRITE, ECC_EXCHANGE_ALG, ECC_WRITE_ALG } from '../constants.js'
-import { KeyUse, type EccCurve, type PublicKey } from '../types.js'
-import { base64ToArrBuf, } from '../util.js'
+import {
+    DEFAULT_ECC_EXCHANGE,
+    DEFAULT_ECC_WRITE,
+    ECC_EXCHANGE_ALG,
+    ECC_WRITE_ALG,
+    DEFAULT_SYMM_LENGTH
+} from '../constants.js'
+import {
+    KeyUse,
+    type EccCurve,
+    type PublicKey,
+    type SymmKeyLength
+} from '../types.js'
+import {
+    base64ToArrBuf,
+    normalizeToBuf
+} from '../util.js'
 import { checkValidKeyUse } from '../errors.js'
 import { AbstractKeys, type KeyArgs } from '../_base.js'
+import { toString } from 'uint8arrays'
 
 /**
  * Class for ECC keys
@@ -22,6 +37,40 @@ export class EccKeys extends AbstractKeys {
     get publicWriteKey ():CryptoKey {
         return this.writeKey.publicKey
     }
+
+    decrypt = Object.assign(
+        /**
+         * Expect the given cipher content to be the format returned by
+         * encryptTo`. That is, encrypted AES key + `iv` + encrypted content.
+         */
+        async (
+            msg:string|Uint8Array|ArrayBuffer,
+            keysize?:SymmKeyLength
+        ):Promise<Uint8Array> => {
+            // const length = keysize || DEFAULT_SYMM_LENGTH
+            // const cipherText = normalizeToBuf(msg, base64ToArrBuf)
+            // const key = cipherText.slice(0, length)
+            // const data = cipherText.slice(length)
+            // const decryptedKey = await this.decryptKey(key)
+            // const decryptedContent = await AES.decrypt(data, decryptedKey)
+            // return decryptedContent
+
+            // first get the symmetric key from the cipher text
+            const length = keysize || DEFAULT_SYMM_LENGTH
+            const encrypted = normalizeToBuf(msg, base64ToArrBuf)
+            const salt = encrypted.slice(0, 16)
+            const iv = encrypted.slice(16, 28)
+            const ciphertext = encrypted.slice(28)
+            const key = await deriveKey(privateKey, publicKey, salt)
+        },
+
+        {
+            asString: async (msg:string, keysize?:SymmKeyLength):Promise<string> => {
+                const dec = await this.decrypt(msg, keysize)
+                return toString(dec)
+            }
+        }
+    )
 }
 
 /**
@@ -60,3 +109,39 @@ export default {
     importPublicKey
 }
 
+/**
+ * Derive AES key from X25519 keypair via ECDH + HKDF
+ */
+async function deriveKey (
+    privateKey:CryptoKey,
+    publicKey:CryptoKey,
+    salt:Uint8Array,
+    info:string
+): Promise<CryptoKey> {
+    const sharedSecret = await crypto.subtle.deriveBits(
+        { name: 'ECDH', public: publicKey },
+        privateKey,
+        256
+    )
+
+    const hkdfBaseKey = await crypto.subtle.importKey(
+        'raw',
+        sharedSecret,
+        'HKDF',
+        false,
+        ['deriveKey']
+    )
+
+    return crypto.subtle.deriveKey(
+        {
+            name: 'HKDF',
+            hash: 'SHA-256',
+            salt,
+            info: encoder.encode(info)
+        },
+        hkdfBaseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    )
+}
