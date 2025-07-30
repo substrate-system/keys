@@ -8,11 +8,12 @@ import {
     AES_GCM,
     IV_LENGTH,
 } from '../constants.js'
-import {
-    type DID,
-    type Msg,
-    type SymmKeyLength,
-    type SymmKey
+import type {
+    DID,
+    Msg,
+    SymmKeyLength,
+    SymmKey,
+    CharSize
 } from '../types.js'
 import {
     publicKeyToDid,
@@ -45,6 +46,39 @@ export class RsaKeys extends AbstractKeys {
     get publicWriteKey ():CryptoKey {
         return this.writeKey.publicKey
     }
+
+    sign = Object.assign(
+        /**
+         * Sign the message, and return the signature as a `Uint8Array`.
+         */
+        async (
+            msg:Msg,
+            charsize:CharSize = DEFAULT_CHAR_SIZE
+        ):Promise<Uint8Array> => {
+            const key = this.writeKey
+            const sig = await rsaOperations.sign(
+                msg,
+                key.privateKey,
+                charsize
+            )
+
+            return new Uint8Array(sig)
+        },
+
+        {
+            /**
+             * Sign a message, return the signature as a base64 encoded string.
+             *
+             * @param {Msg} msg The message to sign
+             * @param {CharSize} [charsize] Character size
+             * @returns {Promise<string>}
+             */
+            asString: async (msg:Msg, charsize?:CharSize):Promise<string> => {
+                const sig = await this.sign(msg, charsize)
+                return toBase64(sig)
+            }
+        }
+    )
 
     /**
      * Decrypt the given encrypted AES key.
@@ -93,6 +127,17 @@ export class RsaKeys extends AbstractKeys {
             const encryptedKey = await encryptKeyTo({ key, publicKey })
 
             return joinBufs(encryptedKey, encryptedContent)
+        },
+        {
+            asString: async (
+                content:string|Uint8Array,
+                recipient?:CryptoKey|string,
+                aesKey?:SymmKey|Uint8Array|string,
+                keysize?:SymmKeyLength
+            ) => {
+                const encrytped = this.encrypt(content, recipient, aesKey, keysize)
+                return 
+            }
         }
     )
 
@@ -374,39 +419,6 @@ export class RsaKeys extends AbstractKeys {
 //             asString: async (msg:string, keysize?:SymmKeyLength):Promise<string> => {
 //                 const dec = await this.decrypt(msg, keysize)
 //                 return toString(dec)
-//             }
-//         }
-//     )
-
-//     sign = Object.assign(
-//         /**
-//          * Sign the message, and return the signature as a `Uint8Array`.
-//          */
-//         async (
-//             msg:Msg,
-//             charsize:CharSize = DEFAULT_CHAR_SIZE
-//         ):Promise<Uint8Array> => {
-//             const key = this._signKey
-//             const sig = await rsaOperations.sign(
-//                 msg,
-//                 key.privateKey,
-//                 charsize
-//             )
-
-//             return new Uint8Array(sig)
-//         },
-
-//         {
-//             /**
-//              * Sign a message, return the signature as a base64 encoded string.
-//              *
-//              * @param {Msg} msg The message to sign
-//              * @param {CharSize} [charsize] Character size
-//              * @returns {Promise<string>}
-//              */
-//             asString: async (msg:Msg, charsize?:CharSize):Promise<string> => {
-//                 const sig = await this.sign(msg, charsize)
-//                 return toBase64(sig)
 //             }
 //         }
 //     )

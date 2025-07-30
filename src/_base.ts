@@ -1,7 +1,13 @@
 import { fromString, type SupportedEncodings, toString } from 'uint8arrays'
 import { get, set, delMany } from 'idb-keyval'
 import { DEFAULT_RSA_EXCHANGE, DEFAULT_RSA_WRITE, } from './constants.js'
-import { type SymmKeyLength, type DID, type SymmKey, } from './types.js'
+import type {
+    CharSize,
+    Msg,
+    SymmKeyLength,
+    DID,
+    SymmKey,
+} from './types.js'
 import { AES } from './aes/index.js'
 import {
     publicKeyToDid,
@@ -53,8 +59,8 @@ export interface Encryptor {
 }
 
 export interface Signer {
-    (msg:string|Uint8Array):Promise<Uint8Array>;
-    asString: (msg:string, keysize?:SymmKeyLength)=>Promise<string>
+    (msg:Msg, charsize?:CharSize):Promise<Uint8Array>;
+    asString: (msg:string, charsize?:CharSize)=>Promise<string>
 }
 
 /**
