@@ -30,16 +30,27 @@ export type SerializedKeys = {
     publicEncryptKey:string;
 }
 
-/**
- * Function that returns a promise for Uint8Array.
- * Has a property `asString` that returns a string.
- */
-export interface Decryptor {
+// RSA: no publicKey param
+export interface RsaDecryptor {
     (
         msg:string|Uint8Array|ArrayBuffer,
         keysize?:SymmKeyLength
     ):Promise<Uint8Array>;
-    asString:(msg:string, keysize?:SymmKeyLength)=>Promise<string>
+    asString:(msg:string, keysize?:SymmKeyLength)=>Promise<string>;
+}
+
+// ECC: requires publicKey
+export interface EccDecryptor {
+    (
+        msg:string|Uint8Array|ArrayBuffer,
+        publicKey:CryptoKey|string,
+        alg?:string,
+    ):Promise<Uint8Array>;
+
+    asString:(
+        msg:string|Uint8Array|ArrayBuffer,
+        keysize?:SymmKeyLength
+    )=>Promise<string>;
 }
 
 export interface Encryptor {
@@ -113,7 +124,7 @@ export abstract class AbstractKeys {
      * By default, encrypt the given data to yourself, as a "note to self".
      */
     abstract encrypt:Encryptor
-    abstract decrypt:Decryptor
+    abstract decrypt:RsaDecryptor|EccDecryptor
     abstract sign:Signer
 
     get publicWriteKey ():CryptoKey {
@@ -148,6 +159,16 @@ export abstract class AbstractKeys {
     static deviceName (did:DID):Promise<string> {
         return getDeviceName(did)
     }
+
+    /**
+     * Get the relevant AES key.
+     *   - if this is an ECC keypair, then use DHKE with the given public key
+     *   - if this is RSA, use your private key to decrypt the given AES key
+     */
+    abstract getAesKey (
+        publicKey?:CryptoKey|string,
+        encryptedKey?:Uint8Array
+    ):Promise<CryptoKey>
 
     /**
      * Save this keys instance to `indexedDB`.

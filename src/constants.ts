@@ -6,7 +6,6 @@ export const BASE58_DID_PREFIX = 'did:key:z'
 // export const ECC_EXCHANGE_ALG = 'ECDH'
 export const ECC_WRITE_ALG = 'ECDSA'
 export const ECC_EXCHANGE_ALG = 'X25519'
-export const ECC_SALT_LENGTH = 128
 
 export const KEY_USE = {
     sign: ['sign', 'verify'],
@@ -21,7 +20,6 @@ export const RSA_DID_PREFIX = new Uint8Array([0x00, 0xf5, 0x02])
 export const DEFAULT_RSA_SIZE = RsaSize.B2048
 export const DEFAULT_HASH_ALGORITHM = HashAlg.SHA_256
 export const DEFAULT_CHAR_SIZE = CharSize.B8
-export const RSA_SALT_LENGTH = 128
 
 // AES
 export const AES_GCM = 'AES-GCM' as const
@@ -43,3 +41,4 @@ export const DEFAULT_RSA_EXCHANGE = 'rsa-encryption-key'
 export const DEFAULT_RSA_WRITE = 'rsa-signing-key'
 export const DEFAULT_ECC_EXCHANGE = 'ecc-exchange'
 export const DEFAULT_ECC_WRITE = 'ecc-write'
+export const SALT_LENGTH = 16

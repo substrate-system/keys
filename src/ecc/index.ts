@@ -4,21 +4,23 @@ import {
     DEFAULT_ECC_WRITE,
     ECC_EXCHANGE_ALG,
     ECC_WRITE_ALG,
-    DEFAULT_SYMM_LENGTH,
-    DEFAULT_SYMM_ALGORITHM
+    DEFAULT_SYMM_ALGORITHM,
+    SALT_LENGTH,
+    IV_LENGTH,
 } from '../constants.js'
 import {
+    EccCurve,
     KeyUse,
-    type EccCurve,
     type PublicKey,
-    type SymmKeyLength
+    type SymmKeyLength,
+    type SymmKey
 } from '../types.js'
 import {
     base64ToArrBuf,
     normalizeToBuf
 } from '../util.js'
 import { checkValidKeyUse } from '../errors.js'
-import { AbstractKeys, Encryptor, type KeyArgs } from '../_base.js'
+import { AbstractKeys, type KeyArgs } from '../_base.js'
 import { toString } from 'uint8arrays'
 
 /**
@@ -39,55 +41,140 @@ export class EccKeys extends AbstractKeys {
         return this.writeKey.publicKey
     }
 
+    static INFO = 'example'
+
+    /**
+     * If no recipient is passed in, then this will encrypt to itself
+     * (a note to self).
+     */
     encrypt = Object.assign(
+        /**
+         * Encrypt the given content to the given public key, or encrypt to
+         * our public key if it is not passedd in.
+         *
+         * @param content Content to encrypt
+         * @param info info tag for HKDF
+         * @param recipient Their public key. Optional b/c we will use our own
+         *                  public key if not passed in.
+         * @param aesKey The AES key to use for encryption. This is not relevant
+         *               for most use cases.
+         * @returns {Promise<ArrayBuffer>} Buffer of encrypted content.
+         */
         async (
             content:string|Uint8Array,
-            recipient?:CryptoKey|string,
+            info:string,
+            recipient?:CryptoKey|string,  // their public key
             aesKey?:SymmKey|Uint8Array|string,
-            keysize?:SymmKeyLength
-        ) => {
+        ):Promise<ArrayBuffer> => {
+            const encoder = new TextEncoder()
+            const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))
+
+            // publicKey is either passed in or we use our own for note to self
+            const _publicKey = (recipient || this.exchangeKey.publicKey)
+            let publicKey:CryptoKey
+            if (typeof _publicKey === 'string') {
+                publicKey = await importPublicKey(
+                    _publicKey,
+                    EccCurve.X25519,
+                    KeyUse.Exchange
+                )
+            } else {
+                publicKey = _publicKey
+            }
+
+            // key is passed in or derived
+            let key = aesKey || (await deriveKey(
+                this.exchangeKey.privateKey,
+                publicKey,
+                salt,
+                info
+            ))
+
+            // if a key was passed in, but it is not a CryptoKey instance
+            if (!(key instanceof CryptoKey)) {
+                key = await deriveKey(
+                    this.exchangeKey.privateKey,
+                    publicKey,
+                    salt,
+                    info
+                )
+            }
+            const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
+            const plaintext:Uint8Array = (typeof content === 'string' ?
+                encoder.encode(content) :
+                content)
+
             const ciphertext = await crypto.subtle.encrypt(
                 { name: DEFAULT_SYMM_ALGORITHM, iv },
                 key,
-                encoder.encode(message)
+                plaintext
             )
+
+            return ciphertext
         },
 
         {
-            asString: () => {
+            // asString:(msg:string, keysize?:SymmKeyLength) => Promise<string>;
+            asString: async (
+                msg:string,
+                keysize?:SymmKeyLength
+            ):Promise<string> => {
+                const encrypted = await this.encrypt(
+                    msg,
+                    recipient,
+                    aesKey,
+                    keysize
+                )
 
+                return toString(new Uint8Array(encrypted), 'base64pad')
             }
         }
     )
 
     decrypt = Object.assign(
         /**
-         * Expect the given cipher content to be the format returned by
-         * encryptTo`. That is, encrypted AES key + `iv` + encrypted content.
+         * The given message should have salt + iv + cipher text.
          */
         async (
             msg:string|Uint8Array|ArrayBuffer,
-            keysize?:SymmKeyLength
-        ):Promise<Uint8Array> => {
-            // const length = keysize || DEFAULT_SYMM_LENGTH
-            // const cipherText = normalizeToBuf(msg, base64ToArrBuf)
-            // const key = cipherText.slice(0, length)
-            // const data = cipherText.slice(length)
-            // const decryptedKey = await this.decryptKey(key)
-            // const decryptedContent = await AES.decrypt(data, decryptedKey)
-            // return decryptedContent
+            publicKey:CryptoKey|string,
+            aesAlgorithm?:string,
+        ):Promise<ArrayBuffer> => {
+            const pub = (typeof publicKey === 'string' ?
+                await importPublicKey(publicKey, EccCurve.X25519, KeyUse.Write) :
+                publicKey)
 
-            // first get the symmetric key from the cipher text
-            const length = keysize || DEFAULT_SYMM_LENGTH
+            // first get the salt & iv from the cipher text
             const encrypted = normalizeToBuf(msg, base64ToArrBuf)
-            const salt = encrypted.slice(0, 16)
-            const iv = encrypted.slice(16, 28)
-            const ciphertext = encrypted.slice(28)
-            const key = await deriveKey(privateKey, publicKey, salt)
+            const salt = encrypted.slice(0, SALT_LENGTH)
+            const iv = encrypted.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH)
+            const ciphertext = encrypted.slice(SALT_LENGTH + IV_LENGTH)
+            const { privateKey } = this.exchangeKey
+            const key = await deriveKey(
+                privateKey,
+                pub,
+                salt,
+                EccKeys.INFO
+            )
+
+            // we have the key, now decrypt the message
+            const decrypted = await crypto.subtle.decrypt(
+                {
+                    name: aesAlgorithm || DEFAULT_SYMM_ALGORITHM,
+                    iv,
+                },
+                key,
+                ciphertext
+            )
+
+            return decrypted
         },
 
         {
-            asString: async (msg:string, keysize?:SymmKeyLength):Promise<string> => {
+            asString: async (
+                msg:string,
+                keysize?:SymmKeyLength
+            ):Promise<string> => {
                 const dec = await this.decrypt(msg, keysize)
                 return toString(dec)
             }
@@ -132,14 +219,15 @@ export default {
 }
 
 /**
- * Derive AES key from X25519 keypair via ECDH + HKDF
+ * Derive an AES key from X25519 keypair via ECDH + HKDF
  */
 async function deriveKey (
     privateKey:CryptoKey,
     publicKey:CryptoKey,
-    salt:Uint8Array,
+    salt:Uint8Array|ArrayBuffer,
     info:string
-): Promise<CryptoKey> {
+):Promise<CryptoKey> {
+    const encoder = new TextEncoder()
     const sharedSecret = await crypto.subtle.deriveBits(
         { name: 'ECDH', public: publicKey },
         privateKey,
@@ -168,24 +256,24 @@ async function deriveKey (
     )
 }
 
-/**
- * Derive a symmetric key via HKDF.
- */
-async function deriveSymmetricKey (
-    sharedSecret:CryptoKey,
-    salt:Uint8Array,
-    length = DEFAULT_SYMM_LENGTH
-):Promise<CryptoKey> {
-    return crypto.subtle.deriveKey(
-        {
-            name: 'HKDF',
-            salt,
-            info: new Uint8Array([]),
-            hash: 'SHA-256',
-        },
-        sharedSecret,
-        { name: DEFAULT_SYMM_ALGORITHM, length },
-        false,
-        ['encrypt', 'decrypt']
-    )
-}
+// /**
+//  * Derive a symmetric key via HKDF.
+//  */
+// async function deriveSymmetricKey (
+//     sharedSecret:CryptoKey,
+//     salt:Uint8Array,
+//     length = DEFAULT_SYMM_LENGTH
+// ):Promise<CryptoKey> {
+//     return crypto.subtle.deriveKey(
+//         {
+//             name: 'HKDF',
+//             salt,
+//             info: new Uint8Array([]),
+//             hash: 'SHA-256',
+//         },
+//         sharedSecret,
+//         { name: DEFAULT_SYMM_ALGORITHM, length },
+//         false,
+//         ['encrypt', 'decrypt']
+//     )
+// }

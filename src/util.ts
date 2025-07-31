@@ -20,7 +20,7 @@ import {
     RSA_ALGORITHM,
     DEFAULT_HASH_ALGORITHM,
     DEFAULT_CHAR_SIZE,
-    RSA_SALT_LENGTH,
+    SALT_LENGTH,
     RSA_HASHING_ALGORITHM,
     RSA_DID_PREFIX,
     KEY_TYPE,
@@ -138,7 +138,7 @@ export const rsaOperations = {
         return webcrypto.subtle.verify(
             {
                 name: RSA_SIGN_ALGORITHM,
-                saltLength: RSA_SALT_LENGTH
+                saltLength: SALT_LENGTH
             },
             (typeof publicKey === 'string' ?
                 await importPublicKey(publicKey, hashAlg, KeyUse.Sign) :
@@ -154,7 +154,7 @@ export const rsaOperations = {
         charSize:CharSize = DEFAULT_CHAR_SIZE
     ):Promise<ArrayBuffer> {
         return webcrypto.subtle.sign(
-            { name: RSA_SIGN_ALGORITHM, saltLength: RSA_SALT_LENGTH },
+            { name: RSA_SIGN_ALGORITHM, saltLength: SALT_LENGTH },
             privateKey,
             normalizeUnicodeToBuf(msg, charSize)
         )
