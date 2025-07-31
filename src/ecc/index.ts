@@ -7,6 +7,7 @@ import {
     DEFAULT_SYMM_ALGORITHM,
     SALT_LENGTH,
     IV_LENGTH,
+    DEFAULT_SYMM_LENGTH,
 } from '../constants.js'
 import {
     EccCurve,
@@ -20,7 +21,7 @@ import {
     normalizeToBuf
 } from '../util.js'
 import { checkValidKeyUse } from '../errors.js'
-import { AbstractKeys, type KeyArgs } from '../_base.js'
+import { AbstractKeys, type EccEncryptor, type KeyArgs } from '../_base.js'
 import { toString } from 'uint8arrays'
 
 /**
@@ -47,7 +48,7 @@ export class EccKeys extends AbstractKeys {
      * If no recipient is passed in, then this will encrypt to itself
      * (a note to self).
      */
-    encrypt = Object.assign(
+    encrypt:EccEncryptor = Object.assign(
         /**
          * Encrypt the given content to the given public key, or encrypt to
          * our public key if it is not passedd in.
@@ -62,9 +63,10 @@ export class EccKeys extends AbstractKeys {
          */
         async (
             content:string|Uint8Array,
-            info:string,
             recipient?:CryptoKey|string,  // their public key
+            info?:string,
             aesKey?:SymmKey|Uint8Array|string,
+            keysize?:SymmKeyLength
         ):Promise<ArrayBuffer> => {
             const encoder = new TextEncoder()
             const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))
@@ -87,7 +89,8 @@ export class EccKeys extends AbstractKeys {
                 this.exchangeKey.privateKey,
                 publicKey,
                 salt,
-                info
+                info || EccKeys.INFO,
+                keysize
             ))
 
             // if a key was passed in, but it is not a CryptoKey instance
@@ -96,7 +99,7 @@ export class EccKeys extends AbstractKeys {
                     this.exchangeKey.privateKey,
                     publicKey,
                     salt,
-                    info
+                    info || EccKeys.INFO
                 )
             }
             const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
@@ -114,14 +117,17 @@ export class EccKeys extends AbstractKeys {
         },
 
         {
-            // asString:(msg:string, keysize?:SymmKeyLength) => Promise<string>;
             asString: async (
-                msg:string,
-                keysize?:SymmKeyLength
+                msg:string|Uint8Array,
+                recipient?:CryptoKey|string,  // their public key
+                info?:string,
+                aesKey?:SymmKey|Uint8Array|string,
+                keysize?:SymmKeyLength,
             ):Promise<string> => {
                 const encrypted = await this.encrypt(
                     msg,
                     recipient,
+                    info || EccKeys.INFO,
                     aesKey,
                     keysize
                 )
@@ -225,7 +231,8 @@ async function deriveKey (
     privateKey:CryptoKey,
     publicKey:CryptoKey,
     salt:Uint8Array|ArrayBuffer,
-    info:string
+    info:string,
+    keysize?:number
 ):Promise<CryptoKey> {
     const encoder = new TextEncoder()
     const sharedSecret = await crypto.subtle.deriveBits(
@@ -250,7 +257,7 @@ async function deriveKey (
             info: encoder.encode(info)
         },
         hkdfBaseKey,
-        { name: 'AES-GCM', length: 256 },
+        { name: 'AES-GCM', length: keysize || DEFAULT_SYMM_LENGTH },
         false,
         ['encrypt', 'decrypt']
     )

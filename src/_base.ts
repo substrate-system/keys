@@ -53,7 +53,24 @@ export interface EccDecryptor {
     )=>Promise<string>;
 }
 
-export interface Encryptor {
+export interface EccEncryptor {
+    (
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,  // their public key
+        info?:string,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:number,
+    ):Promise<Uint8Array>;
+
+    asString: (
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,
+        info?:string,
+        keysize?:SymmKeyLength
+    )=>Promise<string>;
+}
+
+export interface RsaEncryptor {
     (
         content:string|Uint8Array,
         recipient?:CryptoKey|string,
@@ -123,7 +140,7 @@ export abstract class AbstractKeys {
     /**
      * By default, encrypt the given data to yourself, as a "note to self".
      */
-    abstract encrypt:Encryptor
+    abstract encrypt:RsaEncryptor|EccEncryptor
     abstract decrypt:RsaDecryptor|EccDecryptor
     abstract sign:Signer
 
