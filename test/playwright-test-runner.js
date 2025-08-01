@@ -10,7 +10,7 @@ const PORT = 8123
 // Serve static test files
 const server = createServer({ root: path.join(__dirname, '..') })
 server.listen(PORT, () => {
-  console.log(`🚀 Serving at http://localhost:${PORT}/test-runner.html`)
+  console.log(`Serving at http://localhost:${PORT}/test-runner.html`)
 })
 
 const browser = await chromium.launch()
