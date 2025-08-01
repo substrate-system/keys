@@ -4,13 +4,13 @@ import { EccKeys } from '../src/ecc/index.js'
 const subtle = crypto.subtle
 
 // Can we create an x25519 key in this environment?
-test('X25519 keypair generates 32-byte raw public key', async t => {
+test('Sanity', async t => {
     try {
         const keys = await subtle.generateKey({
             name: 'X25519'
         }, true, ['deriveKey']) as CryptoKeyPair
         const raw = await subtle.exportKey('raw', keys.publicKey)
-        t.equal(raw.byteLength, 32, 'should be 32 bytes')
+        t.equal(raw.byteLength, 32, 'should generate an X25519 key')
 
         // @ts-expect-error dev
         window.testsFinished = true

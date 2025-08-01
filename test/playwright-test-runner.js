@@ -1,4 +1,4 @@
-// playwright-test-runner.js
+// test/playwright-test-runner.js
 import { chromium } from 'playwright'
 import { createServer } from 'http-server'
 import path from 'path'
