@@ -9,15 +9,15 @@ import {
     joinBufs,
     randomBuf,
     normalizeBase64ToBuf
-} from '../util'
-import { SymmKeyLength, type Msg, type SymmAlgorithm } from '../types'
+} from '../util.js'
+import { SymmKeyLength, type Msg, type SymmAlgorithm } from '../types.js'
 import {
     DEFAULT_SYMM_ALGORITHM,
     DEFAULT_SYMM_LENGTH,
     AES_GCM,
     DEFAULT_CHAR_SIZE,
     IV_LENGTH
-} from '../constants'
+} from '../constants.js'
 
 export const AES = {
     create (opts:{ alg?:string, length?:number } = {

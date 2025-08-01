@@ -20,76 +20,11 @@ import {
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
 export * from './constants.js'
-
 export type { DID }
-
 export { getPublicKeyAsUint8Array } from './util.js'
-
 export type SerializedKeys = {
     DID:DID;
     publicEncryptKey:string;
-}
-
-// RSA: no publicKey param
-export interface RsaDecryptor {
-    (
-        msg:string|Uint8Array|ArrayBuffer,
-        keysize?:SymmKeyLength
-    ):Promise<Uint8Array>;
-    asString:(msg:string, keysize?:SymmKeyLength)=>Promise<string>;
-}
-
-// ECC: requires publicKey
-export interface EccDecryptor {
-    (
-        msg:string|Uint8Array|ArrayBuffer,
-        publicKey?:CryptoKey|string,
-        aesAlgorithm?:string,
-    ):Promise<ArrayBuffer>;
-
-    asString:(
-        msg:string|Uint8Array|ArrayBuffer,
-        publicKey?:CryptoKey|string,
-        aesAlgorithm?:string,
-    )=>Promise<string>;
-}
-
-export interface EccEncryptor {
-    (
-        content:string|Uint8Array,
-        recipient?:CryptoKey|string,  // their public key
-        info?:string,
-        aesKey?:SymmKey|Uint8Array|string,
-        keysize?:SymmKeyLength
-    ):Promise<ArrayBuffer>;
-
-    asString: (
-        content:string|Uint8Array,
-        recipient?:CryptoKey|string,  // their public key
-        info?:string,
-        aesKey?:SymmKey|Uint8Array|string,
-        keysize?:SymmKeyLength
-    )=>Promise<string>;
-}
-
-export interface RsaEncryptor {
-    (
-        content:string|Uint8Array,
-        recipient?:CryptoKey|string,
-        aesKey?:SymmKey|Uint8Array|string,
-        keysize?:SymmKeyLength
-    ):Promise<Uint8Array>;
-    asString:(
-        content:string|Uint8Array,
-        recipient?:CryptoKey|string,
-        aesKey?:SymmKey|Uint8Array|string,
-        keysize?:SymmKeyLength
-    )=>Promise<string>;
-}
-
-export interface Signer {
-    (msg:Msg, charsize?:CharSize):Promise<Uint8Array>;
-    asString: (msg:string, charsize?:CharSize)=>Promise<string>
 }
 
 /**
@@ -263,8 +198,8 @@ export abstract class AbstractKeys {
 
     static async create<T extends AbstractKeys> (
         this:ChildKeys,
-        session:boolean,
-        type:'ecc'|'rsa'
+        type:'ecc'|'rsa',
+        session?:boolean
     ):Promise<T> {
         // encryption
         const exchange = await this._createExchangeKeys()

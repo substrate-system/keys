@@ -9,6 +9,8 @@ import {
     SALT_LENGTH,
     IV_LENGTH,
     DEFAULT_SYMM_LENGTH,
+    ECC_WRITE_NAME,
+    ECC_EXCHANGE_NAME
 } from '../constants.js'
 import {
     EccCurve,
@@ -48,6 +50,35 @@ export class EccKeys extends AbstractKeys {
     }
 
     static INFO = 'example'
+
+    static async _createExchangeKeys ():Promise<CryptoKeyPair> {
+        /**
+         * you don’t use { name: ECDH, namedCurve: 'X25519' }, you use
+         * { name: 'X25519' } directly.
+         *
+         * Modern X25519/Ed25519 don't use namedCurve at all.
+         */
+        console.log('**generating**', ECC_EXCHANGE_NAME)
+        return await webcrypto.subtle.generateKey(
+            {
+                name: ECC_EXCHANGE_NAME
+                // namedCurve: EccCurve.X25519
+            },
+            false, // not extractable
+            ['deriveKey', 'deriveBits']
+        ) as CryptoKeyPair
+    }
+
+    static async _createWriteKeys ():Promise<CryptoKeyPair> {
+        console.log('generating', ECC_WRITE_NAME)
+        return await webcrypto.subtle.generateKey(
+            {
+                name: ECC_WRITE_NAME
+            },
+            false, // not extractable
+            ['sign', 'verify']
+        )
+    }
 
     /**
      * Encrypt the given content to the given public key, or encrypt to
@@ -396,25 +427,3 @@ async function deriveKey (
         ['encrypt', 'decrypt']
     )
 }
-
-// /**
-//  * Derive a symmetric key via HKDF.
-//  */
-// async function deriveSymmetricKey (
-//     sharedSecret:CryptoKey,
-//     salt:Uint8Array,
-//     length = DEFAULT_SYMM_LENGTH
-// ):Promise<CryptoKey> {
-//     return crypto.subtle.deriveKey(
-//         {
-//             name: 'HKDF',
-//             salt,
-//             info: new Uint8Array([]),
-//             hash: 'SHA-256',
-//         },
-//         sharedSecret,
-//         { name: DEFAULT_SYMM_ALGORITHM, length },
-//         false,
-//         ['encrypt', 'decrypt']
-//     )
-// }
