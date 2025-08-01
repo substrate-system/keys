@@ -53,12 +53,11 @@ export class EccKeys extends AbstractKeys {
 
     static async _createExchangeKeys ():Promise<CryptoKeyPair> {
         /**
-         * you don’t use { name: ECDH, namedCurve: 'X25519' }, you use
-         * { name: 'X25519' } directly.
+         * don’t use `{ name: ECDH, namedCurve: 'X25519' }`, use
+         * `{ name: 'X25519' }`.
          *
-         * Modern X25519/Ed25519 don't use namedCurve at all.
+         * X25519/Ed25519 don't use `namedCurve`.
          */
-        console.log('**generating**', ECC_EXCHANGE_NAME)
         return await webcrypto.subtle.generateKey(
             {
                 name: ECC_EXCHANGE_NAME
@@ -70,7 +69,6 @@ export class EccKeys extends AbstractKeys {
     }
 
     static async _createWriteKeys ():Promise<CryptoKeyPair> {
-        console.log('generating', ECC_WRITE_NAME)
         return await webcrypto.subtle.generateKey(
             {
                 name: ECC_WRITE_NAME
