@@ -9,7 +9,7 @@ import {
     verify,
     publicKeyToDid,
     getPublicKeyAsUint8Array
-} from '../src/index.js'
+} from '../src/rsa/index.js'
 
 let keys:Keys
 test('create a new Keys', async t => {
