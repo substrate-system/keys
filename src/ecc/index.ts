@@ -143,12 +143,14 @@ export class EccKeys extends AbstractKeys {
          */
         async (
             msg:string|Uint8Array|ArrayBuffer,
-            publicKey:CryptoKey|string,
+            publicKey?:CryptoKey|string,
             aesAlgorithm?:string,
         ):Promise<ArrayBuffer> => {
-            const pub = (typeof publicKey === 'string' ?
+            let pub = (typeof publicKey === 'string' ?
                 await importPublicKey(publicKey, EccCurve.X25519, KeyUse.Write) :
                 publicKey)
+
+            if (!pub) pub = this.publicExchangeKey
 
             // first get the salt & iv from the cipher text
             const encrypted = normalizeToBuf(msg, base64ToArrBuf)
@@ -178,11 +180,12 @@ export class EccKeys extends AbstractKeys {
 
         {
             asString: async (
-                msg:string,
-                keysize?:SymmKeyLength
+                msg:string|Uint8Array|ArrayBuffer,
+                publicKey?:CryptoKey|string,
+                aesAlgorithm?:string,
             ):Promise<string> => {
-                const dec = await this.decrypt(msg, keysize)
-                return toString(dec)
+                const dec = await this.decrypt(msg, publicKey, aesAlgorithm)
+                return toString(new Uint8Array(dec))
             }
         }
     )

@@ -43,13 +43,14 @@ export interface RsaDecryptor {
 export interface EccDecryptor {
     (
         msg:string|Uint8Array|ArrayBuffer,
-        publicKey:CryptoKey|string,
-        alg?:string,
+        publicKey?:CryptoKey|string,
+        aesAlgorithm?:string,
     ):Promise<Uint8Array>;
 
     asString:(
         msg:string|Uint8Array|ArrayBuffer,
-        keysize?:SymmKeyLength
+        publicKey?:CryptoKey|string,
+        aesAlgorithm?:string,
     )=>Promise<string>;
 }
 
@@ -59,13 +60,14 @@ export interface EccEncryptor {
         recipient?:CryptoKey|string,  // their public key
         info?:string,
         aesKey?:SymmKey|Uint8Array|string,
-        keysize?:number,
-    ):Promise<Uint8Array>;
+        keysize?:SymmKeyLength
+    ):Promise<ArrayBuffer>;
 
     asString: (
         content:string|Uint8Array,
-        recipient?:CryptoKey|string,
+        recipient?:CryptoKey|string,  // their public key
         info?:string,
+        aesKey?:SymmKey|Uint8Array|string,
         keysize?:SymmKeyLength
     )=>Promise<string>;
 }
@@ -479,4 +481,3 @@ export async function getDeviceName (did:DID|string) {
 
     return toString(hashedUsername, 'base32').slice(0, 32)
 }
-
