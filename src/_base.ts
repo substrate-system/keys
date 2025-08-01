@@ -144,7 +144,8 @@ export abstract class AbstractKeys {
      */
     abstract encrypt:RsaEncryptor|EccEncryptor
     abstract decrypt:RsaDecryptor|EccDecryptor
-    abstract sign:Signer
+    abstract sign(msg:Msg, charsize?:CharSize):Promise<Uint8Array>
+    abstract signAsString(msg:string, charsize?:CharSize):Promise<string>
 
     get publicWriteKey ():CryptoKey {
         return this.writeKey.publicKey

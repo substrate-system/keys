@@ -242,39 +242,47 @@ export class EccKeys extends AbstractKeys {
     /**
      * Sign the given content using our private write key.
      */
-    sign = Object.assign(
-        async (msg:Msg, _charsize?:CharSize):Promise<Uint8Array> => {
-            const encoder = new TextEncoder()
-            let data:Uint8Array
+    async sign (msg:Msg, _charsize?:CharSize):Promise<Uint8Array> {
+        const encoder = new TextEncoder()
+        let data:Uint8Array
 
-            if (typeof msg === 'string') {
-                data = encoder.encode(msg)
-            } else if (msg instanceof ArrayBuffer) {
-                data = new Uint8Array(msg)
-            } else {
-                data = msg
-            }
-
-            const signature = await webcrypto.subtle.sign(
-                { name: ECC_WRITE_ALG },
-                this.writeKey.privateKey,
-                data
-            )
-
-            return new Uint8Array(signature)
-        },
-
-        {
-            asString: async (
-                msg:string,
-                _charsize?:CharSize
-            ):Promise<string> => {
-                const signature = await this.sign(msg, _charsize)
-                return toString(signature, 'base64pad')
-            }
+        if (typeof msg === 'string') {
+            data = encoder.encode(msg)
+        } else if (msg instanceof ArrayBuffer) {
+            data = new Uint8Array(msg)
+        } else {
+            data = msg
         }
-    )
+
+        const signature = await webcrypto.subtle.sign(
+            { name: ECC_WRITE_ALG },
+            this.writeKey.privateKey,
+            data
+        )
+
+        return new Uint8Array(signature)
+    }
+
+    /**
+     * Sign the given content and return as base64 string.
+     */
+    async signAsString (msg:string, _charsize?:CharSize):Promise<string> {
+        const signature = await this.sign(msg, _charsize)
+        return toString(signature, 'base64pad')
+    }
 }
+
+// Attach asString to the prototype method for backward compatibility
+Object.assign(EccKeys.prototype.sign, {
+    asString: async function (
+        this:EccKeys,
+        msg:string,
+        _charsize?:CharSize
+    ):Promise<string> {
+        const signature = await this.sign(msg, _charsize)
+        return toString(signature, 'base64pad')
+    }
+})
 
 /**
  * Get the public key from a given keypair.
