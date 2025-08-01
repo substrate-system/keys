@@ -45,7 +45,7 @@ export interface EccDecryptor {
         msg:string|Uint8Array|ArrayBuffer,
         publicKey?:CryptoKey|string,
         aesAlgorithm?:string,
-    ):Promise<Uint8Array>;
+    ):Promise<ArrayBuffer>;
 
     asString:(
         msg:string|Uint8Array|ArrayBuffer,
@@ -185,8 +185,8 @@ export abstract class AbstractKeys {
      *   - if this is RSA, use your private key to decrypt the given AES key
      */
     abstract getAesKey (
-        publicKey?:CryptoKey|string,
-        encryptedKey?:Uint8Array
+        publicKey?:CryptoKey|string|null,
+        info?:string|null
     ):Promise<CryptoKey>
 
     /**

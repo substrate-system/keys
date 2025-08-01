@@ -1,4 +1,5 @@
 import { webcrypto } from '@substrate-system/one-webcrypto'
+import { toString } from 'uint8arrays'
 import {
     DEFAULT_ECC_EXCHANGE,
     DEFAULT_ECC_WRITE,
@@ -14,15 +15,21 @@ import {
     KeyUse,
     type PublicKey,
     type SymmKeyLength,
-    type SymmKey
+    type SymmKey,
+    type Msg,
+    type CharSize
 } from '../types.js'
 import {
     base64ToArrBuf,
     normalizeToBuf
 } from '../util.js'
 import { checkValidKeyUse } from '../errors.js'
-import { AbstractKeys, type EccEncryptor, type KeyArgs } from '../_base.js'
-import { toString } from 'uint8arrays'
+import {
+    AbstractKeys,
+    type EccDecryptor,
+    type EccEncryptor,
+    type KeyArgs
+} from '../_base.js'
 
 /**
  * Class for ECC keys
@@ -137,7 +144,7 @@ export class EccKeys extends AbstractKeys {
         }
     )
 
-    decrypt = Object.assign(
+    decrypt:EccDecryptor = Object.assign(
         /**
          * The given message should have salt + iv + cipher text.
          */
@@ -186,6 +193,84 @@ export class EccKeys extends AbstractKeys {
             ):Promise<string> => {
                 const dec = await this.decrypt(msg, publicKey, aesAlgorithm)
                 return toString(new Uint8Array(dec))
+            }
+        }
+    )
+
+    /**
+     * Do DHKE, create a new AES-GCM key.
+     *
+     * @param {string} info The info parameter for DHKE. Will use the class
+     *        property `INFO` if it is not passed in.
+     * @param {CryptoKey|string|null} [publicKey] Public key to use in DHKE.
+     *        Will use our public key if it is not passed in.
+     * @returns {CryptoKey} New AES key
+     */
+    async getAesKey (
+        publicKey?:CryptoKey|string|null,
+        info?:string|null,
+    ):Promise<CryptoKey> {
+        if (!publicKey) {
+            publicKey = this.publicExchangeKey
+        }
+
+        let pub:CryptoKey
+        if (typeof publicKey === 'string') {
+            pub = await importPublicKey(
+                publicKey,
+                EccCurve.X25519,
+                KeyUse.Exchange
+            )
+        } else {
+            pub = publicKey
+        }
+
+        // Generate a random salt for HKDF
+        const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))
+
+        // Derive AES key using ECDH + HKDF
+        const aesKey = await deriveKey(
+            this.exchangeKey.privateKey,
+            pub,
+            salt,
+            info || EccKeys.INFO
+        )
+
+        return aesKey
+    }
+
+    /**
+     * Sign the given content using our private write key.
+     */
+    sign = Object.assign(
+        async (msg:Msg, _charsize?:CharSize):Promise<Uint8Array> => {
+            const encoder = new TextEncoder()
+            let data:Uint8Array
+
+            if (typeof msg === 'string') {
+                data = encoder.encode(msg)
+            } else if (msg instanceof ArrayBuffer) {
+                data = new Uint8Array(msg)
+            } else {
+                data = msg
+            }
+
+            const signature = await webcrypto.subtle.sign(
+                { name: ECC_WRITE_ALG },
+                this.writeKey.privateKey,
+                data
+            )
+
+            return new Uint8Array(signature)
+        },
+
+        {
+            asString: async (
+                msg:string,
+                _charsize?:CharSize
+            ):Promise<string> => {
+                const signature = await this.sign(msg, _charsize)
+                return toString(signature, 'base64pad')
             }
         }
     )
