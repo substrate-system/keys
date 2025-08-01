@@ -142,8 +142,34 @@ export abstract class AbstractKeys {
     /**
      * By default, encrypt the given data to yourself, as a "note to self".
      */
-    abstract encrypt:RsaEncryptor|EccEncryptor
-    abstract decrypt:RsaDecryptor|EccDecryptor
+    abstract encrypt(
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,
+        info?:string,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:SymmKeyLength
+    ):Promise<ArrayBuffer|Uint8Array>
+
+    abstract encryptAsString(
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,
+        info?:string,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:SymmKeyLength
+    ):Promise<string>
+
+    abstract decrypt(
+        msg:string|Uint8Array|ArrayBuffer,
+        publicKeyOrKeysize?:CryptoKey|string|SymmKeyLength,
+        aesAlgorithm?:string,
+    ):Promise<ArrayBuffer|Uint8Array>
+
+    abstract decryptAsString(
+        msg:string|Uint8Array|ArrayBuffer,
+        publicKeyOrKeysize?:CryptoKey|string|SymmKeyLength,
+        aesAlgorithm?:string,
+    ):Promise<string>
+
     abstract sign(msg:Msg, charsize?:CharSize):Promise<Uint8Array>
     abstract signAsString(msg:string, charsize?:CharSize):Promise<string>
 

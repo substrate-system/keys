@@ -26,8 +26,6 @@ import {
 import { checkValidKeyUse } from '../errors.js'
 import {
     AbstractKeys,
-    type EccDecryptor,
-    type EccEncryptor,
     type KeyArgs
 } from '../_base.js'
 
@@ -52,158 +50,163 @@ export class EccKeys extends AbstractKeys {
     static INFO = 'example'
 
     /**
-     * If no recipient is passed in, then this will encrypt to itself
-     * (a note to self).
+     * Encrypt the given content to the given public key, or encrypt to
+     * our public key if it is not passed in.
+     *
+     * @param {string|Uint8Array} content Content to encrypt
+     * @param {CryptoKey|string} [recipient] Their public key. Optional b/c we
+     *        will use our own public key if not passed in.
+     * @param {string} [info] info tag for HKDF. Default is the class property.
+     * @param {SymmKey|Uint8Array|string} aesKey This is not relevant for most
+     *        use cases.
+     * @param {SymmKeyLength} [keysize] Default is 256
+     * @returns {Promise<ArrayBuffer>} Buffer of encrypted content.
      */
-    encrypt:EccEncryptor = Object.assign(
-        /**
-         * Encrypt the given content to the given public key, or encrypt to
-         * our public key if it is not passedd in.
-         *
-         * @param content Content to encrypt
-         * @param info info tag for HKDF
-         * @param recipient Their public key. Optional b/c we will use our own
-         *                  public key if not passed in.
-         * @param aesKey The AES key to use for encryption. This is not relevant
-         *               for most use cases.
-         * @returns {Promise<ArrayBuffer>} Buffer of encrypted content.
-         */
-        async (
-            content:string|Uint8Array,
-            recipient?:CryptoKey|string,  // their public key
-            info?:string,
-            aesKey?:SymmKey|Uint8Array|string,
-            keysize?:SymmKeyLength
-        ):Promise<ArrayBuffer> => {
-            const encoder = new TextEncoder()
-            const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))
+    async encrypt (
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,  // their public key
+        info?:string,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:SymmKeyLength
+    ):Promise<Uint8Array> {
+        const encoder = new TextEncoder()
+        const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))
 
-            // publicKey is either passed in or we use our own for note to self
-            const _publicKey = (recipient || this.exchangeKey.publicKey)
-            let publicKey:CryptoKey
-            if (typeof _publicKey === 'string') {
-                publicKey = await importPublicKey(
-                    _publicKey,
-                    EccCurve.X25519,
-                    KeyUse.Exchange
-                )
-            } else {
-                publicKey = _publicKey
-            }
+        // publicKey is either passed in or we use our own for note to self
+        const _publicKey = (recipient || this.exchangeKey.publicKey)
+        let publicKey:CryptoKey
+        if (typeof _publicKey === 'string') {
+            publicKey = await importPublicKey(
+                _publicKey,
+                EccCurve.X25519,
+                KeyUse.Exchange
+            )
+        } else {
+            publicKey = _publicKey
+        }
 
-            // key is passed in or derived
-            let key = aesKey || (await deriveKey(
+        // key is passed in or derived
+        let key = aesKey || (await deriveKey(
+            this.exchangeKey.privateKey,
+            publicKey,
+            salt,
+            info || EccKeys.INFO,
+            keysize
+        ))
+
+        // if a key was passed in, but it is not a CryptoKey instance
+        if (!(key instanceof CryptoKey)) {
+            key = await deriveKey(
                 this.exchangeKey.privateKey,
                 publicKey,
                 salt,
-                info || EccKeys.INFO,
-                keysize
-            ))
-
-            // if a key was passed in, but it is not a CryptoKey instance
-            if (!(key instanceof CryptoKey)) {
-                key = await deriveKey(
-                    this.exchangeKey.privateKey,
-                    publicKey,
-                    salt,
-                    info || EccKeys.INFO
-                )
-            }
-            const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
-            const plaintext:Uint8Array = (typeof content === 'string' ?
-                encoder.encode(content) :
-                content)
-
-            const ciphertext = await crypto.subtle.encrypt(
-                { name: DEFAULT_SYMM_ALGORITHM, iv },
-                key,
-                plaintext
+                info || EccKeys.INFO
             )
-
-            return ciphertext
-        },
-
-        {
-            asString: async (
-                msg:string|Uint8Array,
-                recipient?:CryptoKey|string,  // their public key
-                info?:string,
-                aesKey?:SymmKey|Uint8Array|string,
-                keysize?:SymmKeyLength,
-            ):Promise<string> => {
-                const encrypted = await this.encrypt(
-                    msg,
-                    recipient,
-                    info || EccKeys.INFO,
-                    aesKey,
-                    keysize
-                )
-
-                return toString(new Uint8Array(encrypted), 'base64pad')
-            }
         }
-    )
+        const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
+        const plaintext:Uint8Array = (typeof content === 'string' ?
+            encoder.encode(content) :
+            content)
 
-    decrypt:EccDecryptor = Object.assign(
-        /**
-         * The given message should have salt + iv + cipher text.
-         */
-        async (
-            msg:string|Uint8Array|ArrayBuffer,
-            publicKey?:CryptoKey|string,
-            aesAlgorithm?:string,
-        ):Promise<ArrayBuffer> => {
-            let pub = (typeof publicKey === 'string' ?
-                await importPublicKey(publicKey, EccCurve.X25519, KeyUse.Write) :
-                publicKey)
+        const ciphertext = await crypto.subtle.encrypt(
+            { name: DEFAULT_SYMM_ALGORITHM, iv },
+            key,
+            plaintext
+        )
 
-            if (!pub) pub = this.publicExchangeKey
+        // Prepend salt and IV to the ciphertext for decryption
+        const saltBuffer = new Uint8Array(salt)
+        const ivBuffer = new Uint8Array(iv)
+        const cipherBuf = new Uint8Array(ciphertext)
+        const size = saltBuffer.length + ivBuffer.length + cipherBuf.length
+        const result = new Uint8Array(size)
+        result.set(saltBuffer, 0)
+        result.set(ivBuffer, saltBuffer.length)
+        result.set(cipherBuf, saltBuffer.length + ivBuffer.length)
 
-            // first get the salt & iv from the cipher text
-            const encrypted = normalizeToBuf(msg, base64ToArrBuf)
-            const salt = encrypted.slice(0, SALT_LENGTH)
-            const iv = encrypted.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH)
-            const ciphertext = encrypted.slice(SALT_LENGTH + IV_LENGTH)
-            const { privateKey } = this.exchangeKey
-            const key = await deriveKey(
-                privateKey,
-                pub,
-                salt,
-                EccKeys.INFO
-            )
+        return result
+    }
 
-            // we have the key, now decrypt the message
-            const decrypted = await crypto.subtle.decrypt(
-                {
-                    name: aesAlgorithm || DEFAULT_SYMM_ALGORITHM,
-                    iv,
-                },
-                key,
-                ciphertext
-            )
+    /**
+     * Encrypt and return as base64 string.
+     */
+    async encryptAsString (
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,  // their public key
+        info?:string,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:SymmKeyLength,
+    ):Promise<string> {
+        const encrypted = await this.encrypt(
+            content,
+            recipient,
+            info || EccKeys.INFO,
+            aesKey,
+            keysize
+        )
 
-            return decrypted
-        },
+        return toString(new Uint8Array(encrypted), 'base64pad')
+    }
 
-        {
-            asString: async (
-                msg:string|Uint8Array|ArrayBuffer,
-                publicKey?:CryptoKey|string,
-                aesAlgorithm?:string,
-            ):Promise<string> => {
-                const dec = await this.decrypt(msg, publicKey, aesAlgorithm)
-                return toString(new Uint8Array(dec))
-            }
-        }
-    )
+    /**
+     * Decrypt the given message. The message should be salt + iv + cipher text.
+     */
+    async decrypt (
+        msg:string|Uint8Array|ArrayBuffer,
+        publicKey?:CryptoKey|string,
+        aesAlgorithm?:string,
+    ):Promise<ArrayBuffer> {
+        let pub = (typeof publicKey === 'string' ?
+            await importPublicKey(publicKey, EccCurve.X25519, KeyUse.Write) :
+            publicKey)
+
+        if (!pub) pub = this.publicExchangeKey
+
+        // first get the salt & iv from the cipher text
+        const encrypted = normalizeToBuf(msg, base64ToArrBuf)
+        const salt = encrypted.slice(0, SALT_LENGTH)
+        const iv = encrypted.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH)
+        const ciphertext = encrypted.slice(SALT_LENGTH + IV_LENGTH)
+        const { privateKey } = this.exchangeKey
+        const key = await deriveKey(
+            privateKey,
+            pub,
+            salt,
+            EccKeys.INFO
+        )
+
+        // we have the key, now decrypt the message
+        const decrypted = await crypto.subtle.decrypt(
+            {
+                name: aesAlgorithm || DEFAULT_SYMM_ALGORITHM,
+                iv,
+            },
+            key,
+            ciphertext
+        )
+
+        return decrypted
+    }
+
+    /**
+     * Decrypt and return as string.
+     */
+    async decryptAsString (
+        msg:string|Uint8Array|ArrayBuffer,
+        publicKey?:CryptoKey|string,
+        aesAlgorithm?:string,
+    ):Promise<string> {
+        const dec = await this.decrypt(msg, publicKey, aesAlgorithm)
+        return toString(new Uint8Array(dec))
+    }
 
     /**
      * Do DHKE, create a new AES-GCM key.
      *
-     * @param {string} info The info parameter for DHKE. Will use the class
-     *        property `INFO` if it is not passed in.
      * @param {CryptoKey|string|null} [publicKey] Public key to use in DHKE.
      *        Will use our public key if it is not passed in.
+     * @param {string} info The info parameter for DHKE. Will use the class
+     *        property `INFO` if it is not passed in.
      * @returns {CryptoKey} New AES key
      */
     async getAesKey (
@@ -319,6 +322,41 @@ export default {
     EccKeys,
     importPublicKey
 }
+
+// Add backward compatibility by attaching asString methods to prototypes
+Object.assign(EccKeys.prototype.encrypt, {
+    asString: async function (
+        this: EccKeys,
+        content: string | Uint8Array,
+        recipient?: CryptoKey | string,
+        info?: string,
+        aesKey?: SymmKey | Uint8Array | string,
+        keysize?: SymmKeyLength
+    ): Promise<string> {
+        return this.encryptAsString(content, recipient, info, aesKey, keysize)
+    }
+})
+
+Object.assign(EccKeys.prototype.decrypt, {
+    asString: async function (
+        this: EccKeys,
+        msg: string | Uint8Array | ArrayBuffer,
+        publicKey?: CryptoKey | string,
+        aesAlgorithm?: string
+    ): Promise<string> {
+        return this.decryptAsString(msg, publicKey, aesAlgorithm)
+    }
+})
+
+Object.assign(EccKeys.prototype.sign, {
+    asString: async function (
+        this: EccKeys,
+        msg: string,
+        _charsize?: CharSize
+    ): Promise<string> {
+        return this.signAsString(msg, _charsize)
+    }
+})
 
 /**
  * Derive an AES key from X25519 keypair via ECDH + HKDF
