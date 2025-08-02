@@ -38,6 +38,8 @@ import {
  */
 export class EccKeys extends AbstractKeys {
     static TYPE = 'ecc' as const
+    static EXCHANGE_KEY_NAME:string = DEFAULT_ECC_EXCHANGE
+    static WRITE_KEY_NAME:string = DEFAULT_ECC_WRITE
 
     constructor (opts:KeyArgs) {
         super(opts)
@@ -94,6 +96,33 @@ export class EccKeys extends AbstractKeys {
             false, // not extractable
             ['sign', 'verify']
         )
+    }
+
+    /**
+     * Restore some keys from indexedDB, or create a new keypair if it doesn't
+     * exist yet. Overrides base class to use ECC-specific key names.
+     */
+    static async load<T extends EccKeys = EccKeys> (
+        this:typeof EccKeys,
+        opts:Partial<{
+            encryptionKeyName:string,
+            signingKeyName:string,
+            session:boolean,
+        }> = {
+            session: false,
+        }
+    ):Promise<T> {
+        if (this._instance) return this._instance as T  // cache
+
+        // Use ECC-specific key names as defaults
+        const exchangeKeyName = opts.encryptionKeyName || DEFAULT_ECC_EXCHANGE
+        const writeKeyName = opts.signingKeyName || DEFAULT_ECC_WRITE
+
+        return super.load({
+            ...opts,
+            encryptionKeyName: exchangeKeyName,
+            signingKeyName: writeKeyName
+        }) as Promise<T>
     }
 
     /**
@@ -379,10 +408,16 @@ export async function importPublicKey (
     const alg = use === KeyUse.Exchange ? ECC_EXCHANGE_ALG : ECC_WRITE_ALG
     const uses:KeyUsage[] = use === KeyUse.Exchange ? [] : ['verify']
     const buf = base64ToArrBuf(base64Key)
+
+    // X25519 doesn't use namedCurve in the algorithm parameter
+    const algorithm = (curve === EccCurve.X25519) ?
+        { name: alg } :
+        { name: alg, namedCurve: curve }
+
     return webcrypto.subtle.importKey(
         'raw',
         buf,
-        { name: alg, namedCurve: curve },
+        algorithm,
         true,
         uses
     )
@@ -440,7 +475,7 @@ async function deriveKey (
 ):Promise<CryptoKey> {
     const encoder = new TextEncoder()
     const sharedSecret = await crypto.subtle.deriveBits(
-        { name: 'ECDH', public: publicKey },
+        { name: 'X25519', public: publicKey },
         privateKey,
         256
     )

@@ -1,6 +1,5 @@
 import { fromString, type SupportedEncodings, toString } from 'uint8arrays'
 import { get, set, delMany } from 'idb-keyval'
-import { DEFAULT_RSA_EXCHANGE, DEFAULT_RSA_WRITE, } from './constants.js'
 import type {
     CharSize,
     Msg,
@@ -321,10 +320,10 @@ export abstract class AbstractKeys {
 
         let hasPersisted = true
         let exchangeKeys:CryptoKeyPair|undefined = await get(
-            opts.encryptionKeyName || DEFAULT_RSA_EXCHANGE
+            opts.encryptionKeyName || this.EXCHANGE_KEY_NAME
         )
         let writeKeys:CryptoKeyPair|undefined = await get(
-            opts.signingKeyName || DEFAULT_RSA_WRITE
+            opts.signingKeyName || this.WRITE_KEY_NAME
         )
 
         if (!exchangeKeys) {

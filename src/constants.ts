@@ -3,8 +3,8 @@ import { RsaSize, HashAlg, CharSize, EccCurve } from './types.js'
 export const BASE58_DID_PREFIX = 'did:key:z'
 
 // ECC
-export const ECC_WRITE_ALG = 'ECDSA'
-export const ECC_EXCHANGE_ALG = 'ECDH'
+export const ECC_WRITE_ALG = 'Ed25519'
+export const ECC_EXCHANGE_ALG = 'X25519'
 export const DEFAULT_ECC_EXCHANGE_CURVE = EccCurve.X25519
 export const ECC_WRITE_NAME = 'Ed25519'
 export const ECC_EXCHANGE_NAME = EccCurve.X25519
