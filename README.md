@@ -120,16 +120,16 @@ Create a new keypair, then save it in `indexedDB`.
 ECC is now supported in all major browsers.
 
 ```js
-import { Keys } from '@bicycle-codes/keys'
+import { EccKeys } from '@substrate-system/keys/ecc'
 
-const keys = await Keys.create()
+const keys = await EccKeys.create()
 
 // save the keys to indexedDB
 await keys.persist()
 
 // ... sometime in the future ...
 // get our keys from indexedDB
-const keysAgain = await Keys.load()
+const keysAgain = await EccKeys.load()
 
 console.assert(keys.DID === keysAgain.DID)  // true
 ```
@@ -156,7 +156,7 @@ const name = await keys.getDeviceName()
 const name = await keys.deviceName
 ```
 
-#### `keys.persisted`
+#### `keys.hasPersisted`
 
 A flag indicating whether `.persist` has been called, meaning that these keys
 are saved in `indexedDB`.
