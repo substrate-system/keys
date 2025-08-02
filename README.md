@@ -3,10 +3,7 @@
 [![types](https://img.shields.io/npm/types/@substrate-system/keys?style=flat-square)](README.md)
 [![module](https://img.shields.io/badge/module-ESM%2FCJS-blue?style=flat-square)](README.md)
 [![semantic versioning](https://img.shields.io/badge/semver-2.0.0-blue?logo=semver&style=flat-square)](https://semver.org/)
-[![Common Changeloconst encrypted = await encryptKeyTo({
-  key: aesKey,
-  publicKey: await keys.publicExchangeKeyAsString()
-})  // => Uint8Arrayttps://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
+[![Common Changelog](https://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
 [![install size](https://flat.badgen.net/packagephobia/install/@substrate-system/keys?cache-control=no-cache)](https://packagephobia.com/result?p=@substrate-system/keys)
 [![GZip size](https://flat.badgen.net/bundlephobia/minzip/@substrate-system/keys)](https://bundlephobia.com/package/@substrate-system/keys)
 [![license](https://img.shields.io/badge/license-Big_Time-blue?style=flat-square)](LICENSE)
@@ -87,15 +84,15 @@ This exposes ESM and common JS via [package.json `exports` field](https://nodejs
 
 ### ESM
 ```js
-import { EccKeys } from '@substrate-system/keys/ecc'
-import { RsaKeys } from '@substrate-system/keys/rsa'
+import { EccKeys, verify } from '@substrate-system/keys/ecc'
+import { RsaKeys, verify } from '@substrate-system/keys/rsa'
 import { AES } from '@substrate-system/keys/aes'
 ```
 
 ### Common JS
 ```js
-const { EccKeys } = require('@substrate-system/keys/ecc')
-const { RsaKeys } = require('@substrate-system/keys/rsa')
+const { EccKeys, verify } = require('@substrate-system/keys/ecc')
+const { RsaKeys, verify } = require('@substrate-system/keys/rsa')
 const { AES } = require('@substrate-system/keys/aes')
 ```
 
@@ -126,7 +123,7 @@ Create a new keypair, then save it in `indexedDB`.
 ECC is now supported in all major browsers.
 
 ```js
-import { EccKeys } from '@substrate-system/keys/ecc'
+import { EccKeys, verify } from '@substrate-system/keys/ecc'
 
 const keys = await EccKeys.create()
 
@@ -221,16 +218,16 @@ used to sign. The DID is exposed as the property `.DID` on a `Keys` instance.
 
 ```js
 import { RsaKeys, verify } from '@substrate-system/keys/rsa'
-// or: import { EccKeys } from '@substrate-system/keys/ecc'
+// or: import { EccKeys, verify } from '@substrate-system/keys/ecc'
 
 const keys = await RsaKeys.create()
 // or: const keys = await EccKeys.create()
 
 // sign something
 const sig = await keys.signAsString('hello string')
-// or backward compatible: const sig = await keys.sign.asString('hello string')
+// or string format: const sig = await keys.sign.asString('hello string')
 
-// verify the signature (RSA only)
+// verify the signature
 const isOk = await verify('hello string', sig, keys.DID)
 ```
 
@@ -239,7 +236,16 @@ Take the public key we are encrypting to, return encrypted content.
 
 #### `keys.encrypt` methods
 
+Encrypt something, return a Uint8Array.
+
 **ECC:**
+
+>
+> [!NOTE]  
+> `recipient` is optional. If it is omitted, then this will encrypt to
+> its own public key, a "note to self."
+>
+
 ```ts
 async encrypt (
   content:string|Uint8Array,
@@ -255,13 +261,14 @@ async encrypt (
 async encrypt (
   content:string|Uint8Array,
   recipient?:CryptoKey|string,
-  aesKeyOrInfo?:SymmKey|Uint8Array|string,  // For RSA, this is aesKey
-  keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,  // For RSA, this is keysize
-  keysize?:SymmKeyLength
+  aesKey?:SymmKey|Uint8Array|string,  // For RSA, can pass in AES key
+  keysize?:SymmKeyLength,
 ):Promise<Uint8Array>
 ```
 
 #### `keys.encryptAsString` methods
+
+Encrypt something, return a string.
 
 **ECC:**
 ```ts
@@ -279,9 +286,8 @@ async encryptAsString (
 async encryptAsString (
   content:string|Uint8Array,
   recipient?:CryptoKey|string,
-  aesKeyOrInfo?:SymmKey|Uint8Array|string,
-  keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,
-  keysize?:SymmKeyLength
+  aesKey?:SymmKey|Uint8Array|string,
+  keysize?:SymmKeyLength,
 ):Promise<string>
 ```
 
@@ -299,13 +305,12 @@ const encrypted = await encryptTo({
 const encrypted = await encryptTo.asString({
   content: 'hello public key',
   publicKey
-})
-// => <encrypted text>
+})  // => <encrypted text>
 ```
 
 ### decrypt something
 A `Keys` instance has a method `decrypt`. The `encryptedMessage` argument is
-an `ArrayBuffer` as returned from `encryptTo`, above.
+an `ArrayBuffer`, as returned from `encryptTo`, above.
 
 ```js
 import { EccKeys } from '@substrate-system/keys/ecc'
@@ -313,7 +318,8 @@ import { EccKeys } from '@substrate-system/keys/ecc'
 
 const keys = await EccKeys.create()
 // or: const keys = await RsaKeys.create()
-// ...
+
+// This will decrypt the message using our own public key
 const decrypted = await keys.decrypt(encryptedMsg)
 ```
 
@@ -356,7 +362,6 @@ import { EccKeys } from '@substrate-system/keys/ecc'
 // or: import { RsaKeys } from '@substrate-system/keys/rsa'
 
 const keys = await EccKeys.create()
-// or: const keys = await RsaKeys.create()
 ```
 
 ### Get a hash of the DID
@@ -385,9 +390,10 @@ class EccKeys {  // or RsaKeys
 ```
 
 ### Persist the keys
-Save the keys to `indexedDB`. This depends on the values of static class properties
-`EXCHANGE_KEY_NAME` and `WRITE_KEY_NAME`. Set them if you want to change the
-indexes under which the keys are saved to `indexedDB`.
+Save the keys to `indexedDB`. This depends on the values of the static class
+properties `EXCHANGE_KEY_NAME` and `WRITE_KEY_NAME`.
+Set them if you want to change the indexes under which the keys are
+saved to `indexedDB`.
 
 By default we use these:
 - **ECC**: `'ecc-exchange'` and `'ecc-write'`
@@ -432,7 +438,6 @@ import { EccKeys } from '@substrate-system/keys/ecc'
 // or: import { RsaKeys } from '@substrate-system/keys/rsa'
 
 const newKeys = await EccKeys.load()
-// or: const newKeys = await RsaKeys.load()
 ```
 
 
@@ -489,7 +494,8 @@ that it can be used independently from any keypairs. You need to pass in the
 data that was signed, the signature, and the `DID` string of the public key used
 to create the signature.
 
-**RSA verification:**
+This works the same for either RSA or ECC keys.
+
 ```ts
 async function verify (
     msg:string|Uint8Array,
@@ -498,7 +504,7 @@ async function verify (
 ):Promise<boolean>
 ```
 
-**Note:** ECC verification would need to be implemented separately as it uses different algorithms (Ed25519).
+**RSA verification uses RSA-PSS with SHA-256:**
 
 ```js
 import { verify } from '@substrate-system/keys/rsa'
@@ -506,9 +512,17 @@ import { verify } from '@substrate-system/keys/rsa'
 const isOk = await verify('hello string', sig, keys.DID)
 ```
 
+**ECC verification uses Ed25519:**
+
+```js
+import { verify } from '@substrate-system/keys/ecc'
+
+const isOk = await verify('hello string', sig, keys.DID)
+```
+
 ### Encrypt a key
 
-Use asynchronous (RSA) encryption to encrypt an AES key to the given public key.
+Use asymmetric (RSA) encryption to encrypt an AES key to the given public key.
 
 ```ts
 async function encryptKeyTo ({ key, publicKey }:{
@@ -539,6 +553,9 @@ const encryptedTwo = await encryptKeyTo({
 Encrypt the given key to the public key, and return the result as a
 base64 string.
 
+> !NOTE
+> This is only relevant for RSA keys
+
 ```ts
 import { encryptKeyTo } from '@substrate-system/keys/rsa'
 
@@ -549,8 +566,11 @@ encryptKeyTo.asString = async function ({ key, publicKey }:{
 ```
 
 #### format
-`encryptKeyTo.asString` takes an optional second argument for [the format](https://github.com/achingbrain/uint8arrays/blob/26684d4fa1a78f3e5c16e74bf13192e881db4fcf/src/util/bases.ts#L46)
-of the returned string. Format is anything supported by [uint8arrays](https://github.com/achingbrain/uint8arrays). By default, if omitted, it is `base64`.
+`encryptKeyTo.asString` takes an optional second argument for
+[the format](https://github.com/achingbrain/uint8arrays/blob/26684d4fa1a78f3e5c16e74bf13192e881db4fcf/src/util/bases.ts#L46)
+of the returned string.
+Format is anything supported by [uint8arrays](https://github.com/achingbrain/uint8arrays).
+By default, if omitted, it is `base64`.
 
 
 ### Asymmetrically encrypt some arbitrary data
@@ -559,8 +579,14 @@ Encrypt the given message to the given public key. If an AES key is not
 provided, one will be created. Use the AES key to encrypt the given
 content, then encrypt the AES key to the given public key.
 
+> !NOTE
+> This is only relevant for RSA keys.
+> If using ECC keys, a symmetric key is automatically generated
+> via diffie-hellman.
+
 The return value is an ArrayBuffer containing the encrypted AES key +
-the `iv` + the encrypted content.
+the `iv` + the encrypted content if using RSA. It is `salt` + `iv` + cipher text
+if using ECC.
 
 To decrypt, pass the returned value to `keys.decrypt`, where `keys` is an
 instance with the corresponding private key.
@@ -617,6 +643,8 @@ async decryptAsString (
 ):Promise<string>
 ```
 
+##### example
+
 ```js
 import { RsaKeys, encryptTo } from '@substrate-system/keys/rsa'  // RSA example
 // or: import { EccKeys } from '@substrate-system/keys/ecc'
@@ -647,6 +675,9 @@ async decrypt (
   info?:string,
 ):Promise<ArrayBuffer>
 ```
+
+> !NOTE
+> ECC keys will use our own public key if it is not passed in.
 
 **RSA:**
 ```ts

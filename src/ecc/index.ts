@@ -251,6 +251,10 @@ export class EccKeys extends AbstractKeys {
     /**
      * Decrypt the given message. The encrypted message should be
      * salt + iv + cipher text.
+     * @param msg The encrypted content
+     * @param {CryptoKey|string} [publicKey] The public key used to generate
+     * the AES key used on this message. If omitted, decrypt with our own
+     * public key.
      * @returns {Promise<ArrayBuffer>} The decrypted content.
      */
     async decrypt (
