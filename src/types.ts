@@ -22,6 +22,9 @@ export type EncryptedMessage = {
     key:string|Uint8Array;
 }
 
+export type RSA = 'rsa'
+export type ECC = 'ecc'
+
 export enum HashAlg {
     SHA_1 = 'SHA-1',
     SHA_256 = 'SHA-256',

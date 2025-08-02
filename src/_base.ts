@@ -296,6 +296,8 @@ export abstract class AbstractKeys {
             isSessionOnly: !!session
         })
 
+        this._instance = keys
+
         return keys as T
     }
 
@@ -354,6 +356,7 @@ export abstract class AbstractKeys {
             isSessionOnly: !!opts.session
         }) as T
 
+        this._instance = keys
         return keys
     }
 }

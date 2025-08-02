@@ -8,6 +8,8 @@ import {
     IV_LENGTH,
     DEFAULT_RSA_EXCHANGE,
     DEFAULT_RSA_WRITE,
+    DEFAULT_RSA_SIZE,
+    DEFAULT_HASH_ALGORITHM,
 } from '../constants.js'
 import { AbstractKeys, type KeyArgs } from '../_base.js'
 import type {
@@ -31,7 +33,8 @@ import {
     base64ToArrBuf,
     toBase64,
     didToPublicKey,
-    importPublicKey
+    importPublicKey,
+    makeRSAKeypair
 } from '../util.js'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
@@ -51,6 +54,26 @@ export class RsaKeys extends AbstractKeys {
         super(opts)
         RsaKeys.EXCHANGE_KEY_NAME = opts.exchangeKeyName || DEFAULT_RSA_EXCHANGE
         RsaKeys.WRITE_KEY_NAME = opts.writeKeyName || DEFAULT_RSA_WRITE
+    }
+
+    static async _createExchangeKeys ():Promise<CryptoKeyPair> {
+        const exchangeKeys = await makeRSAKeypair(
+            DEFAULT_RSA_SIZE,
+            DEFAULT_HASH_ALGORITHM,
+            KeyUse.Exchange
+        )
+
+        return exchangeKeys
+    }
+
+    static async _createWriteKeys ():Promise<CryptoKeyPair> {
+        const writeKeys = await makeRSAKeypair(
+            DEFAULT_RSA_SIZE,
+            DEFAULT_HASH_ALGORITHM,
+            KeyUse.Write
+        )
+
+        return writeKeys
     }
 
     /**

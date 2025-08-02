@@ -43,12 +43,26 @@ export class EccKeys extends AbstractKeys {
         EccKeys.WRITE_KEY_NAME = opts.writeKeyName || DEFAULT_ECC_WRITE
     }
 
-    get publicExchangeKey ():CryptoKey {
-        return this.exchangeKey.publicKey
+    get publicExchangeKey () {
+        const publicKey = this.exchangeKey.publicKey
+        return Object.assign(publicKey, {
+            asString: async (format?: SupportedEncodings): Promise<string> => {
+                const arrayBuffer = await exportPublicKey(this.exchangeKey)
+                const uint8Array = new Uint8Array(arrayBuffer)
+                return format ? toString(uint8Array, format) : toBase64(arrayBuffer)
+            }
+        })
     }
 
-    get publicWriteKey ():CryptoKey {
-        return this.writeKey.publicKey
+    get publicWriteKey () {
+        const publicKey = this.writeKey.publicKey
+        return Object.assign(publicKey, {
+            asString: async (format?: SupportedEncodings): Promise<string> => {
+                const arrayBuffer = await exportPublicKey(this.writeKey)
+                const uint8Array = new Uint8Array(arrayBuffer)
+                return format ? toString(uint8Array, format) : toBase64(arrayBuffer)
+            }
+        })
     }
 
     static INFO = 'keys'
