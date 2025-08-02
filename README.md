@@ -71,19 +71,11 @@ See also, [the API docs generated from typescript](https://bicycle-codes.github.
 </details>
 
 
-## install
+## Install
 
 ```sh
-npm i -S @bicycle-codes/keys
+npm i -S @substrate-system/keys
 ```
-
-## Asymmetric Encryption
-
-Asymmetric encryption means using an AES key to encrypt the content, then
-encrypting the AES key to a public RSA key. If you encrypt something to Bob's
-public key, that means we create a new buffer of encrypted AES key +
-encrypted content, where the encrypted AES key can only be decrypted by Bob's
-private key.
 
 ## Modules
 
@@ -122,6 +114,10 @@ cp ./node_modules/@bicycle-codes/keys/dist/index.min.js ./public/keys.min.js
 
 ### Create a keypair
 Create a new keypair, then save it in `indexedDB`.
+
+### ECC
+
+ECC is now supported in all major browsers.
 
 ```js
 import { Keys } from '@bicycle-codes/keys'

@@ -16,9 +16,25 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./rsa": {
+      "import": "./dist/rsa/index.js",
+      "require": "./dist/rsa/index.cjs"
+    },
+    "./ecc": {
+      "import": "./dist/ecc/index.js",
+      "require": "./dist/ecc/index.cjs"
+    },
     "./min": {
       "import": "./dist/index.min.js",
       "require": "./dist/index.min.cjs"
+    },
+    "./min/ecc": {
+      "import": "./dist/ecc/index.min.js",
+      "require": "./dist/ecc/index.min.cjs"
+    },
+    "./min/rsa": {
+      "import": "./dist/rsa/index.min.cjs",
+      "require": "./dist/rsa/index.min.cjs"
     },
     "./*": {
       "import": [
@@ -38,10 +54,10 @@
     "test-rsa": "esbuild ./test/rsa.ts --bundle | npx tapout",
     "test-aes": "esbuild ./test/aes.ts --bundle | npx tapout",
     "test": "npm run test-ecc && npm run test-rsa && npm run test-aes",
-    "build-cjs": "esbuild src/*.ts --target=es2020 --format=cjs --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.cjs --sourcemap",
-    "build-cjs:min": "esbuild src/*.ts --target=es2020 --format=cjs --minify --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.min.cjs --sourcemap",
-    "build-esm": "esbuild src/*.ts --target=es2020 --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
-    "build-esm:min": "esbuild ./src/*.ts --target=es2020 --format=esm --keep-names --bundle --tsconfig=tsconfig.build.json --minify --out-extension:.js=.min.js --outdir=./dist --sourcemap",
+    "build-cjs": "esbuild src/**/*.ts --target=es2020 --format=cjs --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.cjs --sourcemap",
+    "build-cjs:min": "esbuild src/**/*.ts --target=es2020 --format=cjs --minify --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.min.cjs --sourcemap",
+    "build-esm": "esbuild src/**/*.ts --target=es2020 --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
+    "build-esm:min": "esbuild ./src/**/*.ts --target=es2020 --format=esm --keep-names --bundle --tsconfig=tsconfig.build.json --minify --out-extension:.js=.min.js --outdir=./dist --sourcemap",
     "build-docs": "typedoc ./src/index.ts",
     "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-cjs && npm run build-esm && npm run build-esm:min && npm run build-cjs:min",
     "toc": "markdown-toc --maxdepth 3 -i README.md",
