@@ -144,13 +144,13 @@ test('encrypt to public key as string', async t => {
     t.equal(decrypted, message, 'should encrypt/decrypt with string public key')
 })
 
-test('sign and verify', async t => {
+let sig
+test('sign', async t => {
     const message = 'message to sign'
-    const signature = await myKeys.sign(message)
+    sig = await myKeys.sign(message)
 
-    t.ok(signature instanceof Uint8Array,
-        'should return signature as Uint8Array')
-    t.ok(signature.length > 0, 'should have signature data')
+    t.ok(sig instanceof Uint8Array, 'should return signature as Uint8Array')
+    t.ok(sig.length > 0, 'should have signature data')
 })
 
 test('signAsString', async t => {

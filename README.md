@@ -3,7 +3,10 @@
 [![types](https://img.shields.io/npm/types/@substrate-system/keys?style=flat-square)](README.md)
 [![module](https://img.shields.io/badge/module-ESM%2FCJS-blue?style=flat-square)](README.md)
 [![semantic versioning](https://img.shields.io/badge/semver-2.0.0-blue?logo=semver&style=flat-square)](https://semver.org/)
-[![Common Changelog](https://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
+[![Common Changeloconst encrypted = await encryptKeyTo({
+  key: aesKey,
+  publicKey: await keys.publicExchangeKeyAsString()
+})  // => Uint8Arrayttps://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
 [![install size](https://flat.badgen.net/packagephobia/install/@substrate-system/keys?cache-control=no-cache)](https://packagephobia.com/result?p=@substrate-system/keys)
 [![GZip size](https://flat.badgen.net/bundlephobia/minzip/@substrate-system/keys)](https://bundlephobia.com/package/@substrate-system/keys)
 [![license](https://img.shields.io/badge/license-Big_Time-blue?style=flat-square)](LICENSE)
@@ -164,35 +167,27 @@ const name = await keys.deviceName
 A flag indicating whether `.persist` has been called, meaning that these keys
 are saved in `indexedDB`.
 
-#### `keys.publicExchangeKey` (ECC) / `keys.publicEncryptKey` (RSA)
+#### `keys.publicExchangeKey`
 
 The public encryption `CryptoKey`. For ECC keys, this is the X25519 exchange key.
 For RSA keys, this is the RSA encryption key.
 
-#### `keys.publicExchangeKeyAsString()` (ECC) / `keys.getPublicEncryptKey()` (RSA)
+#### `keys.publicExchangeKeyAsString()`
 
 Get the public encryption key as a `base64` string. For other formats,
 [see below](#format-options).
 
-**ECC:**
 ```ts
 {
   async publicExchangeKeyAsString (format?:SupportedEncodings):Promise<string>
 }
 ```
 
-**RSA:**
-```ts
-{
-  async getPublicEncryptKey (format?:SupportedEncodings):Promise<string>
-}
-```
+#### `keys.publicWriteKey`
 
-#### `keys.publicWriteKey` (ECC only)
+The public signing `CryptoKey`. This is the Ed25519 or RSA signing key.
 
-The public signing `CryptoKey` for ECC keys. This is the Ed25519 signing key.
-
-#### `keys.publicWriteKeyAsString()` (ECC only)
+#### `keys.publicWriteKeyAsString()`
 
 Get the public signing key as a string.
 
@@ -213,13 +208,14 @@ await keys.delete()
 --------------------------------------------------------------------------
 
 
-### sign and verify something
+### Sign and Verify Something
+
 `.verify` takes the content, the signature, and the DID for the public key
 used to sign. The DID is exposed as the property `.DID` on a `Keys` instance.
 
 >
 > [!NOTE]  
-> `verify` is exposed as a separate function (RSA only), so you don't
+> `verify` is exposed as a separate function, so you don't
 > have to include all of `Keys` just to verify a signature.
 >
 
@@ -293,8 +289,7 @@ async encryptAsString (
 import { encryptTo } from '@substrate-system/keys/rsa'  // RSA version
 
 // need to know the public key we are encrypting for
-const publicKey = await keys.publicExchangeKeyAsString()  // ECC
-// or: const publicKey = await keys.getPublicEncryptKey()  // RSA
+const publicKey = await keys.publicExchangeKeyAsString()  // Both ECC and RSA
 
 const encrypted = await encryptTo({
   content: 'hello public key',
@@ -529,13 +524,13 @@ import { encryptKeyTo } from '@substrate-system/keys/rsa'
 // pass in a CryptoKey
 const encrypted = await encryptKeyTo({
     key: myAesKey,
-    publicKey: keys.publicEncryptKey
+    publicKey: keys.publicExchangeKey
 })
 
 // pass in a base64 string
 const encryptedTwo = await encryptKeyTo({
   key: aesKey,
-  publicKey: await keys.getPublicEncryptKey()
+  publicKey: await keys.publicExchangeKeyAsString()
 })  // => Uint8Array
 ```
 
@@ -586,7 +581,7 @@ import { encryptTo } from '@substrate-system/keys/rsa'
 
 const encrypted = await encryptTo({
     content: 'hello encryption',
-    publicKey: keys.publicEncryptKey
+    publicKey: keys.publicExchangeKey
 })
 
 // => ArrayBuffer
@@ -628,8 +623,7 @@ import { RsaKeys, encryptTo } from '@substrate-system/keys/rsa'  // RSA example
 
 const keys = await RsaKeys.create()
 // or: const keys = await EccKeys.create()
-const pubKey = await keys.publicExchangeKeyAsString()  // ECC
-// or: const pubKey = await keys.getPublicEncryptKey()  // RSA
+const pubKey = await keys.publicExchangeKeyAsString()  // Both ECC and RSA
 const msg = { type: 'test', content: 'hello' }
 const cipherText = await encryptTo.asString({
     content: JSON.stringify(msg),
