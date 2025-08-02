@@ -43,7 +43,7 @@ export type { DID }
 export { getPublicKeyAsUint8Array } from '../util.js'
 export type SerializedKeys = {
     DID:DID;
-    publicEncryptKey:string;
+    publicExchangeKey:string;
 }
 
 export class RsaKeys extends AbstractKeys {
@@ -81,7 +81,7 @@ export class RsaKeys extends AbstractKeys {
      * Serialize this keys instance. Will return an object of
      * { DID, publicExchangeKey }, where DID is the public signature key,
      * and `publicExchangeKey` is the encryption key, `base64` encoded.
-     * @returns {Promise<{ DID:DID, publicEncryptKey:string }>}
+     * @returns {Promise<{ DID:DID, publicExchangeKey:string }>}
      */
     async toJson (
         format?:SupportedEncodings

@@ -1,6 +1,6 @@
 # keys
 [![tests](https://img.shields.io/github/actions/workflow/status/substrate-system/keys/nodejs.yml?style=flat-square)](https://github.com/substrate-system/keys/actions/workflows/nodejs.yml)
-[![types](https://img.shields.io/npm/types/@bicycle-codes/keys?style=flat-square)](README.md)
+[![types](https://img.shields.io/npm/types/@substrate-system/keys?style=flat-square)](README.md)
 [![module](https://img.shields.io/badge/module-ESM%2FCJS-blue?style=flat-square)](README.md)
 [![semantic versioning](https://img.shields.io/badge/semver-2.0.0-blue?logo=semver&style=flat-square)](https://semver.org/)
 [![Common Changelog](https://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
@@ -31,15 +31,14 @@ See also, [the API docs generated from typescript](https://bicycle-codes.github.
 
 <!-- toc -->
 
-- [install](#install)
-- [Asymmetric Encryption](#asymmetric-encryption)
+- [Install](#install)
 - [Modules](#modules)
   * [`exports`](#exports)
   * [ESM](#esm)
   * [Common JS](#common-js)
   * [pre-built JS](#pre-built-js)
-- [get started](#get-started)
-  * [Create a keypair](#create-a-keypair)
+- [Get started](#get-started)
+  * [ECC](#ecc)
   * [some notes about the `keys` instance](#some-notes-about-the-keys-instance)
   * [Delete a keypair](#delete-a-keypair)
   * [sign and verify something](#sign-and-verify-something)
@@ -57,7 +56,7 @@ See also, [the API docs generated from typescript](https://bicycle-codes.github.
   * [Asymmetrically encrypt some arbitrary data](#asymmetrically-encrypt-some-arbitrary-data)
   * [Asymmetrically encrypt a string, return a new string](#asymmetrically-encrypt-a-string-return-a-new-string)
   * [Decrypt a message](#decrypt-a-message)
-  * [`.decrypt.asString`](#decryptasstring)
+  * [Backward compatibility: `.decrypt.asString`](#backward-compatibility-decryptasstring)
   * [In memory only](#in-memory-only)
 - [AES](#aes)
   * [`create`](#create)
@@ -85,12 +84,16 @@ This exposes ESM and common JS via [package.json `exports` field](https://nodejs
 
 ### ESM
 ```js
-import { Keys } from '@bicycle-codes/keys'
+import { EccKeys } from '@substrate-system/keys/ecc'
+import { RsaKeys } from '@substrate-system/keys/rsa'
+import { AES } from '@substrate-system/keys/aes'
 ```
 
 ### Common JS
 ```js
-const { Keys } = require('@bicycle-codes/keys')
+const { EccKeys } = require('@substrate-system/keys/ecc')
+const { RsaKeys } = require('@substrate-system/keys/rsa')
+const { AES } = require('@substrate-system/keys/aes')
 ```
 
 ### pre-built JS
@@ -99,7 +102,7 @@ accessible to your web server, then link to them in HTML.
 
 #### copy
 ```sh
-cp ./node_modules/@bicycle-codes/keys/dist/index.min.js ./public/keys.min.js
+cp ./node_modules/@substrate-system/keys/dist/index.min.js ./public/keys.min.js
 ```
 
 #### HTML
@@ -110,12 +113,12 @@ cp ./node_modules/@bicycle-codes/keys/dist/index.min.js ./public/keys.min.js
 ------------------------------------------------------
 
 
-## get started
-
-### Create a keypair
-Create a new keypair, then save it in `indexedDB`.
+## Get started
 
 ### ECC
+
+#### Create a keypair
+Create a new keypair, then save it in `indexedDB`.
 
 ECC is now supported in all major browsers.
 
@@ -147,7 +150,7 @@ this instance. The DID looks like this:
 
 #### `keys.getDeviceName` / `keys.deviceName`
 
-Return the 32 character, DNS friendly hash of the signing public key.
+Return a 32 character, DNS friendly hash of the signing public key.
 
 ```js
 const name = await keys.getDeviceName()
@@ -161,42 +164,41 @@ const name = await keys.deviceName
 A flag indicating whether `.persist` has been called, meaning that these keys
 are saved in `indexedDB`.
 
-#### `keys.publicEncryptKey`
+#### `keys.publicExchangeKey` (ECC) / `keys.publicEncryptKey` (RSA)
 
-The public encryption `CryptoKey`.
+The public encryption `CryptoKey`. For ECC keys, this is the X25519 exchange key.
+For RSA keys, this is the RSA encryption key.
 
-#### `keys.getPublicEncryptKey()`
+#### `keys.publicExchangeKeyAsString()` (ECC) / `keys.getPublicEncryptKey()` (RSA)
 
-Get the public encryption key, as a `base64` string. For other formats,
-[see below](#keysgetpublicencryptkeyformat).
+Get the public encryption key as a `base64` string. For other formats,
+[see below](#format-options).
 
+**ECC:**
 ```ts
 {
-  async getPublicEncryptKey ():Promise<string>
+  async publicExchangeKeyAsString (format?:SupportedEncodings):Promise<string>
 }
 ```
 
-#####  `keys.getPublicEncryptKey(format)`
-
-Get the public encryption key. The given format should be a
-[supported encoding](https://github.com/achingbrain/uint8arrays/blob/26684d4fa1a78f3e5c16e74bf13192e881db4fcf/src/util/bases.ts#L46) in
-[uint8arrays](https://github.com/achingbrain/uint8arrays).
-
+**RSA:**
 ```ts
 {
-  async getPublicEncryptKey (
-    format?:SupportedEncodings
-  ):Promise<string>
+  async getPublicEncryptKey (format?:SupportedEncodings):Promise<string>
 }
 ```
 
-#### keys.getPublicEncryptKey.uint8Array
+#### `keys.publicWriteKey` (ECC only)
 
-Get the public encryption key as a `Uint8Array`.
+The public signing `CryptoKey` for ECC keys. This is the Ed25519 signing key.
+
+#### `keys.publicWriteKeyAsString()` (ECC only)
+
+Get the public signing key as a string.
 
 ```ts
 {
-  function uint8Array:()=>Promise<Uint8Array<ArrayBufferLike>>
+  async publicWriteKeyAsString (format?:SupportedEncodings):Promise<string>
 }
 ```
 
@@ -217,32 +219,82 @@ used to sign. The DID is exposed as the property `.DID` on a `Keys` instance.
 
 >
 > [!NOTE]  
-> `verify` is exposed as a separate function, so you don't
+> `verify` is exposed as a separate function (RSA only), so you don't
 > have to include all of `Keys` just to verify a signature.
 >
 
 ```js
-import { Keys, verify } from '@bicycle-codes/keys'
+import { RsaKeys, verify } from '@substrate-system/keys/rsa'
+// or: import { EccKeys } from '@substrate-system/keys/ecc'
 
-const keys = await Keys.create()
+const keys = await RsaKeys.create()
+// or: const keys = await EccKeys.create()
 
 // sign something
-const sig = await keys.sign.asString('hello string')
+const sig = await keys.signAsString('hello string')
+// or backward compatible: const sig = await keys.sign.asString('hello string')
 
-// verify the signature
+// verify the signature (RSA only)
 const isOk = await verify('hello string', sig, keys.DID)
 ```
 
 ### encrypt something
-Take the public key we are encrypting to, return an `ArrayBuffer`, containing
-the encrypted AES key concattenated with the `iv` and encrypted content.
+Take the public key we are encrypting to, return encrypted content.
 
+#### `keys.encrypt` methods
+
+**ECC:**
+```ts
+async encrypt (
+  content:string|Uint8Array,
+  recipient?:CryptoKey|string,  // their public key
+  info?:string,
+  aesKey?:SymmKey|Uint8Array|string,
+  keysize?:SymmKeyLength
+):Promise<Uint8Array>
+```
+
+**RSA:**
+```ts
+async encrypt (
+  content:string|Uint8Array,
+  recipient?:CryptoKey|string,
+  aesKeyOrInfo?:SymmKey|Uint8Array|string,  // For RSA, this is aesKey
+  keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,  // For RSA, this is keysize
+  keysize?:SymmKeyLength
+):Promise<Uint8Array>
+```
+
+#### `keys.encryptAsString` methods
+
+**ECC:**
+```ts
+async encryptAsString (
+  content:string|Uint8Array,
+  recipient?:CryptoKey|string,
+  info?:string,
+  aesKey?:SymmKey|Uint8Array|string,
+  keysize?:SymmKeyLength,
+):Promise<string>
+```
+
+**RSA:**
+```ts
+async encryptAsString (
+  content:string|Uint8Array,
+  recipient?:CryptoKey|string,
+  aesKeyOrInfo?:SymmKey|Uint8Array|string,
+  keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,
+  keysize?:SymmKeyLength
+):Promise<string>
+```
 
 ```js
-import { encryptTo } from '@bicycle-codes/keys'
+import { encryptTo } from '@substrate-system/keys/rsa'  // RSA version
 
 // need to know the public key we are encrypting for
-const publicKey = await keys.getPublicEncryptKey()
+const publicKey = await keys.publicExchangeKeyAsString()  // ECC
+// or: const publicKey = await keys.getPublicEncryptKey()  // RSA
 
 const encrypted = await encryptTo({
   content: 'hello public key',
@@ -261,9 +313,11 @@ A `Keys` instance has a method `decrypt`. The `encryptedMessage` argument is
 an `ArrayBuffer` as returned from `encryptTo`, above.
 
 ```js
-import { Keys } from '@bicycle-codes/keys'
+import { EccKeys } from '@substrate-system/keys/ecc'
+// or: import { RsaKeys } from '@substrate-system/keys/rsa'
 
-const keys = await Keys.create()
+const keys = await EccKeys.create()
+// or: const keys = await RsaKeys.create()
 // ...
 const decrypted = await keys.decrypt(encryptedMsg)
 ```
@@ -274,20 +328,27 @@ const decrypted = await keys.decrypt(encryptedMsg)
 
 ### Create a new `Keys` instance
 
-Use the factory function `Keys.create`. The optional parameters,
+Use the factory function `EccKeys.create` or `RsaKeys.create`. The optional parameters,
 `encryptionKeyName` and `signingKeyName`, are added as properties to the
-`keys` instance -- `ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. These are
-used as indexes for saving the keys in `indexedDB`.
+`keys` instance. These are used as indexes for saving the keys in `indexedDB`.
 
+**ECC:**
 ```ts
-class Keys {
-  ENCRYPTION_KEY_NAME:string = 'encryption-key'
-  SIGNING_KEY_NAME:string = 'signing-key'
+class EccKeys {
+  static EXCHANGE_KEY_NAME:string = 'ecc-exchange'
+  static WRITE_KEY_NAME:string = 'ecc-write'
 
-  static async create (opts?:{
-      encryptionKeyName:string,
-      signingKeyName:string
-  }):Promise<Keys>
+  static async create (session?:boolean):Promise<EccKeys>
+}
+```
+
+**RSA:**
+```ts
+class RsaKeys {
+  static EXCHANGE_KEY_NAME:string = 'rsa-exchange'
+  static WRITE_KEY_NAME:string = 'rsa-write'
+
+  static async create (session?:boolean):Promise<RsaKeys>
 }
 ```
 
@@ -296,9 +357,11 @@ class Keys {
 Use the factory function b/c async.
 
 ```js
-import { Keys } from '@bicycle-codes/keys'
+import { EccKeys } from '@substrate-system/keys/ecc'
+// or: import { RsaKeys } from '@substrate-system/keys/rsa'
 
-const keys = await Keys.create()
+const keys = await EccKeys.create()
+// or: const keys = await RsaKeys.create()
 ```
 
 ### Get a hash of the DID
@@ -311,7 +374,7 @@ The static method requires a `DID` string to be passed in.
 #### static method
 
 ```ts
-class Keys {
+class EccKeys {  // or RsaKeys
   static async deviceName (did:DID):Promise<string>
 }
 ```
@@ -321,37 +384,35 @@ class Keys {
 If used as an instance method, this will use the `DID` assigned to the instance.
 
 ```ts
-class Keys {
+class EccKeys {  // or RsaKeys
   async getDeviceName ():Promise<string>
 }
 ```
 
 ### Persist the keys
-Save the keys to `indexedDB`. This depends on the values of class properties
-`ENCRYPTION_KEY_NAME` and `SIGNING_KEY_NAME`. Set them if you want to change the
+Save the keys to `indexedDB`. This depends on the values of static class properties
+`EXCHANGE_KEY_NAME` and `WRITE_KEY_NAME`. Set them if you want to change the
 indexes under which the keys are saved to `indexedDB`.
 
 By default we use these:
-```js
-const DEFAULT_ENC_NAME = 'encryption-key'
-const DEFAULT_SIG_NAME = 'signing-key'
-```
+- **ECC**: `'ecc-exchange'` and `'ecc-write'`
+- **RSA**: `'rsa-exchange'` and `'rsa-write'`
 
 #### `.persist`
 
 ```ts
-class Keys {
+class EccKeys {  // or RsaKeys
   async persist ():Promise<void>
 }
 ```
 
 #### `.persist` example
 ```js
-import { Keys } from '@bicycle-codes/keys'
+import { EccKeys } from '@substrate-system/keys/ecc'
 
-const keys = await Keys.create()
-keys.ENCRYPTION_KEY_NAME = 'encryption-key-custom-name'
-keys.SIGNING_KEY_NAME = 'signing-key-custom-name'
+const keys = await EccKeys.create()
+EccKeys.EXCHANGE_KEY_NAME = 'encryption-key-custom-name'
+EccKeys.WRITE_KEY_NAME = 'signing-key-custom-name'
 await keys.persist()
 ```
 
@@ -361,35 +422,39 @@ Create a `Keys` instance from data saved to `indexedDB`. Pass in different
 
 #### `static .load`
 ```ts
-class Keys {
-    static async load (opts:{
-      encryptionKeyName,
-      signingKeyName
-    } = {
-      encryptionKeyName: DEFAULT_ENC_NAME,
-      signingKeyName: DEFAULT_SIG_NAME
-    }):Promise<Keys>
+class EccKeys {  // or RsaKeys
+    static async load (opts?:{
+      encryptionKeyName?:string,
+      signingKeyName?:string,
+      session?:boolean,
+    }):Promise<EccKeys>
 }
 ```
 
 #### example
 ```js
-import { Keys } from '@bicycle-codes/keys'
+import { EccKeys } from '@substrate-system/keys/ecc'
+// or: import { RsaKeys } from '@substrate-system/keys/rsa'
 
-const newKeys = await Keys.load()
+const newKeys = await EccKeys.load()
+// or: const newKeys = await RsaKeys.load()
 ```
 
 
 ### Sign something
 Create a new signature for the given input.
 
+**ECC:**
 ```ts
-class Keys {
-  async sign (
-    msg:ArrayBuffer|string|Uint8Array,
-    charsize?:CharSize,
-  ):Promise<Uint8Array>
-}
+async sign (msg:Msg, _charsize?:CharSize):Promise<Uint8Array>
+```
+
+**RSA:**
+```ts
+async sign (
+  msg:Msg,
+  charsize:CharSize = DEFAULT_CHAR_SIZE
+):Promise<Uint8Array>
 ```
 
 #### example
@@ -399,20 +464,24 @@ const sig = await keys.sign('hello signatures')
 
 ### Get a signature as a string
 
-#### `keys.sign.asString(msg)`
+#### `keys.signAsString(msg)`
+
+Sign a message and return the signature as a base64 encoded string.
 
 ```ts
 {
-  /**
-   * Sign a message, return the signature as a base64 encoded string.
-   *
-   * @param {Msg} msg The message to sign
-   * @param {CharSize} [charsize] Character size
-   * @returns {Promise<string>}
-   */
-  asString: async (msg:Msg, charsize?:CharSize):Promise<string>
+  async signAsString (msg:string, charsize?:CharSize):Promise<string>
 }
 ```
+
+```js
+const sig = await keys.signAsString('hello string')
+// => ubW9PIjb360v...
+```
+
+#### Backward compatibility: `keys.sign.asString(msg)`
+
+For backward compatibility, the `.asString` method is still available:
 
 ```js
 const sig = await keys.sign.asString('hello string')
@@ -425,6 +494,7 @@ that it can be used independently from any keypairs. You need to pass in the
 data that was signed, the signature, and the `DID` string of the public key used
 to create the signature.
 
+**RSA verification:**
 ```ts
 async function verify (
     msg:string|Uint8Array,
@@ -433,8 +503,10 @@ async function verify (
 ):Promise<boolean>
 ```
 
+**Note:** ECC verification would need to be implemented separately as it uses different algorithms (Ed25519).
+
 ```js
-import { verify } from '@bicycle-codes/keys'
+import { verify } from '@substrate-system/keys/rsa'
 
 const isOk = await verify('hello string', sig, keys.DID)
 ```
@@ -452,7 +524,7 @@ async function encryptKeyTo ({ key, publicKey }:{
 
 #### example
 ```js
-import { encryptKeyTo } from '@bicycle-codes/keys'
+import { encryptKeyTo } from '@substrate-system/keys/rsa'
 
 // pass in a CryptoKey
 const encrypted = await encryptKeyTo({
@@ -473,7 +545,7 @@ Encrypt the given key to the public key, and return the result as a
 base64 string.
 
 ```ts
-import { encryptKeyTo } from '@bicycle-codes/keys'
+import { encryptKeyTo } from '@substrate-system/keys/rsa'
 
 encryptKeyTo.asString = async function ({ key, publicKey }:{
     key:string|Uint8Array|CryptoKey;
@@ -510,7 +582,7 @@ async function encryptTo (
 
 #### example
 ```js
-import { encryptTo } from '@bicycle-codes/keys'
+import { encryptTo } from '@substrate-system/keys/rsa'
 
 const encrypted = await encryptTo({
     content: 'hello encryption',
@@ -523,22 +595,41 @@ const encrypted = await encryptTo({
 ### Asymmetrically encrypt a string, return a new string
 
 Encrypt the given string, and return a new string that is the (encrypted) AES
-key concattenated with the `iv` and cipher text. The
-corresponding method `keys.decrypt.asString` will know how to parse and
+key concatenated with the `iv` and cipher text. The
+corresponding method `keys.decryptAsString` will know how to parse and
 decrypt the resulting text.
 
-Use the functions `encryptTo.asString` and `keys.decrypt.asString`.
+Use the functions `encryptTo.asString` and `keys.decryptAsString`.
 
-#### `keys.decrypt.asString`
+#### `keys.decryptAsString`
+
+**ECC:**
 ```ts
-async function asString (msg:string, keysize?:SymmKeyLength):Promise<string> 
+async decryptAsString (
+  msg:string|Uint8Array|ArrayBuffer,
+  publicKey?:CryptoKey|string,
+  aesAlgorithm?:string,
+  info?:string,
+):Promise<string>
+```
+
+**RSA:**
+```ts
+async decryptAsString (
+  msg:string|Uint8Array|ArrayBuffer,
+  keysize?:CryptoKey|string|SymmKeyLength,
+  _aesAlgorithm?:string,
+):Promise<string>
 ```
 
 ```js
-import { Keys, encryptTo } from '@bicycle-codes/keys'
+import { RsaKeys, encryptTo } from '@substrate-system/keys/rsa'  // RSA example
+// or: import { EccKeys } from '@substrate-system/keys/ecc'
 
-const keys = await Keys.create()
-const pubKey = await keys.getPublicEncryptKey()
+const keys = await RsaKeys.create()
+// or: const keys = await EccKeys.create()
+const pubKey = await keys.publicExchangeKeyAsString()  // ECC
+// or: const pubKey = await keys.getPublicEncryptKey()  // RSA
 const msg = { type: 'test', content: 'hello' }
 const cipherText = await encryptTo.asString({
     content: JSON.stringify(msg),
@@ -546,34 +637,39 @@ const cipherText = await encryptTo.asString({
     publicKey: pubKey
 })  // => string
 
-const text = await keys.decrypt.asString(cipherText)
+const text = await keys.decryptAsString(cipherText)
 const data = JSON.parse(text)
 // => { type: 'test', content: 'hello' }
 ```
 
 ### Decrypt a message
+
+**ECC:**
 ```ts
-class Keys {
-  async decrypt (
-    msg:string|Uint8Array|ArrayBuffer,
-    keysize?:SymmKeyLength
-  ):Promise<Uint8Array>
-}
+async decrypt (
+  msg:string|Uint8Array|ArrayBuffer,
+  publicKey?:CryptoKey|string,
+  aesAlgorithm?:string,
+  info?:string,
+):Promise<ArrayBuffer>
+```
+
+**RSA:**
+```ts
+async decrypt (
+  msg:string|Uint8Array|ArrayBuffer,
+  keysize?:CryptoKey|string|SymmKeyLength,
+  _aesAlgorithm?:string,
+):Promise<Uint8Array>
 ```
 
 ```js
 const decrypted = await keys.decrypt(encrypted)
-// => Uint8Array
+// => ArrayBuffer (ECC) or Uint8Array (RSA)
 ```
 
-### `.decrypt.asString`
+### Backward compatibility: `.decrypt.asString`
 Decrypt a message, and stringify the result.
-
-```ts
-{
-  async function asString (msg:EncryptedMessage):Promise<string>
-}
-```
 
 ```js
 await keys.decrypt.asString(encryptedString)
@@ -582,15 +678,18 @@ await keys.decrypt.asString(encryptedString)
 
 ### In memory only
 Create a keypair, but do not save it in `indexedDB`, even if you call `persist`.
-Pass an option `.session` to `.create` or `.load`.
+Pass `true` as the session parameter to `.create` or pass `{ session: true }` to `.load`.
 
 ```js
-import { Keys } from '@bicycle-codes/keys'
+import { EccKeys } from '@substrate-system/keys/ecc'
+// or: import { RsaKeys } from '@substrate-system/keys/rsa'
 
-const keys = await Keys.create({ session: true })
+const keys = await EccKeys.create(true)
+// or: const keys = await RsaKeys.create(true)
 
 // or pass it to `.load`
-const keysTwo = await Keys.load({ session: true })
+const keysTwo = await EccKeys.load({ session: true })
+// or: const keysTwo = await RsaKeys.load({ session: true })
 ```
 
 ## AES
@@ -601,7 +700,7 @@ Expose several AES functions with nice defaults.
 * `iv` size: [`12` bytes](https://crypto.stackexchange.com/questions/41601/aes-gcm-recommended-iv-size-why-12-bytes) (96 bits)
 
 ```js
-import { AES } from '@bicycle-codes/keys'
+import { AES } from '@substrate-system/keys/aes'
 
 const key = await AES.create(/* ... optional arguments ... */)
 ```
@@ -617,7 +716,7 @@ function create (opts:{ alg:string, length:number } = {
 ```
 
 ```ts
-import { AES } from '@bicycle-codes/keys'
+import { AES } from '@substrate-system/keys/aes'
 const aesKey = await AES.create()
 ```
 
@@ -629,7 +728,7 @@ Get the AES key as a `Uint8Array`.
 ```
 
 ```js
-import { AES } from '@bicycle-codes/keys'
+import { AES } from '@substrate-system/keys/aes'
 const exported = await AES.export(aesKey)
 ```
 
@@ -644,7 +743,7 @@ async function asString (
 ```
 
 ```js
-import { AES } from '@bicycle-codes/keys'
+import { AES } from '@substrate-system/keys/aes'
 const exported = await AES.export.asString(aesKey)
 ```
 
@@ -661,7 +760,7 @@ async function encrypt (
 ```
 
 ```js
-import { AES } from '@bicycle-codes/keys'
+import { AES } from '@substrate-system/keys/aes'
 import { fromString } from 'uint8arrays'
 
 const encryptedText = await AES.encrypt(fromString('hello AES'), aesKey)
@@ -677,7 +776,7 @@ async function decrypt (
 ```
 
 ```js
-import { AES } from '@bicycle-codes/keys'
+import { AES } from '@substrate-system/keys/aes'
 
 const decryptedText = await AES.decrypt(encryptedText, aesKey)
 ```
