@@ -25,7 +25,8 @@ import {
 import {
     base64ToArrBuf,
     normalizeToBuf,
-    toBase64
+    toBase64,
+    didToPublicKey
 } from '../util.js'
 import { checkValidKeyUse } from '../errors.js'
 import {
@@ -466,6 +467,70 @@ Object.assign(EccKeys.prototype.sign, {
         return this.signAsString(msg, _charsize)
     }
 })
+
+/**
+ * Check that the given signature is valid with the given message.
+ * This uses Ed25519 verification.
+ */
+export async function verify (
+    msg:string|Uint8Array,
+    sig:string|Uint8Array,
+    signingDid:DID
+):Promise<boolean> {
+    try {
+        const _key = didToPublicKey(signingDid)
+
+        // Verify it's an Ed25519 key
+        if (_key.type !== 'ed25519') {
+            throw new Error(`Expected Ed25519 key for ECC verification, got ${_key.type}`)
+        }
+
+        // Extract raw Ed25519 key from DER encoding
+        // DER format has 12-byte header, then 32-byte raw key
+        const rawKeyBytes = _key.publicKey.slice(-32)
+
+        // Import the public key for verification
+        const publicKey = await webcrypto.subtle.importKey(
+            'raw',
+            rawKeyBytes,
+            { name: ECC_WRITE_ALG },
+            true,
+            ['verify']
+        )
+
+        // Prepare the message using the same encoding as the sign function
+        const encoder = new TextEncoder()
+        let data:Uint8Array
+
+        if (typeof msg === 'string') {
+            data = encoder.encode(msg)
+        } else if (msg instanceof ArrayBuffer) {
+            data = new Uint8Array(msg)
+        } else {
+            data = msg
+        }
+
+        // Prepare the signature - handle both string and Uint8Array
+        let signature:Uint8Array
+        if (typeof sig === 'string') {
+            signature = new Uint8Array(base64ToArrBuf(sig))
+        } else {
+            signature = sig
+        }
+
+        // Verify the signature
+        const isValid = await webcrypto.subtle.verify(
+            { name: ECC_WRITE_ALG },
+            publicKey,
+            signature,
+            data
+        )
+
+        return isValid
+    } catch (_err) {
+        return false
+    }
+}
 
 /**
  * Derive an AES key from X25519 keypair via ECDH + HKDF

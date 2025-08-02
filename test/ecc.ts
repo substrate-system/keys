@@ -4,7 +4,8 @@ import { toString } from 'uint8arrays'
 import {
     EccKeys,
     exportPublicKey,
-    importPublicKey
+    importPublicKey,
+    verify
 } from '../src/ecc/index.js'
 import { EccCurve, KeyUse } from '../src/types.js'
 
@@ -159,6 +160,24 @@ test('signAsString', async t => {
 
     t.equal(typeof signature, 'string', 'should return signature as string')
     t.ok(signature.length > 0, 'should have signature data')
+})
+
+test('verify signature', async t => {
+    const message = 'message to verify'
+    const signature = await myKeys.signAsString(message)
+
+    // Verify with correct message and signature
+    const isValid = await verify(message, signature, myKeys.DID)
+    t.ok(isValid, 'should verify valid signature')
+
+    // Verify with wrong message
+    const isInvalid = await verify('wrong message', signature, myKeys.DID)
+    t.equal(isInvalid, false, 'should reject invalid signature')
+
+    // Test with Uint8Array signature
+    const sigBytes = await myKeys.sign(message)
+    const isValidBytes = await verify(message, sigBytes, myKeys.DID)
+    t.ok(isValidBytes, 'should verify valid signature with Uint8Array')
 })
 
 test('getAesKey method', async t => {
