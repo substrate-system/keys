@@ -1,4 +1,3 @@
-import { AbstractKeys } from '../_base.js'
 import { webcrypto } from '@substrate-system/one-webcrypto'
 import { fromString, toString, type SupportedEncodings } from 'uint8arrays'
 import { AES, importAesKey } from '../aes/index.js'
@@ -7,14 +6,18 @@ import {
     DEFAULT_SYMM_LENGTH,
     AES_GCM,
     IV_LENGTH,
+    DEFAULT_RSA_EXCHANGE,
+    DEFAULT_RSA_WRITE,
 } from '../constants.js'
+import { AbstractKeys, type KeyArgs } from '../_base.js'
 import type {
     DID,
     Msg,
     SymmKeyLength,
     SymmKey,
-    CharSize
+    CharSize,
 } from '../types.js'
+import { HashAlg, KeyUse } from '../types.js'
 import {
     publicKeyToDid,
     getPublicKeyAsArrayBuffer,
@@ -26,7 +29,9 @@ import {
     normalizeToBuf,
     rsaOperations,
     base64ToArrBuf,
-    toBase64
+    toBase64,
+    didToPublicKey,
+    importPublicKey
 } from '../util.js'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
@@ -39,12 +44,40 @@ export type SerializedKeys = {
 }
 
 export class RsaKeys extends AbstractKeys {
-    get publicExchangeKey ():CryptoKey {
-        return this.exchangeKey.publicKey
+    static EXCHANGE_KEY_NAME:string = DEFAULT_RSA_EXCHANGE
+    static WRITE_KEY_NAME:string = DEFAULT_RSA_WRITE
+
+    constructor (opts:KeyArgs) {
+        super(opts)
+        RsaKeys.EXCHANGE_KEY_NAME = opts.exchangeKeyName || DEFAULT_RSA_EXCHANGE
+        RsaKeys.WRITE_KEY_NAME = opts.writeKeyName || DEFAULT_RSA_WRITE
     }
 
-    get publicWriteKey ():CryptoKey {
-        return this.writeKey.publicKey
+    /**
+     * Serialize this keys instance. Will return an object of
+     * { DID, publicExchangeKey }, where DID is the public signature key,
+     * and `publicExchangeKey` is the encryption key, `base64` encoded.
+     * @returns {Promise<{ DID:DID, publicEncryptKey:string }>}
+     */
+    async toJson (
+        format?:SupportedEncodings
+    ):Promise<{ DID:DID; publicExchangeKey:string; }> {
+        const pubEnc = this.publicExchangeKey
+        const did = this.DID
+
+        const spki = await webcrypto.subtle.exportKey(
+            'spki',
+            pubEnc
+        )
+
+        const keyString = (format ?
+            toString(new Uint8Array(spki), format) :
+            toBase64(spki))
+
+        return {
+            publicExchangeKey: keyString,
+            DID: did
+        }
     }
 
     /**
@@ -78,12 +111,16 @@ export class RsaKeys extends AbstractKeys {
     async encrypt (
         content:string|Uint8Array,
         recipient?:CryptoKey|string,
-        _info?:string,  // RSA doesn't use info, but kept for interface compatibility
-        aesKey?:SymmKey|Uint8Array|string,
+        aesKeyOrInfo?:SymmKey|Uint8Array|string,  // For RSA, this is aesKey
+        // For RSA, this is keysize
+        keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,
         keysize?:SymmKeyLength
     ):Promise<Uint8Array> {
         const publicKey = recipient || this.exchangeKey.publicKey
-        const key = aesKey || await AES.create({ length: keysize })
+        // For RSA: aesKeyOrInfo is aesKey, keysizeOrAesKey is keysize
+        const aesKey = aesKeyOrInfo
+        const keysizeValue = keysizeOrAesKey as SymmKeyLength
+        const key = aesKey || await AES.create({ length: keysizeValue || keysize })
         const encryptedContent = await AES.encrypt(
             typeof content === 'string' ? fromString(content) : content,
             typeof key === 'string' ? await AES.import(key) : key,
@@ -100,11 +137,11 @@ export class RsaKeys extends AbstractKeys {
     async encryptAsString (
         content:string|Uint8Array,
         recipient?:CryptoKey|string,
-        _info?:string,  // RSA doesn't use info, but kept for interface compatibility
-        aesKey?:SymmKey|Uint8Array|string,
+        aesKeyOrInfo?:SymmKey|Uint8Array|string,  // For RSA, this is aesKey
+        keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,  // For RSA, this is keysize
         keysize?:SymmKeyLength
     ):Promise<string> {
-        const encrypted = await this.encrypt(content, recipient, _info, aesKey, keysize)
+        const encrypted = await this.encrypt(content, recipient, aesKeyOrInfo, keysizeOrAesKey, keysize)
         return toString(encrypted, 'base64pad')
     }
 
@@ -206,8 +243,7 @@ Object.assign(RsaKeys.prototype.encrypt, {
         aesKey?: SymmKey | Uint8Array | string,
         keysize?: SymmKeyLength
     ): Promise<string> {
-        // RSA doesn't use info parameter, so we pass undefined
-        return this.encryptAsString(content, recipient, undefined, aesKey, keysize)
+        return this.encryptAsString(content, recipient, aesKey, keysize)
     }
 })
 
@@ -220,6 +256,29 @@ Object.assign(RsaKeys.prototype.decrypt, {
         return this.decryptAsString(msg, keysize)
     }
 })
+
+/**
+ * Check that the given signature is valid with the given message.
+ */
+export async function verify (
+    msg:string|Uint8Array,
+    sig:string|Uint8Array,
+    signingDid:DID
+):Promise<boolean> {
+    const _key = didToPublicKey(signingDid)
+    const key = await importPublicKey(
+        _key.publicKey.buffer,
+        HashAlg.SHA_256,
+        KeyUse.Sign
+    )
+
+    try {
+        const isOk = rsaOperations.verify(msg, sig, key)
+        return isOk
+    } catch (_err) {
+        return false
+    }
+}
 
 Object.assign(RsaKeys.prototype.decryptKey, {
     asString: async function (
@@ -289,70 +348,6 @@ encryptTo.asString = async function (
 
     return toString(new Uint8Array(joined), 'base64pad')
 }
-
-// export const AES = {
-//     create (opts:{ alg:string, length:number } = {
-//         alg: DEFAULT_SYMM_ALGORITHM,
-//         length: DEFAULT_SYMM_LENGTH
-//     }):Promise<CryptoKey> {
-//         return webcrypto.subtle.generateKey({
-//             name: opts.alg,
-//             length: opts.length
-//         }, true, ['encrypt', 'decrypt'])
-//     },
-
-//     export: Object.assign(
-//         async (key:CryptoKey):Promise<Uint8Array> => {
-//             const raw = await webcrypto.subtle.exportKey('raw', key)
-//             return new Uint8Array(raw)
-//         },
-
-//         {
-//             asString: async (key:CryptoKey, format?:SupportedEncodings) => {
-//                 const raw = await AES.export(key)
-//                 return format ? toString(raw, format) : toBase64(raw)
-//             }
-//         }
-//     ),
-
-//     import (key:Uint8Array|string):Promise<CryptoKey> {
-//         return importAesKey(typeof key === 'string' ? base64ToArrBuf(key) : key)
-//     },
-
-//     async exportAsString (key:CryptoKey):Promise<string> {
-//         const raw = await AES.export(key)
-//         return toBase64(raw)
-//     },
-
-//     encrypt,
-
-//     async decrypt (
-//         encryptedData:Uint8Array|string|ArrayBuffer,
-//         cryptoKey:CryptoKey|Uint8Array|ArrayBuffer,
-//         iv?:Uint8Array
-//     ):Promise<Uint8Array> {
-//         const key = (isCryptoKey(cryptoKey) ?
-//             cryptoKey :
-//             await importAesKey(cryptoKey))
-
-//         // the `iv` is prefixed to the cipher text
-//         const decrypted = (iv ?
-//             await webcrypto.subtle.decrypt(
-//                 {
-//                     name: AES_GCM,
-//                     iv
-//                 },
-//                 key,
-//                 (typeof encryptedData === 'string' ?
-//                     fromString(encryptedData) :
-//                     encryptedData)
-//             ) :
-
-//             await decryptBytes(encryptedData, key))
-
-//         return new Uint8Array(decrypted)
-//     },
-// }
 
 export async function encryptKeyTo ({ key, publicKey }:{
     key:string|Uint8Array|CryptoKey;

@@ -2,43 +2,43 @@ import { get } from 'idb-keyval'
 import { test } from '@substrate-system/tapzero'
 import { fromString, toString, equals } from 'uint8arrays'
 import {
-    Keys,
+    RsaKeys,
     encryptKeyTo,
     encryptTo,
-    AES,
     verify,
     publicKeyToDid,
     getPublicKeyAsUint8Array
 } from '../src/rsa/index.js'
+import { AES } from '../src/aes/index.js'
 
-let keys:Keys
+let keys:RsaKeys
 test('create a new Keys', async t => {
-    keys = await Keys.create()
+    keys = await RsaKeys.create('rsa')
     t.ok(keys, 'should return something')
 
-    t.equal(keys.persisted, false,
+    t.equal(keys.hasPersisted, false,
         'should not have persisted flag for newly created keys')
-    t.equal(keys.ENCRYPTION_KEY_NAME, 'encryption-key',
+    t.equal(RsaKeys.EXCHANGE_KEY_NAME, 'rsa-exchange-key',
         'should have the default encryption key name')
-    t.equal(keys.SIGNING_KEY_NAME, 'signing-key',
+    t.equal(RsaKeys.WRITE_KEY_NAME, 'rsa-write-key',
         'should have the default signature key name')
     t.ok(keys.DID, 'should have a DID')
 })
 
 test('encrypt and decrypt a string', async t => {
-    const pubKey = keys.publicEncryptKey
+    const pubKey = keys.publicExchangeKey
     const message = 'hello world'
     const cipherText = await encryptTo.asString({
         content: message,
         publicKey: pubKey
     })
 
-    const decrypted = await keys.decrypt.asString(cipherText)
+    const decrypted = await keys.decryptAsString(cipherText)
     t.equal(decrypted, 'hello world', 'should decrypt the text')
 })
 
 test('`encryptTo.asString` and `keys.decrypt`', async t => {
-    const pubKey = keys.publicEncryptKey
+    const pubKey = keys.publicExchangeKey
     const message = 'hello encryption formats'
     const cipherText = await encryptTo.asString({
         content: message,
@@ -52,7 +52,7 @@ test('`encryptTo.asString` and `keys.decrypt`', async t => {
 })
 
 test('An example use of to/from strings', async t => {
-    const pubKey = await keys.getPublicEncryptKey()
+    const pubKey = keys.publicExchangeKey
     const msg = { type: 'test', content: 'hello' }
     const cipherText = await encryptTo.asString({
         content: JSON.stringify(msg),
@@ -62,54 +62,54 @@ test('An example use of to/from strings', async t => {
 
     t.equal(typeof cipherText, 'string', 'should return a string')
 
-    const text = await keys.decrypt.asString(cipherText)
+    const text = await keys.decryptAsString(cipherText)
     const data = JSON.parse(text)
     t.equal(data.content, 'hello', 'should get the original object')
 })
 
 test('cache the keys instance', async t => {
-    const newKeys = await Keys.load()
+    const newKeys = await RsaKeys.load()
     t.equal(newKeys, keys, 'should return the same isntance of Keys')
 })
 
 test('getPublicKeyAsUint8Array', async t => {
-    const arr = await getPublicKeyAsUint8Array(keys.publicEncryptKey)
+    const arr = await getPublicKeyAsUint8Array(keys.publicExchangeKey)
     t.ok(arr instanceof Uint8Array,
         'should expose the util function `getPublicKeyAsUint8Array`')
 })
 
 test('publicKeyToDid method', async t => {
-    const did = await publicKeyToDid(keys.publicSignKey)
+    const did = await publicKeyToDid(keys.publicWriteKey)
     t.equal(did, keys.DID, 'should return the DID')
 })
 
 test('indexedDB', async t => {
     await keys.persist()
-    t.ok(keys.persisted, 'should have persisted flag after calling .persist')
-    const encryptionKey = await get(keys.ENCRYPTION_KEY_NAME)
-    const signKey = await get(keys.SIGNING_KEY_NAME)
+    t.ok(keys.hasPersisted, 'should have persisted flag after calling .persist')
+    const encryptionKey = await get(RsaKeys.EXCHANGE_KEY_NAME)
+    const signKey = await get(RsaKeys.WRITE_KEY_NAME)
     t.ok(encryptionKey, 'should save an encryption key in indexedDB')
     t.ok(signKey, 'should save a signature key in indexedDB')
 })
 
 test('Create keys from indexedDB', async t => {
-    const newKeys = await Keys.load()
+    const newKeys = await RsaKeys.load()
     t.equal(newKeys.DID, keys.DID,
         'should create a new instance with the same keys')
-    t.equal(newKeys.persisted, true, 'should have `persisted` flag')
+    t.equal(newKeys.hasPersisted, true, 'should have `persisted` flag')
 })
 
 test('Delete the keys from indexedDB', async t => {
-    t.ok(keys.persisted, 'should start with persisted keys')
-    t.ok(await get(keys.ENCRYPTION_KEY_NAME), 'Should return key from indexedDB')
+    t.ok(keys.hasPersisted, 'should start with persisted keys')
+    t.ok(await get(RsaKeys.EXCHANGE_KEY_NAME), 'Should return key from indexedDB')
     await keys.delete()
-    t.ok(!keys.persisted, 'now keys.persisted is false')
-    const res = await get(keys.ENCRYPTION_KEY_NAME)
+    t.ok(!keys.hasPersisted, 'now keys.persisted is false')
+    const res = await get(RsaKeys.EXCHANGE_KEY_NAME)
     t.ok(!res, 'should not return keys from indexedDB')
 })
 
 test('device name', async t => {
-    const name = await Keys.deviceName(keys.DID)
+    const name = await RsaKeys.deviceName(keys.DID)
     const name2 = await keys.getDeviceName()
     t.equal(name, name2, 'should return the same device name')
     t.equal(name.length, 32, 'should return 32 chracters')
@@ -127,8 +127,8 @@ test('verify the signature as a buffer', async t => {
 })
 
 let sig:string
-test('.sign.asString', async t => {
-    sig = await keys.sign.asString('hello string')
+test('.signAsString', async t => {
+    sig = await keys.signAsString('hello string')
     t.equal(typeof sig, 'string', 'should return the signature as a string')
 })
 
@@ -146,7 +146,7 @@ let encrypted:Uint8Array
 test('encrypt a key to a keys instance', async t => {
     encrypted = await encryptKeyTo({
         key: 'hello',
-        publicKey: keys.publicEncryptKey
+        publicKey: keys.publicExchangeKey
     })
 
     t.ok(encrypted instanceof Uint8Array, 'should return a Uint8Array')
@@ -155,7 +155,7 @@ test('encrypt a key to a keys instance', async t => {
     const otherArr = await AES.export(otherKey)
     const otherEncrypted = await encryptKeyTo({
         key: otherKey,
-        publicKey: keys.publicEncryptKey
+        publicKey: keys.publicExchangeKey
     })
 
     const otherDecrypted = await keys.decryptKey(otherEncrypted)
@@ -164,25 +164,25 @@ test('encrypt a key to a keys instance', async t => {
 
 test('get a serializable object from keys', async t => {
     t.plan(2)
-    const keys = await Keys.create()
+    const keys = await RsaKeys.create('rsa')
     const obj = await keys.toJson()
     t.equal(obj.DID, keys.DID, 'should return the DID')
-    t.equal(obj.publicEncryptKey, await keys.getPublicEncryptKey(),
-        'should return a string of the public encyrption key')
+    t.equal(obj.publicExchangeKey, await keys.publicExchangeKeyAsString(),
+        'should return a string of the public encryption key')
 })
 
 test('encrypt a key to a keypair, return a string', async t => {
     const aes = await AES.create()
     const encrypted = await encryptKeyTo.asString({
         key: aes,
-        publicKey: keys.publicEncryptKey
+        publicKey: keys.publicExchangeKey
     })
 
     t.equal(typeof encrypted, 'string', 'should return the AES key as a string')
 
     const encryptedTwo = await encryptKeyTo.asString({
         key: aes,
-        publicKey: keys.publicEncryptKey
+        publicKey: keys.publicExchangeKey
     }, 'base32')
 
     t.equal(typeof encryptedTwo, 'string', 'should retunr a string')
@@ -194,24 +194,19 @@ test('encrypt a key to a public key, return a string', async t => {
     const aes = await AES.create()
     const enc = await encryptKeyTo.asString({
         key: aes,
-        publicKey: await keys.getPublicEncryptKey()
+        publicKey: await keys.publicExchangeKeyAsString()
     })
 
     t.equal(typeof enc, 'string', 'should encrypt the key and return a string')
 })
 
 test('`getPublicEncryptKey', async t => {
-    const key = await keys.getPublicEncryptKey()
+    const key = await keys.publicExchangeKeyAsString()
     t.equal(typeof key, 'string', 'should return a string')
 })
 
-test('`getPublicEncryptKey.uint8Array`', async t => {
-    const arr = await keys.getPublicEncryptKey.uint8Array()
-    t.ok(arr instanceof Uint8Array, 'should return a Uint8Array')
-})
-
 test('Can pass a format to `getPublicEncryptKey`', async t => {
-    const key = await keys.getPublicEncryptKey('base32')
+    const key = await keys.publicExchangeKeyAsString('base32')
     t.equal(typeof key, 'string', 'should return a string')
     t.equal(key, key.toLowerCase(), 'should be base32 encoded')
 })
@@ -219,7 +214,7 @@ test('Can pass a format to `getPublicEncryptKey`', async t => {
 test('encrypt some content to a public key', async t => {
     const encrypted = await encryptTo({
         content: 'hello public key',
-        publicKey: await keys.getPublicEncryptKey()
+        publicKey: await keys.publicExchangeKey
     })
 
     t.ok(encrypted instanceof ArrayBuffer, 'should return an array buffer')
@@ -228,7 +223,7 @@ test('encrypt some content to a public key', async t => {
 test('encrypt some content to a public key, as string', async t => {
     const encrypted = await encryptTo.asString({
         content: 'hello public key',
-        publicKey: await keys.getPublicEncryptKey()
+        publicKey: await keys.publicExchangeKey
     })
 
     t.equal(typeof encrypted, 'string', 'returns a string')
@@ -240,7 +235,7 @@ test('decrypt a key', async t => {
 })
 
 test('decrypt a key with the wrong keys', async t => {
-    const newKeys = await Keys.create()
+    const newKeys:RsaKeys = await RsaKeys.create('rsa')
     try {
         const decrypted = await newKeys.decryptKey(encrypted)
         t.ok(toString(decrypted) !== 'hello',
@@ -251,7 +246,7 @@ test('decrypt a key with the wrong keys', async t => {
 })
 
 test('decrypt as string', async t => {
-    const decrypted = await keys.decryptKey.asString(encrypted)
+    const decrypted = await keys.decryptKeyAsString(encrypted)
     t.equal(decrypted, 'hello', 'should decrypt and return a string')
 })
 
@@ -293,21 +288,21 @@ test('AES decrypt', async t => {
 })
 
 test('getPublicEncryptKey', async t => {
-    const pubKey = await keys.getPublicEncryptKey()
+    const pubKey = await keys.publicExchangeKey.asString()
     t.ok(pubKey, 'should return something')
     t.equal(typeof pubKey, 'string', 'should return a string')
 })
 
-let bob:Keys
+let bob:RsaKeys
 let encryptedMsg:ArrayBuffer
 test('encrypt content to a public key', async t => {
-    bob = await Keys.create()
+    bob = await RsaKeys.create('rsa')
 
     const message = 'Hello bob'
 
     encryptedMsg = await encryptTo({
         content: message,
-        publicKey: bob.publicEncryptKey
+        publicKey: bob.publicExchangeKey
     })
 
     t.ok(encryptedMsg instanceof ArrayBuffer, 'should return an array buffer')
@@ -319,7 +314,7 @@ test('encrypt and return a string', async t => {
 
     encryptedString = await encryptTo.asString({
         content: msg,
-        publicKey: bob.publicEncryptKey
+        publicKey: bob.publicExchangeKey
     })
 
     t.equal(typeof encryptedString, 'string', 'should return an encrypted string')
@@ -331,8 +326,8 @@ test('Bob can decrypt the message addressed to Bob', async t => {
     t.equal(toString(decrypted), 'Hello bob', 'should decrypt the message')
 })
 
-test('keys.decrypt.asString', async t => {
-    const decrypted = await bob.decrypt.asString(encryptedString)
+test('keys.decryptAsString', async t => {
+    const decrypted = await bob.decryptAsString(encryptedString)
     t.equal(decrypted, 'hello strings', 'should decrypt the message to a string')
 })
 
@@ -344,18 +339,18 @@ test('AES.export with format argument', async t => {
 })
 
 test('in memory only', async t => {
-    const keys = await Keys.create({ session: true })
+    const keys = await RsaKeys.create('rsa', true)
     await keys.persist()
-    delete Keys._instance  // rm the cached copy
-    t.equal(keys.persisted, false, 'should not have `persisted` flag')
-    const keysTwo = await Keys.load()
+    delete RsaKeys._instance  // rm the cached copy
+    t.equal(keys.hasPersisted, false, 'should not have `persisted` flag')
+    const keysTwo = await RsaKeys.load()
     t.ok(keysTwo.DID !== keys.DID,
         'should not load the same keypair from indexedDB')
-    delete Keys._instance
+    delete RsaKeys._instance
 })
 
 test('in memory, using the .load method', async t => {
-    const keys = await Keys.load({
+    const keys = await RsaKeys.load({
         session: true,
         // need different keys here, b/c previous tests have used
         // the defaults
@@ -363,10 +358,10 @@ test('in memory, using the .load method', async t => {
         signingKeyName: 'memory_test_sig'
     })
     await keys.persist()
-    t.ok(!(keys.persisted), 'should not be persisted')
+    t.ok(!(keys.hasPersisted), 'should not be persisted')
 
-    delete Keys._instance
-    const keysTwo = await Keys.load({
+    delete RsaKeys._instance
+    const keysTwo = await RsaKeys.load({
         encryptionKeyName: 'memory_test',
         signingKeyName: 'memory_test_sig'
     })

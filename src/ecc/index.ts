@@ -1,5 +1,5 @@
 import { webcrypto } from '@substrate-system/one-webcrypto'
-import { toString } from 'uint8arrays'
+import { type SupportedEncodings, toString } from 'uint8arrays'
 import {
     DEFAULT_ECC_EXCHANGE,
     DEFAULT_ECC_WRITE,
@@ -19,11 +19,13 @@ import {
     type SymmKeyLength,
     type SymmKey,
     type Msg,
-    type CharSize
+    type CharSize,
+    type DID,
 } from '../types.js'
 import {
     base64ToArrBuf,
-    normalizeToBuf
+    normalizeToBuf,
+    toBase64
 } from '../util.js'
 import { checkValidKeyUse } from '../errors.js'
 import {
@@ -49,7 +51,7 @@ export class EccKeys extends AbstractKeys {
         return this.writeKey.publicKey
     }
 
-    static INFO = 'example'
+    static INFO = 'keys'
 
     static async _createExchangeKeys ():Promise<CryptoKeyPair> {
         /**
@@ -76,6 +78,29 @@ export class EccKeys extends AbstractKeys {
             false, // not extractable
             ['sign', 'verify']
         )
+    }
+
+    /**
+     * Serialize this keys instance. Will return an object of
+     * { DID, publicExchangeKey }, where DID is the public write key,
+     * and `publicExchangeKey` is the encryption key, `base64` encoded.
+     * @returns {Promise<{ DID:DID, publicEncryptKey:string }>}
+     */
+    async toJson (
+        format?:SupportedEncodings
+    ):Promise<{ DID:DID; publicExchangeKey:string; }> {
+        const did = this.DID
+
+        const rawKey = await exportPublicKey(this.exchangeKey)
+
+        const keyString = (format ?
+            toString(new Uint8Array(rawKey), format) :
+            toBase64(rawKey))
+
+        return {
+            publicExchangeKey: keyString,
+            DID: did
+        }
     }
 
     /**

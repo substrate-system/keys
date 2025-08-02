@@ -39,8 +39,8 @@ export const KEY_TYPE = {
 } as const
 
 // app specific
-export const DEFAULT_RSA_EXCHANGE = 'rsa-encryption-key'
-export const DEFAULT_RSA_WRITE = 'rsa-signing-key'
+export const DEFAULT_RSA_EXCHANGE = 'rsa-exchange-key'
+export const DEFAULT_RSA_WRITE = 'rsa-write-key'
 export const DEFAULT_ECC_EXCHANGE = 'ecc-exchange'
 export const DEFAULT_ECC_WRITE = 'ecc-write'
 export const SALT_LENGTH = 16

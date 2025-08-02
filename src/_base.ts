@@ -27,6 +27,55 @@ export type SerializedKeys = {
     publicEncryptKey:string;
 }
 
+export interface RsaEncryptor {
+    (
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:SymmKeyLength
+    ):Promise<Uint8Array>
+}
+
+export interface EccEncryptor {
+    (
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,
+        info?:string,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:SymmKeyLength
+    ):Promise<Uint8Array>
+}
+
+export interface RsaEncryptorAsString {
+    (
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:SymmKeyLength
+    ):Promise<string>
+}
+
+export interface EccEncryptorAsString {
+    (
+        content:string|Uint8Array,
+        recipient?:CryptoKey|string,
+        info?:string,
+        aesKey?:SymmKey|Uint8Array|string,
+        keysize?:SymmKeyLength
+    ):Promise<string>
+}
+
+// Type helpers to constrain implementations
+export type RsaKeysType = AbstractKeys & {
+    encrypt: RsaEncryptor;
+    encryptAsString: RsaEncryptorAsString;
+}
+
+export type EccKeysType = AbstractKeys & {
+    encrypt: EccEncryptor;
+    encryptAsString: EccEncryptorAsString;
+}
+
 /**
  * Args to constructor.
  */
@@ -59,7 +108,7 @@ export abstract class AbstractKeys {
     writeKey:CryptoKeyPair
     hasPersisted:boolean
     isSessionOnly:boolean
-    type:'ecc'|'rsa'
+    // type:'ecc'|'rsa'
     static EXCHANGE_KEY_NAME:string  // needs to be defined by child class
     static WRITE_KEY_NAME:string
     static _instance  // a cache for indexedDB
@@ -71,25 +120,25 @@ export abstract class AbstractKeys {
         this.writeKey = keys.write
         this.hasPersisted = opts.hasPersisted
         this.isSessionOnly = !!opts.isSessionOnly
-        this.type = opts.type
+        // this.type = opts.type
     }
 
     /**
      * By default, encrypt the given data to yourself, as a "note to self".
      */
-    abstract encrypt(
+    abstract encrypt (
         content:string|Uint8Array,
         recipient?:CryptoKey|string,
-        info?:string,
-        aesKey?:SymmKey|Uint8Array|string,
+        aesKeyOrInfo?:SymmKey|Uint8Array|string,
+        keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,
         keysize?:SymmKeyLength
-    ):Promise<ArrayBuffer|Uint8Array>
+    ):Promise<Uint8Array>
 
-    abstract encryptAsString(
+    abstract encryptAsString (
         content:string|Uint8Array,
         recipient?:CryptoKey|string,
-        info?:string,
-        aesKey?:SymmKey|Uint8Array|string,
+        aesKeyOrInfo?:SymmKey|Uint8Array|string,
+        keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,
         keysize?:SymmKeyLength
     ):Promise<string>
 
@@ -108,12 +157,34 @@ export abstract class AbstractKeys {
     abstract sign(msg:Msg, charsize?:CharSize):Promise<Uint8Array>
     abstract signAsString(msg:string, charsize?:CharSize):Promise<string>
 
-    get publicWriteKey ():CryptoKey {
-        return this.writeKey.publicKey
+    publicExchangeKeyAsString (format?:SupportedEncodings):Promise<string> {
+        return this.publicExchangeKey.asString(format)
     }
 
-    get publicExchangeKey ():CryptoKey {
-        return this.exchangeKey.publicKey
+    publicWriteKeyAsString (format?:SupportedEncodings):Promise<string> {
+        return this.publicWriteKey.asString(format)
+    }
+
+    get publicWriteKey () {
+        const publicKey = this.writeKey.publicKey
+        return Object.assign(publicKey, {
+            asString: async (format?:SupportedEncodings):Promise<string> => {
+                const arrayBuffer = await getPublicKeyAsArrayBuffer(this.writeKey)
+                const uint8Array = new Uint8Array(arrayBuffer)
+                return format ? toString(uint8Array, format) : toBase64(uint8Array)
+            }
+        })
+    }
+
+    get publicExchangeKey () {
+        const publicKey = this.exchangeKey.publicKey
+        return Object.assign(publicKey, {
+            asString: async (format?: SupportedEncodings): Promise<string> => {
+                const arrayBuffer = await getPublicKeyAsArrayBuffer(this.exchangeKey)
+                const uint8Array = new Uint8Array(arrayBuffer)
+                return format ? toString(uint8Array, format) : toBase64(uint8Array)
+            }
+        })
     }
 
     get privateWriteKey ():CryptoKey {
@@ -178,6 +249,11 @@ export abstract class AbstractKeys {
         ])
         this.hasPersisted = false
     }
+
+    abstract toJson (format?:SupportedEncodings):Promise<{
+        DID:DID;
+        publicExchangeKey:string;
+    }>
 
     /**
      * Return a 32-character, DNS friendly hash of the public signing key.
@@ -280,35 +356,6 @@ export abstract class AbstractKeys {
 
         return keys
     }
-
-    // /**
-    //  * Decrypt the given message.
-    //  */
-    // decrypt = Object.assign(
-    //     /**
-    //      * Expect the given cipher content to be the format returned by
-    //      * encryptTo`. That is, encrypted AES key + `iv` + encrypted content.
-    //      */
-    //     async (
-    //         msg:string|Uint8Array|ArrayBuffer,
-    //         keysize?:SymmKeyLength
-    //     ):Promise<Uint8Array> => {
-    //         const length = keysize || DEFAULT_SYMM_LENGTH
-    //         const cipherText = normalizeToBuf(msg, base64ToArrBuf)
-    //         const key = cipherText.slice(0, length)
-    //         const data = cipherText.slice(length)
-    //         const decryptedKey = await this.decryptKey(key)
-    //         const decryptedContent = await AES.decrypt(data, decryptedKey)
-    //         return decryptedContent
-    //     },
-
-    //     {
-    //         asString: async (msg:string, keysize?:SymmKeyLength):Promise<string> => {
-    //             const dec = await this.decrypt(msg, keysize)
-    //             return toString(dec)
-    //         }
-    //     }
-    // )
 }
 
 /**
@@ -317,9 +364,9 @@ export abstract class AbstractKeys {
  * content, then we encrypt the AES key to the given public key.
  *
  * @param {{ content, publicKey }} opts The content to encrypt and
- * public key to encrypt to
+ *   public key to encrypt to
  * @param {SymmKey|Uint8Array|string} [aesKey] An optional AES key to encrypt
- * to the given public key
+ *   to the given public key
  * @returns {Promise<ArrayBuffer>} The encrypted AES key, concattenated with
  *   the encrypted content.
  */
