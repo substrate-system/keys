@@ -13,7 +13,7 @@ import { AES } from '../src/aes/index.js'
 
 let keys:RsaKeys
 test('create a new Keys', async t => {
-    keys = await RsaKeys.create('rsa')
+    keys = await RsaKeys.create()
     t.ok(keys, 'should return something')
 
     t.equal(keys.hasPersisted, false,

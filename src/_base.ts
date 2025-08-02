@@ -80,7 +80,6 @@ export type EccKeysType = AbstractKeys & {
  * Args to constructor.
  */
 export type KeyArgs = {
-    type:'ecc'|'rsa'
     keys:{ exchange:CryptoKeyPair, write:CryptoKeyPair };
     did:DID;
     hasPersisted:boolean;
@@ -95,6 +94,7 @@ export type KeyArgs = {
 interface ChildKeys<T extends AbstractKeys = AbstractKeys> {
     new (opts:KeyArgs):T;
     _instance:T;
+    TYPE: 'ecc' | 'rsa';
     _createExchangeKeys():Promise<CryptoKeyPair>
     _createWriteKeys():Promise<CryptoKeyPair>
 }
@@ -120,7 +120,6 @@ export abstract class AbstractKeys {
         this.writeKey = keys.write
         this.hasPersisted = opts.hasPersisted
         this.isSessionOnly = !!opts.isSessionOnly
-        // this.type = opts.type
     }
 
     /**
@@ -274,7 +273,6 @@ export abstract class AbstractKeys {
 
     static async create<T extends AbstractKeys> (
         this:ChildKeys,
-        type:'ecc'|'rsa',
         session?:boolean
     ):Promise<T> {
         // encryption
@@ -285,12 +283,11 @@ export abstract class AbstractKeys {
         const publicSigningKey = await getPublicKeyAsArrayBuffer(write)
         const did = await publicKeyToDid(
             new Uint8Array(publicSigningKey),
-            type === 'ecc' ? 'ed25519' : 'rsa'
+            this.TYPE === 'ecc' ? 'ed25519' : 'rsa'
         )
 
         const keys = new this({
             keys: { exchange, write },
-            type,
             did,
             hasPersisted: false,
             isSessionOnly: !!session
@@ -316,14 +313,11 @@ export abstract class AbstractKeys {
             encryptionKeyName:string,
             signingKeyName:string,
             session:boolean,
-            type:'ecc'|'rsa'
         }> = {
             session: false,
-            type: 'rsa'
         }
     ):Promise<T> {
         if (this._instance) return this._instance  // cache
-        const type = opts.type || 'rsa'
 
         let hasPersisted = true
         let exchangeKeys:CryptoKeyPair|undefined = await get(
@@ -345,13 +339,12 @@ export abstract class AbstractKeys {
         const publicSigningKey = await getPublicKeyAsArrayBuffer(writeKeys)
         const did = await publicKeyToDid(
             new Uint8Array(publicSigningKey),
-            type === 'ecc' ? 'ed25519' : 'rsa'
+            this.TYPE === 'ecc' ? 'ed25519' : 'rsa'
         )
 
         const keys = new this({
             keys: { exchange: exchangeKeys, write: writeKeys },
             did,
-            type,
             hasPersisted,
             isSessionOnly: !!opts.session
         }) as T

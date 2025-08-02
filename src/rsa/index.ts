@@ -47,6 +47,7 @@ export type SerializedKeys = {
 }
 
 export class RsaKeys extends AbstractKeys {
+    static TYPE = 'rsa' as const
     static EXCHANGE_KEY_NAME:string = DEFAULT_RSA_EXCHANGE
     static WRITE_KEY_NAME:string = DEFAULT_RSA_WRITE
 

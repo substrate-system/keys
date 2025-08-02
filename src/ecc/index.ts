@@ -37,6 +37,8 @@ import {
  * Class for ECC keys
  */
 export class EccKeys extends AbstractKeys {
+    static TYPE = 'ecc' as const
+    
     constructor (opts:KeyArgs) {
         super(opts)
         EccKeys.EXCHANGE_KEY_NAME = opts.exchangeKeyName || DEFAULT_ECC_EXCHANGE
