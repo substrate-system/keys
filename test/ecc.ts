@@ -1,5 +1,6 @@
 import { test } from '@substrate-system/tapzero'
 import { EccKeys } from '../src/ecc/index.js'
+import { publicKeyToDid } from '../src/util.js'
 
 const subtle = crypto.subtle
 
@@ -21,9 +22,18 @@ test('Sanity', async t => {
     }
 })
 
+let myKeys:EccKeys
 test('Create a new Keys instance', async t => {
-    const myKeys = await EccKeys.create()
+    myKeys = await EccKeys.create()
     t.ok(myKeys, 'should create the keys')
+})
+
+test('Get a DID from the keys', async t => {
+    const did = myKeys.DID
+    t.equal(typeof did, 'string', 'should get a string')
+    t.equal(did.length, 72, 'should be 72 characters')
+    const did2 = await publicKeyToDid(myKeys.publicWriteKey, 'ed25519')
+    t.equal(did2, myKeys.DID, 'should return the right string')
 })
 
 test('done', () => {

@@ -81,6 +81,7 @@ test('getPublicKeyAsUint8Array', async t => {
 test('publicKeyToDid method', async t => {
     const did = await publicKeyToDid(keys.publicWriteKey)
     t.equal(did, keys.DID, 'should return the DID')
+    t.equal(did.length, 415, 'should be 415 characters')
 })
 
 test('indexedDB', async t => {
