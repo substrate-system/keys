@@ -6,3 +6,10 @@ dist
 .env
 public
 docs
+!test/playwright-test-runner.js
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
