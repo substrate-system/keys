@@ -34,12 +34,10 @@
   "scripts": {
     "lint": "eslint \"./**/*.{ts,js}\"",
     "start": "vite",
-    "build-tests": "esbuild test/index.ts --target=es2020 --bundle --keep-names > test/test-bundle.js",
     "test-ecc": "esbuild ./test/ecc.ts --bundle | npx tapout",
     "test-rsa": "esbuild ./test/rsa.ts --bundle | npx tapout",
     "test-aes": "esbuild ./test/aes.ts --bundle | npx tapout",
     "test": "npm run test-ecc && npm run test-rsa && npm run test-aes",
-    "test-tape-run": "cat test/index.html | tape-run --input=html --static=test | tap-spec",
     "build-cjs": "esbuild src/*.ts --target=es2020 --format=cjs --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.cjs --sourcemap",
     "build-cjs:min": "esbuild src/*.ts --target=es2020 --format=cjs --minify --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.min.cjs --sourcemap",
     "build-esm": "esbuild src/*.ts --target=es2020 --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
@@ -77,7 +75,6 @@
     "postcss-nesting": "^13.0.2",
     "preact": "^10.27.0",
     "tap-spec": "^5.0.0",
-    "tape-run": "^11.0.0",
     "typedoc": "^0.28.1",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"

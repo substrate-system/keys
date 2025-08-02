@@ -16,7 +16,8 @@ test('create AES key with custom options', async t => {
     t.equal((key128.algorithm as any).length, 128, 'should create 128-bit key')
 
     const key256 = await AES.create({ length: SymmKeyLength.B256 })
-    t.equal((key256.algorithm as any).length, 256, 'should create 256-bit key with enum')
+    t.equal((key256.algorithm as any).length, 256,
+        'should create 256-bit key with enum')
 })
 
 test('export an AES key', async t => {
@@ -81,7 +82,8 @@ test('importAesKey with custom length', async t => {
     const exported = await AES.export(key128)
     const imported = await importAesKey(exported, 128)
 
-    t.equal((imported.algorithm as any).length, 128, 'should import with correct length')
+    t.equal((imported.algorithm as any).length, 128,
+        'should import with correct length')
 })
 
 test('AES encrypt and decrypt', async t => {
@@ -91,7 +93,8 @@ test('AES encrypt and decrypt', async t => {
 
     const encrypted = await AES.encrypt(data, key)
     t.ok(encrypted instanceof Uint8Array, 'should return encrypted Uint8Array')
-    t.ok(encrypted.length > data.length, 'encrypted should be larger (includes IV)')
+    t.ok(encrypted.length > data.length,
+        'encrypted should be larger (includes IV)')
 
     const decrypted = await AES.decrypt(encrypted, key)
     t.ok(decrypted instanceof Uint8Array, 'should return decrypted Uint8Array')
@@ -113,7 +116,8 @@ test('AES encrypt with format options', async t => {
     // Both should decrypt to same result
     const decrypted1 = await AES.decrypt(encryptedUint8, key)
     const decrypted2 = await AES.decrypt(encryptedBuffer, key)
-    t.ok(equals(decrypted1, decrypted2), 'should decrypt to same result regardless of format')
+    t.ok(equals(decrypted1, decrypted2),
+        'should decrypt to same result regardless of format')
 })
 
 test('AES encrypt with custom IV', async t => {

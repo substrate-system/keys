@@ -49,8 +49,10 @@ test('publicExchangeKey and publicWriteKey getters', async t => {
 
     t.ok(pubExchange, 'should have public exchange key')
     t.ok(pubWrite, 'should have public write key')
-    t.equal(typeof pubExchange.asString, 'function', 'should have asString method on exchange key')
-    t.equal(typeof pubWrite.asString, 'function', 'should have asString method on write key')
+    t.equal(typeof pubExchange.asString, 'function',
+        'should have asString method on exchange key')
+    t.equal(typeof pubWrite.asString, 'function',
+        'should have asString method on write key')
 
     const exchangeStr = await pubExchange.asString()
     const writeStr = await pubWrite.asString()
@@ -58,7 +60,7 @@ test('publicExchangeKey and publicWriteKey getters', async t => {
     t.equal(typeof writeStr, 'string', 'should export write key as string')
 })
 
-test('publicExchangeKeyAsString and publicWriteKeyAsString methods', async t => {
+test('publicExchangeKeyAsString and publicWriteKeyAsString', async t => {
     const exchangeStr = await myKeys.publicExchangeKeyAsString()
     const writeStr = await myKeys.publicWriteKeyAsString()
 
@@ -67,17 +69,21 @@ test('publicExchangeKeyAsString and publicWriteKeyAsString methods', async t => 
 
     const exchangeStr64 = await myKeys.publicExchangeKeyAsString('base64')
     const writeStr64 = await myKeys.publicWriteKeyAsString('base64')
-    t.equal(typeof exchangeStr64, 'string', 'should return exchange key as base64 string')
-    t.equal(typeof writeStr64, 'string', 'should return write key as base64 string')
+    t.equal(typeof exchangeStr64, 'string',
+        'should return exchange key as base64 string')
+    t.equal(typeof writeStr64, 'string',
+        'should return write key as base64 string')
 })
 
 test('toJson serialization', async t => {
     const obj = await myKeys.toJson()
     t.equal(obj.DID, myKeys.DID, 'should return the DID')
-    t.equal(typeof obj.publicExchangeKey, 'string', 'should return public exchange key as string')
+    t.equal(typeof obj.publicExchangeKey, 'string',
+        'should return public exchange key as string')
 
     const objBase32 = await myKeys.toJson('base32')
-    t.equal(typeof objBase32.publicExchangeKey, 'string', 'should format public key with specified encoding')
+    t.equal(typeof objBase32.publicExchangeKey, 'string',
+        'should format public key with specified encoding')
 })
 
 test('encrypt and decrypt a string (note to self)', async t => {
@@ -96,7 +102,8 @@ test('encryptAsString and decryptAsString', async t => {
     const message = 'hello encryption formats'
     const encrypted = await myKeys.encryptAsString(message)
 
-    t.equal(typeof encrypted, 'string', 'should return encrypted data as string')
+    t.equal(typeof encrypted, 'string',
+        'should return encrypted data as string')
 
     const decrypted = await myKeys.decryptAsString(encrypted)
     t.equal(decrypted, message, 'should decrypt to original message')
@@ -130,7 +137,10 @@ test('encrypt to public key as string', async t => {
     const encrypted = await myKeys.encrypt(message, pubKeyString)
 
     // Other keys should be able to decrypt
-    const decrypted = await otherKeys.decryptAsString(encrypted, myKeys.publicExchangeKey)
+    const decrypted = await otherKeys.decryptAsString(
+        encrypted,
+        myKeys.publicExchangeKey
+    )
     t.equal(decrypted, message, 'should encrypt/decrypt with string public key')
 })
 
@@ -138,7 +148,8 @@ test('sign and verify', async t => {
     const message = 'message to sign'
     const signature = await myKeys.sign(message)
 
-    t.ok(signature instanceof Uint8Array, 'should return signature as Uint8Array')
+    t.ok(signature instanceof Uint8Array,
+        'should return signature as Uint8Array')
     t.ok(signature.length > 0, 'should have signature data')
 })
 
@@ -164,14 +175,14 @@ test('getAesKey with another public key', async t => {
 
 // Note: Custom info parameter requires both encrypt and decrypt to use same info
 // This test is disabled as ECC doesn't expose info parameter in decrypt method
-// test('encrypt with custom info parameter', async t => {
-//     const message = 'test with custom info'
-//     const customInfo = 'custom-info'
+test('encrypt with custom info parameter', async t => {
+    const message = 'test with custom info'
+    const customInfo = 'custom-info'
 
-//     const encrypted = await myKeys.encrypt(message, undefined, customInfo)
-//     const decrypted = await myKeys.decryptAsString(encrypted)
-//     t.equal(decrypted, message, 'should encrypt/decrypt with custom info')
-// })
+    const encrypted = await myKeys.encrypt(message, undefined, customInfo)
+    const decrypted = await myKeys.decryptAsString(encrypted)
+    t.equal(decrypted, message, 'should encrypt/decrypt with custom info')
+})
 
 test('Cache the keys instance', async t => {
     // Clear cache to start fresh
