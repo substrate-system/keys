@@ -173,14 +173,12 @@ test('getAesKey with another public key', async t => {
     t.ok(aesKey instanceof CryptoKey, 'should return a CryptoKey with other public key')
 })
 
-// Note: Custom info parameter requires both encrypt and decrypt to use same info
-// This test is disabled as ECC doesn't expose info parameter in decrypt method
 test('encrypt with custom info parameter', async t => {
     const message = 'test with custom info'
     const customInfo = 'custom-info'
 
     const encrypted = await myKeys.encrypt(message, undefined, customInfo)
-    const decrypted = await myKeys.decryptAsString(encrypted)
+    const decrypted = await myKeys.decryptAsString(encrypted, undefined, undefined, customInfo)
     t.equal(decrypted, message, 'should encrypt/decrypt with custom info')
 })
 

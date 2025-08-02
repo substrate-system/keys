@@ -159,7 +159,7 @@ export class EccKeys extends AbstractKeys {
      * @param {SymmKey|Uint8Array|string} aesKey This is not relevant for most
      *        use cases.
      * @param {SymmKeyLength} [keysize] Default is 256
-     * @returns {Promise<ArrayBuffer>} Buffer of encrypted content.
+     * @returns {Promise<ArrayBuffer>} Buffer of salt + iv + cipher text
      */
     async encrypt (
         content:string|Uint8Array,
@@ -248,12 +248,15 @@ export class EccKeys extends AbstractKeys {
     }
 
     /**
-     * Decrypt the given message. The message should be salt + iv + cipher text.
+     * Decrypt the given message. The encrypted message should be
+     * salt + iv + cipher text.
+     * @returns {Promise<ArrayBuffer>} The decrypted content.
      */
     async decrypt (
         msg:string|Uint8Array|ArrayBuffer,
         publicKey?:CryptoKey|string,
         aesAlgorithm?:string,
+        info?:string,
     ):Promise<ArrayBuffer> {
         let pub = (typeof publicKey === 'string' ?
             await importPublicKey(publicKey, EccCurve.X25519, KeyUse.Write) :
@@ -271,7 +274,7 @@ export class EccKeys extends AbstractKeys {
             privateKey,
             pub,
             salt,
-            EccKeys.INFO
+            info || EccKeys.INFO
         )
 
         // we have the key, now decrypt the message
@@ -294,8 +297,9 @@ export class EccKeys extends AbstractKeys {
         msg:string|Uint8Array|ArrayBuffer,
         publicKey?:CryptoKey|string,
         aesAlgorithm?:string,
+        info?:string,
     ):Promise<string> {
-        const dec = await this.decrypt(msg, publicKey, aesAlgorithm)
+        const dec = await this.decrypt(msg, publicKey, aesAlgorithm, info)
         return toString(new Uint8Array(dec))
     }
 
