@@ -22,7 +22,7 @@ test('Sanity', async t => {
 })
 
 test('Create a new Keys instance', async t => {
-    const myKeys = await EccKeys.create('ecc')
+    const myKeys = await EccKeys.create()
     t.ok(myKeys, 'should create the keys')
 })
 

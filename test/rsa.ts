@@ -164,7 +164,7 @@ test('encrypt a key to a keys instance', async t => {
 
 test('get a serializable object from keys', async t => {
     t.plan(2)
-    const keys = await RsaKeys.create('rsa')
+    const keys = await RsaKeys.create()
     const obj = await keys.toJson()
     t.equal(obj.DID, keys.DID, 'should return the DID')
     t.equal(obj.publicExchangeKey, await keys.publicExchangeKeyAsString(),
@@ -235,7 +235,7 @@ test('decrypt a key', async t => {
 })
 
 test('decrypt a key with the wrong keys', async t => {
-    const newKeys:RsaKeys = await RsaKeys.create('rsa')
+    const newKeys:RsaKeys = await RsaKeys.create()
     try {
         const decrypted = await newKeys.decryptKey(encrypted)
         t.ok(toString(decrypted) !== 'hello',
@@ -296,7 +296,7 @@ test('getPublicEncryptKey', async t => {
 let bob:RsaKeys
 let encryptedMsg:ArrayBuffer
 test('encrypt content to a public key', async t => {
-    bob = await RsaKeys.create('rsa')
+    bob = await RsaKeys.create()
 
     const message = 'Hello bob'
 
@@ -339,7 +339,7 @@ test('AES.export with format argument', async t => {
 })
 
 test('in memory only', async t => {
-    const keys = await RsaKeys.create('rsa', true)
+    const keys = await RsaKeys.create(true)
     await keys.persist()
     delete RsaKeys._instance  // rm the cached copy
     t.equal(keys.hasPersisted, false, 'should not have `persisted` flag')

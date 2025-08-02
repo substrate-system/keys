@@ -1,10 +1,10 @@
 import { type FunctionComponent, render } from 'preact'
 import { html } from 'htm/preact'
-import { create } from '../src/ecc/index.js'
+import { EccKeys } from '../src/ecc/index.js'
 import Debug from '@substrate-system/debug'
 const debug = Debug()
 
-const keys = await create()
+const keys = await EccKeys.create()
 
 debug('keys', keys)
 
