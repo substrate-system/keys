@@ -1,3 +1,3 @@
-export * from './ecc/index.js'
-export * from './rsa/index.js'
-export * from './aes/index.js'
+export * as rsa from './rsa/index.js'
+export * as ecc from './ecc/index.js'
+export * as aes from './aes/index.js'
