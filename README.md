@@ -41,7 +41,7 @@ See also, [the API docs generated from typescript](https://bicycle-codes.github.
   * [ECC](#ecc)
   * [some notes about the `keys` instance](#some-notes-about-the-keys-instance)
   * [Delete a keypair](#delete-a-keypair)
-  * [sign and verify something](#sign-and-verify-something)
+  * [Sign and Verify Something](#sign-and-verify-something)
   * [encrypt something](#encrypt-something)
   * [decrypt something](#decrypt-something)
 - [examples](#examples)
