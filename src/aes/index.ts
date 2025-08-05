@@ -19,6 +19,11 @@ import {
     IV_LENGTH
 } from '../constants.js'
 
+// Helper function to ensure proper ArrayBuffer type
+function toArrayBuffer (data: Uint8Array): ArrayBuffer {
+    return new Uint8Array(data).buffer
+}
+
 export const AES = {
     create (opts:{ alg?:string, length?:number } = {
         alg: DEFAULT_SYMM_ALGORITHM,
@@ -72,12 +77,12 @@ export const AES = {
             await webcrypto.subtle.decrypt(
                 {
                     name: AES_GCM,
-                    iv
+                    iv: toArrayBuffer(iv)
                 },
                 key,
                 (typeof encryptedData === 'string' ?
-                    fromString(encryptedData) :
-                    encryptedData)
+                    toArrayBuffer(fromString(encryptedData)) :
+                    encryptedData instanceof Uint8Array ? toArrayBuffer(encryptedData) : encryptedData)
             ) :
 
             await decryptBytes(encryptedData, key))
@@ -92,7 +97,7 @@ export function importAesKey (
 ):Promise<CryptoKey> {
     return webcrypto.subtle.importKey(
         'raw',
-        key,
+        key instanceof Uint8Array ? toArrayBuffer(key) : key,
         {
             name: AES_GCM,
             length: length || SymmKeyLength.B256,
@@ -136,7 +141,7 @@ async function encrypt (
 
     // prefix the `iv` into the cipher text
     const encrypted = (iv ?
-        await webcrypto.subtle.encrypt({ name: AES_GCM, iv }, key, data) :
+        await webcrypto.subtle.encrypt({ name: AES_GCM, iv: toArrayBuffer(iv) }, key, toArrayBuffer(data)) :
         await encryptBytes(data, key)
     )
 

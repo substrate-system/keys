@@ -34,11 +34,16 @@ import {
     type KeyArgs
 } from '../_base.js'
 
+// Helper function to ensure proper ArrayBuffer type
+function toArrayBuffer (data: Uint8Array): ArrayBuffer {
+    return new Uint8Array(data).buffer
+}
+
 /**
  * Class for ECC keys
  */
 export class EccKeys extends AbstractKeys {
-    static TYPE = 'ecc' as const
+    static TYPE: 'ecc' | 'rsa' = 'ecc' as const
     static EXCHANGE_KEY_NAME:string = DEFAULT_ECC_EXCHANGE
     static WRITE_KEY_NAME:string = DEFAULT_ECC_WRITE
 
@@ -211,7 +216,7 @@ export class EccKeys extends AbstractKeys {
         const ciphertext = await crypto.subtle.encrypt(
             { name: DEFAULT_SYMM_ALGORITHM, iv },
             key,
-            plaintext
+            toArrayBuffer(plaintext)
         )
 
         // Prepend salt and IV to the ciphertext for decryption
@@ -262,7 +267,7 @@ export class EccKeys extends AbstractKeys {
         publicKey?:CryptoKey|string,
         aesAlgorithm?:string,
         info?:string,
-    ):Promise<ArrayBuffer> {
+    ):Promise<ArrayBuffer|Uint8Array> {
         let pub = (typeof publicKey === 'string' ?
             await importPublicKey(publicKey, EccCurve.X25519, KeyUse.Write) :
             publicKey)
@@ -368,7 +373,7 @@ export class EccKeys extends AbstractKeys {
         const signature = await webcrypto.subtle.sign(
             { name: ECC_WRITE_ALG },
             this.writeKey.privateKey,
-            data
+            toArrayBuffer(data)
         )
 
         return new Uint8Array(signature)
@@ -526,8 +531,8 @@ export async function verify (
         const isValid = await webcrypto.subtle.verify(
             { name: ECC_WRITE_ALG },
             publicKey,
-            signature,
-            data
+            toArrayBuffer(signature),
+            toArrayBuffer(data)
         )
 
         return isValid
@@ -565,7 +570,7 @@ async function deriveKey (
         {
             name: 'HKDF',
             hash: 'SHA-256',
-            salt,
+            salt: salt instanceof Uint8Array ? toArrayBuffer(salt) : salt,
             info: encoder.encode(info)
         },
         hkdfBaseKey,

@@ -30,6 +30,11 @@ import {
     DEFAULT_SYMM_LENGTH,
 } from './constants.js'
 
+// Helper function to ensure proper ArrayBuffer type
+function toArrayBuffer (data: Uint8Array): ArrayBuffer {
+    return new Uint8Array(data).buffer
+}
+
 export type VerifyArgs = {
     message:Uint8Array
     publicKey:Uint8Array
@@ -96,7 +101,9 @@ export async function createDeviceName (did:DID):Promise<string> {
 }
 
 export async function sha256 (bytes:Uint8Array):Promise<Uint8Array> {
-    return new Uint8Array(await webcrypto.subtle.digest('sha-256', bytes))
+    return new Uint8Array(
+        await webcrypto.subtle.digest('sha-256', bytes.buffer as ArrayBuffer)
+    )
 }
 
 /**
@@ -174,7 +181,7 @@ export const rsaOperations = {
             pubKey = await importPublicKey(publicKey, hashAlg, KeyUse.Exchange)
         } else {
             pubKey = publicKey instanceof Uint8Array ?
-                await importPublicKey(publicKey, hashAlg, KeyUse.Exchange) :
+                await importPublicKey(toArrayBuffer(publicKey), hashAlg, KeyUse.Exchange) :
                 publicKey
         }
 
@@ -206,7 +213,7 @@ export const rsaOperations = {
         const arrayBuffer = await webcrypto.subtle.decrypt(
             { name: RSA_ALGORITHM },
             key,
-            data
+            data instanceof Uint8Array ? toArrayBuffer(data) : data
         )
 
         const arr = new Uint8Array(arrayBuffer)
@@ -219,17 +226,13 @@ export async function rsaVerify ({
     message,
     publicKey,
     signature
-}:{
-    message: Uint8Array
-    publicKey: Uint8Array
-    signature: Uint8Array
-}):Promise<boolean> {
+}:VerifyArgs):Promise<boolean> {
     return rsaOperations.verify(
         message,
         signature,
         await webcrypto.subtle.importKey(
             'spki',
-            publicKey,
+            toArrayBuffer(publicKey),
             { name: RSA_SIGN_ALGORITHM, hash: RSA_HASHING_ALGORITHM },
             false,
             ['verify']
@@ -279,7 +282,8 @@ function stripKeyHeader (base64Key:string):string {
 }
 
 export function base64ToArrBuf (string:string):ArrayBuffer {
-    return fromString(string, 'base64pad').buffer
+    const uint8 = fromString(string, 'base64pad')
+    return toArrayBuffer(uint8)
 }
 
 export const normalizeToBuf = (
@@ -334,7 +338,7 @@ export function importRsaKey (
 ):Promise<CryptoKey> {
     return webcrypto.subtle.importKey(
         'spki',
-        key,
+        key instanceof Uint8Array ? toArrayBuffer(key) : key,
         { name: RSA_ALGORITHM, hash: RSA_HASHING_ALGORITHM },
         false,
         keyUsages
@@ -391,7 +395,7 @@ export function didToPublicKey (did:string):({
 
     const didWithoutPrefix = ('' + did.substring(BASE58_DID_PREFIX.length))
     const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
-    const { keyBuffer, type } = parseMagicBytes(magicalBuf)
+    const { keyBuffer, type } = parseMagicBytes(toArrayBuffer(magicalBuf))
 
     return {
         publicKey: new Uint8Array(keyBuffer),
@@ -405,19 +409,19 @@ export function didToPublicKey (did:string):({
  */
 function parseMagicBytes (prefixedKey:ArrayBuffer) {
     // RSA
-    if (hasPrefix(prefixedKey, RSA_DID_PREFIX)) {
+    if (hasPrefix(prefixedKey, toArrayBuffer(RSA_DID_PREFIX))) {
         return {
             keyBuffer: prefixedKey.slice(RSA_DID_PREFIX.byteLength),
             type: KEY_TYPE.RSA
         }
     // EDWARDS
-    } else if (hasPrefix(prefixedKey, EDWARDS_DID_PREFIX)) {
+    } else if (hasPrefix(prefixedKey, toArrayBuffer(EDWARDS_DID_PREFIX))) {
         return {
             keyBuffer: prefixedKey.slice(EDWARDS_DID_PREFIX.byteLength),
             type: KEY_TYPE.Edwards
         }
     // BLS
-    } else if (hasPrefix(prefixedKey, BLS_DID_PREFIX)) {
+    } else if (hasPrefix(prefixedKey, toArrayBuffer(BLS_DID_PREFIX))) {
         return {
             keyBuffer: prefixedKey.slice(BLS_DID_PREFIX.byteLength),
             type: KEY_TYPE.BLS
@@ -460,7 +464,7 @@ export async function importKey (
     key:string|Uint8Array,
     opts?:Partial<SymmKeyOpts>
 ):Promise<SymmKey> {
-    const buf = typeof key === 'string' ? base64ToArrBuf(key) : key
+    const buf = typeof key === 'string' ? base64ToArrBuf(key) : toArrayBuffer(key)
 
     return webcrypto.subtle.importKey(
         'raw',
@@ -505,9 +509,9 @@ export function randomBuf (
     return arr.buffer
 }
 
-export function joinBufs (fst:ArrayBuffer, snd:ArrayBuffer):ArrayBuffer {
-    const view1 = new Uint8Array(fst)
-    const view2 = new Uint8Array(snd)
+export function joinBufs (fst:ArrayBuffer|Uint8Array, snd:ArrayBuffer|Uint8Array):ArrayBuffer {
+    const view1 = fst instanceof ArrayBuffer ? new Uint8Array(fst) : new Uint8Array(toArrayBuffer(fst))
+    const view2 = snd instanceof ArrayBuffer ? new Uint8Array(snd) : new Uint8Array(toArrayBuffer(snd))
     const joined = new Uint8Array(view1.length + view2.length)
     joined.set(view1)
     joined.set(view2, view1.length)
@@ -545,7 +549,7 @@ export async function makeRSAKeypair (
         modulusLength: size,
         publicExponent: publicExponent(),
         hash: { name: hashAlg }
-    }, false, uses)
+    } as RsaHashedKeyGenParams, false, uses)
 }
 
 function publicExponent ():Uint8Array {

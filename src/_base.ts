@@ -94,6 +94,7 @@ interface ChildKeys<T extends AbstractKeys = AbstractKeys> {
     new (opts:KeyArgs):T;
     _instance:T;
     TYPE: 'ecc' | 'rsa';
+    INFO: string;
     _createExchangeKeys():Promise<CryptoKeyPair>
     _createWriteKeys():Promise<CryptoKeyPair>
 }

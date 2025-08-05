@@ -39,6 +39,11 @@ import {
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
 export * from '../constants.js'
+
+// Helper function to ensure proper ArrayBuffer type
+function toArrayBuffer (data: Uint8Array): ArrayBuffer {
+    return new Uint8Array(data).buffer
+}
 export type { DID }
 export { getPublicKeyAsUint8Array } from '../util.js'
 export type SerializedKeys = {
@@ -291,7 +296,7 @@ export async function verify (
 ):Promise<boolean> {
     const _key = didToPublicKey(signingDid)
     const key = await importPublicKey(
-        _key.publicKey.buffer,
+        toArrayBuffer(_key.publicKey),
         HashAlg.SHA_256,
         KeyUse.Sign
     )
@@ -458,7 +463,7 @@ export async function encrypt (
 
     // prefix the `iv` into the cipher text
     const encrypted = (iv ?
-        await webcrypto.subtle.encrypt({ name: AES_GCM, iv }, key, data) :
+        await webcrypto.subtle.encrypt({ name: AES_GCM, iv: toArrayBuffer(iv) }, key, toArrayBuffer(data)) :
         await encryptBytes(data, key)
     )
 
