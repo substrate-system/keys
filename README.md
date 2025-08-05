@@ -25,7 +25,7 @@ reading the private key, but the keys can be persisted and re-used indefinitely.
 Each instance of `Keys` has two keypairs -- one for signing, and another for
 encrypting. 
 
-See also, [the API docs generated from typescript](https://bicycle-codes.github.io/keys/).
+See also, [the API docs generated from typescript](https://substrate-system.github.io/keys/).
 
 <details><summary><h2>Contents</h2></summary>
 
