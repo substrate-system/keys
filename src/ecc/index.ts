@@ -46,6 +46,7 @@ export class EccKeys extends AbstractKeys {
     static TYPE: 'ecc' | 'rsa' = 'ecc' as const
     static EXCHANGE_KEY_NAME:string = DEFAULT_ECC_EXCHANGE
     static WRITE_KEY_NAME:string = DEFAULT_ECC_WRITE
+    static INFO = 'keys'
 
     constructor (opts:KeyArgs) {
         super(opts)
@@ -74,8 +75,6 @@ export class EccKeys extends AbstractKeys {
             }
         })
     }
-
-    static INFO = 'keys'
 
     static async _createExchangeKeys ():Promise<CryptoKeyPair> {
         /**
