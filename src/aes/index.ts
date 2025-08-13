@@ -3,13 +3,13 @@ import { toString, type SupportedEncodings, fromString } from 'uint8arrays'
 import {
     toBase64,
     base64ToArrBuf,
-    isCryptoKey,
     normalizeUnicodeToBuf,
     importKey,
     joinBufs,
     randomBuf,
     normalizeBase64ToBuf
 } from '../util.js'
+import { isCryptoKey } from '../crypto.js'
 import { SymmKeyLength, type Msg, type SymmAlgorithm } from '../types.js'
 import {
     DEFAULT_SYMM_ALGORITHM,

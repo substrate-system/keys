@@ -23,19 +23,21 @@ import { HashAlg, KeyUse } from '../types.js'
 import {
     publicKeyToDid,
     getPublicKeyAsArrayBuffer,
-    isCryptoKey,
     normalizeUnicodeToBuf,
     importKey,
     randomBuf,
     joinBufs,
     normalizeToBuf,
-    rsaOperations,
     base64ToArrBuf,
     toBase64,
     didToPublicKey,
-    importPublicKey,
     makeRSAKeypair
 } from '../util.js'
+import {
+    rsaOperations,
+    importPublicKey,
+    isCryptoKey
+} from '../crypto.js'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
 export * from '../constants.js'

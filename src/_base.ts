@@ -11,11 +11,11 @@ import { AES } from './aes/index.js'
 import {
     publicKeyToDid,
     getPublicKeyAsArrayBuffer,
-    rsaOperations,
     toBase64,
     joinBufs,
     sha256,
 } from './util.js'
+import { rsaOperations } from './crypto.js'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
 export * from './constants.js'
