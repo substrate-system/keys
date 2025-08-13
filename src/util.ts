@@ -171,7 +171,7 @@ const arrBufs = {
     }
 }
 
-function hasPrefix (prefixedKey:ArrayBuffer, prefix:ArrayBuffer) {
+export function hasPrefix (prefixedKey:ArrayBuffer, prefix:ArrayBuffer) {
     return arrBufs.equal(prefix, prefixedKey.slice(0, prefix.byteLength))
 }
 
@@ -286,6 +286,12 @@ function publicExponent ():Uint8Array {
     return new Uint8Array([0x01, 0x00, 0x01])
 }
 
+/**
+ * Create a 32 character, DNS-friendly hash of the given DID.
+ *
+ * @param {DID} did String representation of the DID for the device
+ * @returns {string} The 32 character, DNS friendly hash
+ */
 export async function getDeviceName (did:DID|string) {
     const hashedUsername = await sha256(
         new TextEncoder().encode(did.normalize('NFD'))

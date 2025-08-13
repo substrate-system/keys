@@ -7,7 +7,8 @@ import {
     normalizeBase64ToBuf,
     normalizeUnicodeToBuf,
     base64ToArrBuf,
-    InvalidKeyUse
+    InvalidKeyUse,
+    hasPrefix
 } from './util.js'
 import {
     DEFAULT_HASH_ALGORITHM,
@@ -46,14 +47,6 @@ type KeyTypes = Record<string, {
     verify:(args:VerifyArgs)=>Promise<boolean>
 }>
 
-export async function ed25519Verify ({
-    message,
-    publicKey,
-    signature
-}:VerifyArgs):Promise<boolean> {
-    return tweetnacl.sign.detached.verify(message, signature, publicKey)
-}
-
 export const did:{ keyTypes:KeyTypes } = {
     keyTypes: {
         'bls12-381': {
@@ -69,6 +62,52 @@ export const did:{ keyTypes:KeyTypes } = {
             verify: ed25519Verify
         },
     }
+}
+
+/**
+ * Verify either Ed25519 or RSA
+ */
+export async function verify ({
+    message,
+    publicKey,
+    signature
+}:VerifyArgs) {
+
+}
+
+/**
+ * Convert a DID (did:key) to a base64 public key.
+ */
+export function didToPublicKey (inputDid:string): {
+  publicKey: Uint8Array
+  type: string
+} {
+    if (!did.startsWith(BASE58_DID_PREFIX)) {
+        throw new Error('Please use a base58-encoded DID formatted `did:key:z...`')
+    }
+
+    const didWithoutPrefix = inputDid.substr(BASE58_DID_PREFIX.length)
+    const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
+    const result = Object.entries(did.keyTypes).find(
+        ([_key, attr]) => hasPrefix(magicalBuf, attr.magicBytes)
+    )
+
+    if (!result) {
+        throw new Error('Unsupported key algorithm.')
+    }
+
+    return {
+        publicKey: magicalBuf.slice(result[1].magicBytes.length),
+        type: result[0]
+    }
+}
+
+export async function ed25519Verify ({
+    message,
+    publicKey,
+    signature
+}:VerifyArgs):Promise<boolean> {
+    return tweetnacl.sign.detached.verify(message, signature, publicKey)
 }
 
 export async function rsaVerify ({
