@@ -9,18 +9,20 @@ import type {
 } from './types.js'
 import { AES } from './aes/index.js'
 import {
-    publicKeyToDid,
-    getPublicKeyAsArrayBuffer,
     toBase64,
     joinBufs,
     sha256,
 } from './util.js'
-import { rsaOperations } from './crypto.js'
+import {
+    rsaOperations,
+    publicKeyToDid,
+    getPublicKeyAsArrayBuffer,
+} from './crypto.js'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
 export * from './constants.js'
 export type { DID }
-export { getPublicKeyAsUint8Array } from './util.js'
+export { getPublicKeyAsUint8Array } from './crypto.js'
 export type SerializedKeys = {
     DID:DID;
     publicEncryptKey:string;

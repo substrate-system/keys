@@ -21,8 +21,6 @@ import type {
 } from '../types.js'
 import { HashAlg, KeyUse } from '../types.js'
 import {
-    publicKeyToDid,
-    getPublicKeyAsArrayBuffer,
     normalizeUnicodeToBuf,
     importKey,
     randomBuf,
@@ -36,7 +34,9 @@ import {
 import {
     rsaOperations,
     importPublicKey,
-    isCryptoKey
+    isCryptoKey,
+    publicKeyToDid,
+    getPublicKeyAsArrayBuffer,
 } from '../crypto.js'
 
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
@@ -47,7 +47,7 @@ function toArrayBuffer (data: Uint8Array): ArrayBuffer {
     return new Uint8Array(data).buffer
 }
 export type { DID }
-export { getPublicKeyAsUint8Array } from '../util.js'
+export { getPublicKeyAsUint8Array } from '../crypto.js'
 export type SerializedKeys = {
     DID:DID;
     publicExchangeKey:string;

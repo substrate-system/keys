@@ -1,12 +1,13 @@
 import { webcrypto } from '@substrate-system/one-webcrypto'
-import { fromString } from 'uint8arrays'
+import { fromString, toString as uToString, concat } from 'uint8arrays'
 import tweetnacl from 'tweetnacl'
 import {
     type VerifyArgs,
     toArrayBuffer,
     normalizeBase64ToBuf,
     normalizeUnicodeToBuf,
-    base64ToArrBuf
+    base64ToArrBuf,
+    InvalidKeyUse
 } from './util.js'
 import {
     DEFAULT_HASH_ALGORITHM,
@@ -14,13 +15,15 @@ import {
     SALT_LENGTH,
     RSA_SIGN_ALGORITHM,
     RSA_HASHING_ALGORITHM,
-    RSA_ALGORITHM
+    RSA_ALGORITHM,
+    BASE58_DID_PREFIX
 } from './constants.js'
 import {
     type Msg,
     type HashAlg,
     KeyUse,
-    type CharSize
+    type CharSize,
+    type DID
 } from './types.js'
 
 /**
@@ -195,9 +198,6 @@ export async function importPublicKey (
     }, true, uses)
 }
 
-export const InvalidKeyUse = new Error("Invalid key use. Please use 'encryption' or 'signing")
-export const InvalidMaxValue = new Error('Max must be less than 256 and greater than 0')
-
 export function checkValidKeyUse (use:KeyUse):void {
     checkValid(use, [KeyUse.Sign, KeyUse.Exchange], InvalidKeyUse)
 }
@@ -241,4 +241,56 @@ export function importRsaKey (
         false,
         keyUsages
     )
+}
+
+/**
+ * Convert a public key to a DID format string.
+ *
+ * @param {Uint8Array|CryptoKey|CryptoKeyPair} publicKey Public key as Uint8Array
+ * @param {'rsa'} [keyType] 'rsa' or 'ecc'
+ * @returns {DID} A DID format string
+ */
+export async function publicKeyToDid (
+    _publicKey:Uint8Array|CryptoKey,
+    keyType:'rsa'|'ed25519' = 'rsa'
+):Promise<DID> {
+    const publicKey = ((_publicKey instanceof CryptoKey) ?
+        new Uint8Array(await getPublicKeyAsArrayBuffer(_publicKey)) :
+        _publicKey
+    )
+
+    // Prefix public-write key
+    const prefix = did.keyTypes[keyType]?.magicBytes
+    if (!prefix) {
+        throw new Error(`Key type '${keyType}' not supported, ` +
+            `available types: ${Object.keys(did.keyTypes).join(', ')}`)
+    }
+
+    const prefixedBuf = concat([prefix, publicKey])
+
+    return (BASE58_DID_PREFIX + uToString(prefixedBuf, 'base58btc')) as DID
+}
+
+export async function getPublicKeyAsArrayBuffer (
+    keypair:CryptoKeyPair|CryptoKey
+):Promise<ArrayBuffer> {
+    const spki = (keypair instanceof CryptoKey ?
+        await webcrypto.subtle.exportKey(
+            'spki',
+            keypair
+        ) :
+        await webcrypto.subtle.exportKey(
+            'spki',
+            keypair.publicKey
+        )
+    )
+
+    return spki
+}
+
+export async function getPublicKeyAsUint8Array (
+    keypair:CryptoKeyPair|CryptoKey
+):Promise<Uint8Array> {
+    const arr = await getPublicKeyAsArrayBuffer(keypair)
+    return new Uint8Array(arr)
 }

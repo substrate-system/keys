@@ -1,6 +1,5 @@
 import { webcrypto } from '@substrate-system/one-webcrypto'
-import { fromString, concat, toString as uToString } from 'uint8arrays'
-import tweetnacl from 'tweetnacl'
+import { fromString, toString as uToString } from 'uint8arrays'
 import type {
     DID,
     Msg,
@@ -13,7 +12,6 @@ import {
     KeyUse,
     CharSize,
 } from './types.js'
-import { did, InvalidMaxValue } from './crypto.js'
 import {
     BASE58_DID_PREFIX,
     KEY_USE,
@@ -27,6 +25,11 @@ import {
     DEFAULT_SYMM_LENGTH,
 } from './constants.js'
 
+export const InvalidKeyUse = new Error('Invalid key use. Please use ' +
+    "'encryption' or 'signing")
+export const InvalidMaxValue = new Error('Max must be less than 256 and ' +
+    'greater than 0')
+
 // Helper function to ensure proper ArrayBuffer type
 export function toArrayBuffer (data: Uint8Array): ArrayBuffer {
     return new Uint8Array(data).buffer
@@ -36,14 +39,6 @@ export type VerifyArgs = {
     message:Uint8Array
     publicKey:Uint8Array
     signature:Uint8Array
-}
-
-export async function ed25519Verify ({
-    message,
-    publicKey,
-    signature
-}:VerifyArgs):Promise<boolean> {
-    return tweetnacl.sign.detached.verify(message, signature, publicKey)
 }
 
 /**
@@ -64,34 +59,6 @@ export async function sha256 (bytes:Uint8Array):Promise<Uint8Array> {
     return new Uint8Array(
         await webcrypto.subtle.digest('sha-256', bytes.buffer as ArrayBuffer)
     )
-}
-
-/**
- * Convert a public key to a DID format string.
- *
- * @param {Uint8Array|CryptoKey|CryptoKeyPair} publicKey Public key as Uint8Array
- * @param {'rsa'} [keyType] 'rsa' or 'ecc'
- * @returns {DID} A DID format string
- */
-export async function publicKeyToDid (
-    _publicKey:Uint8Array|CryptoKey,
-    keyType:'rsa'|'ed25519' = 'rsa'
-):Promise<DID> {
-    const publicKey = ((_publicKey instanceof CryptoKey) ?
-        new Uint8Array(await getPublicKeyAsArrayBuffer(_publicKey)) :
-        _publicKey
-    )
-
-    // Prefix public-write key
-    const prefix = did.keyTypes[keyType]?.magicBytes
-    if (!prefix) {
-        throw new Error(`Key type '${keyType}' not supported, ` +
-            `available types: ${Object.keys(did.keyTypes).join(', ')}`)
-    }
-
-    const prefixedBuf = concat([prefix, publicKey])
-
-    return (BASE58_DID_PREFIX + uToString(prefixedBuf, 'base58btc')) as DID
 }
 
 export function base64ToArrBuf (string:string):ArrayBuffer {
@@ -143,30 +110,6 @@ export function normalizeUnicodeToBuf (msg:Msg, charSize:CharSize) {
         case 8: return normalizeUtf8ToBuf(msg)
         default: return normalizeUtf16ToBuf(msg)
     }
-}
-
-export async function getPublicKeyAsArrayBuffer (
-    keypair:CryptoKeyPair|CryptoKey
-):Promise<ArrayBuffer> {
-    const spki = (keypair instanceof CryptoKey ?
-        await webcrypto.subtle.exportKey(
-            'spki',
-            keypair
-        ) :
-        await webcrypto.subtle.exportKey(
-            'spki',
-            keypair.publicKey
-        )
-    )
-
-    return spki
-}
-
-export async function getPublicKeyAsUint8Array (
-    keypair:CryptoKeyPair|CryptoKey
-):Promise<Uint8Array> {
-    const arr = await getPublicKeyAsArrayBuffer(keypair)
-    return new Uint8Array(arr)
 }
 
 export function didToPublicKey (did:string):({
