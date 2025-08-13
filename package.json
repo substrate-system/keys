@@ -36,6 +36,8 @@
       "import": "./dist/rsa/index.min.cjs",
       "require": "./dist/rsa/index.min.cjs"
     },
+    "./browser": "./dist/browser/index.js",
+    "./browser/min": "./dist/browser/min.js",
     "./*": {
       "import": [
         "./dist/*.js",
@@ -59,8 +61,8 @@
     "build-esm": "esbuild src/*.ts src/**/*.ts --target=es2020 --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
     "build-esm:min": "esbuild ./src/*.ts ./src/**/*.ts --target=es2020 --format=esm --keep-names --bundle --tsconfig=tsconfig.build.json --minify --out-extension:.js=.min.js --outdir=./dist --sourcemap",
     "build-docs": "typedoc ./src/index.ts --exclude \"test/**\"",
-    "build-browser": "esbuild ./src/index.ts --keep-names --bundle > ./dist/index.js",
-    "build-browser:min": "esbuild ./src/index.ts --bundle --minify --keep-names > ./dist/index.min.js",
+    "build-browser": "mkdir -p ./dist/browser && esbuild ./src/index.ts --keep-names --bundle > ./dist/browser/index.js",
+    "build-browser:min": "esbuild ./src/index.ts --bundle --minify --keep-names > ./dist/browser/index.min.js",
     "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-cjs && npm run build-esm && npm run build-esm:min && npm run build-cjs:min && npm run build-browser && npm run build-browser:min",
     "toc": "markdown-toc --maxdepth 3 -i README.md",
     "preversion": "npm run lint",
