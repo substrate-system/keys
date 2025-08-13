@@ -3,7 +3,7 @@ import { toString, fromString, equals } from 'uint8arrays'
 import { AES, importAesKey } from '../src/aes/index.js'
 import { SymmKeyLength } from '../src/types.js'
 
-test('create an AES key', async t => {
+test('________________create an AES key__________________', async t => {
     const key = await AES.create()
     t.ok(key instanceof CryptoKey, 'should return a new CryptoKey')
     t.equal(key.type, 'secret', 'should be a secret key')
@@ -260,9 +260,4 @@ test('Binary data encryption/decryption', async t => {
     const decrypted = await AES.decrypt(encrypted, key)
 
     t.ok(equals(binaryData, decrypted), 'should handle binary data correctly')
-})
-
-test('done', () => {
-    // @ts-expect-error dev
-    window.testsFinished = true
 })

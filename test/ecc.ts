@@ -25,7 +25,7 @@ test('Sanity', async t => {
 })
 
 let myKeys:EccKeys
-test('Create a new Keys instance', async t => {
+test('__________Create a new EccKeys instance___________________', async t => {
     myKeys = await EccKeys.create()
     t.ok(myKeys, 'should create the keys')
     t.equal(myKeys.hasPersisted, false,
@@ -318,9 +318,4 @@ test('An example use of to/from strings', async t => {
     const text = await myKeys.decryptAsString(encrypted)
     const data = JSON.parse(text)
     t.equal(data.content, 'hello ECC', 'should get the original object')
-})
-
-test('done', () => {
-    // @ts-expect-error dev
-    window.testsFinished = true
 })

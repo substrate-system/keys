@@ -27,9 +27,9 @@ import {
 } from './types.js'
 
 export type VerifyArgs = {
-    message:Uint8Array;
-    publicKey:Uint8Array|string;
-    signature:Uint8Array;
+    message:Uint8Array|string;
+    publicKey:Uint8Array|string;  // key or DID string
+    signature:Uint8Array|string;
 }
 
 /**
@@ -71,13 +71,48 @@ export const did:{ keyTypes:KeyTypes } = {
 
 /**
  * Verify either Ed25519 or RSA
+ * @throws Error if the given DID is bad.
  */
 export async function verify ({
     message,
     publicKey,
     signature
-}:VerifyArgs) {
-    const pub = 
+}:{
+    message:string|Uint8Array;
+    publicKey:string;  // DID
+    signature:string;
+}):Promise<boolean> {
+    const format = getAlgorithm(publicKey)
+    const pub = didToPublicKey(publicKey).publicKey
+
+    if (format === 'ecc') {
+        // ecc verify
+        return ed25519Verify({ message, publicKey: pub, signature })
+    }
+
+    if (format === 'rsa') {
+        // rsa verify
+        return rsaVerify({ message, publicKey: pub, signature })
+    }
+
+    throw new Error('Unknown key format')
+}
+
+/**
+ * Look at the given DID and find the algorithm.
+ */
+function getAlgorithm (did:string):'ecc'|'rsa'|'unknown' {
+    if (did.startsWith('did:key:')) {
+        const keyPart = did.split(':')[2]
+        // Multicodec prefixes can indicate algorithm type
+        // z6Mk... usually indicates Ed25519 (ECC)
+        // z4MX... usually indicates RSA
+        if (keyPart.startsWith('z6Mk')) return 'ecc'
+        if (keyPart.startsWith('z4MX')) return 'rsa'
+        return 'unknown'
+    }
+
+    return 'unknown'
 }
 
 /**
@@ -115,11 +150,19 @@ export async function ed25519Verify ({
     publicKey,
     signature
 }:VerifyArgs):Promise<boolean> {
+    let msg:Uint8Array = message as Uint8Array
+    if (typeof message === 'string') {
+        msg = fromString(message)
+    }
+    let sig:Uint8Array = signature as Uint8Array
+    if (typeof signature === 'string') {
+        sig = fromString(signature)
+    }
     let pub:Uint8Array = publicKey as Uint8Array
     if (typeof publicKey === 'string') {
         pub = didToPublicKey(publicKey).publicKey
     }
-    return tweetnacl.sign.detached.verify(message, signature, pub)
+    return tweetnacl.sign.detached.verify(msg, sig, pub)
 }
 
 export async function rsaVerify ({

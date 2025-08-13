@@ -12,7 +12,7 @@ import {
 import { AES } from '../src/aes/index.js'
 
 let keys:RsaKeys
-test('create a new Keys', async t => {
+test('__________________create a new RsaKeys_______________', async t => {
     keys = await RsaKeys.create()
     t.ok(keys, 'should return something')
 
