@@ -85,13 +85,13 @@ export async function verify ({
     const format = getAlgorithm(publicKey)
     const pub = didToPublicKey(publicKey).publicKey
 
-    if (format === 'ecc') {
-        // ecc verify
+    if (format === 'ed25519') {
+        // Ed25519 verify
         return ed25519Verify({ message, publicKey: pub, signature })
     }
 
     if (format === 'rsa') {
-        // rsa verify
+        // RSA verify
         return rsaVerify({ message, publicKey: pub, signature })
     }
 
@@ -101,47 +101,12 @@ export async function verify ({
 /**
  * Look at the given DID and find the algorithm.
  */
-function getAlgorithm (did:string):'ecc'|'rsa'|'unknown' {
-    if (did.startsWith('did:key:')) {
-        const keyPart = did.split(':')[2]
-        // Multicodec prefixes can indicate algorithm type
-        // z6Mk... usually indicates Ed25519 (ECC)
-        // z4MX... usually indicates RSA
-        if (keyPart.startsWith('z6Mk')) return 'ecc'
-        if (keyPart.startsWith('z4MX')) return 'rsa'
+export function getAlgorithm (did:string):'ed25519'|'rsa'|'bls12-381'|'unknown' {
+    try {
+        const { type } = didToPublicKey(did)
+        return type as 'ed25519'|'rsa'|'bls12-381'
+    } catch {
         return 'unknown'
-    }
-
-    return 'unknown'
-}
-
-/**
- * Convert a DID (did:key) to a base64 public key.
- */
-export function didToPublicKey (inputDid:string):{
-    publicKey:Uint8Array
-    type:string
-} {
-    if (!inputDid.startsWith(BASE58_DID_PREFIX)) {
-        throw new Error('Please use a base58-encoded DID formatted `did:key:z...`')
-    }
-
-    const didWithoutPrefix = inputDid.substr(BASE58_DID_PREFIX.length)
-    const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
-    const result = Object.entries(did.keyTypes).find(
-        ([_key, attr]) => hasPrefix(
-            magicalBuf.buffer as ArrayBuffer,
-            attr.magicBytes.buffer as ArrayBuffer
-        )
-    )
-
-    if (!result) {
-        throw new Error('Unsupported key algorithm.')
-    }
-
-    return {
-        publicKey: magicalBuf.slice(result[1].magicBytes.length),
-        type: result[0]
     }
 }
 
@@ -152,16 +117,35 @@ export async function ed25519Verify ({
 }:VerifyArgs):Promise<boolean> {
     let msg:Uint8Array = message as Uint8Array
     if (typeof message === 'string') {
-        msg = fromString(message)
+        // message is typically plain text
+        msg = fromString(message, 'utf8')
     }
+
     let sig:Uint8Array = signature as Uint8Array
     if (typeof signature === 'string') {
-        sig = fromString(signature)
+        // Signatures are base64 encoded
+        sig = fromString(signature, 'base64pad')
     }
+
     let pub:Uint8Array = publicKey as Uint8Array
     if (typeof publicKey === 'string') {
         pub = didToPublicKey(publicKey).publicKey
     }
+
+    console.log('Message length:', msg.length)
+    console.log('Signature length:', sig.length, 'expected: 64')
+    console.log('Public key length:', pub.length, 'expected: 32')
+
+    // Ed25519 expects exactly 32 bytes for public key and 64 for signature
+    if (pub.length !== 32) {
+        throw new Error(`Invalid Ed25519 public key size: ${pub.length}` +
+            ' bytes, expected 32')
+    }
+    if (sig.length !== 64) {
+        throw new Error(`Invalid Ed25519 signature size: ${sig.length} ` +
+            'bytes, expected 64')
+    }
+
     return tweetnacl.sign.detached.verify(msg, sig, pub)
 }
 
@@ -391,4 +375,46 @@ export async function getPublicKeyAsUint8Array (
 ):Promise<Uint8Array> {
     const arr = await getPublicKeyAsArrayBuffer(keypair)
     return new Uint8Array(arr)
+}
+
+/**
+ * Convert a DID (did:key) to a base64 public key.
+ */
+export function didToPublicKey (inputDid:string):{
+    publicKey:Uint8Array
+    type:string
+} {
+    if (!inputDid.startsWith(BASE58_DID_PREFIX)) {
+        throw new Error('Please use a base58-encoded DID formatted `did:key:z...`')
+    }
+
+    const didWithoutPrefix = inputDid.substr(BASE58_DID_PREFIX.length)
+    const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
+    const result = Object.entries(did.keyTypes).find(
+        ([_key, attr]) => hasPrefix(
+            magicalBuf.buffer as ArrayBuffer,
+            attr.magicBytes.buffer as ArrayBuffer
+        )
+    )
+
+    if (!result) {
+        throw new Error('Unsupported key algorithm.')
+    }
+
+    const rawKeyData = magicalBuf.slice(result[1].magicBytes.length)
+
+    // For Ed25519, if the key is in SPKI format (44 bytes),
+    // extract the raw 32-byte key
+    if (result[0] === 'ed25519' && rawKeyData.length === 44) {
+        // Ed25519 SPKI format has 12-byte header, so extract last 32 bytes
+        return {
+            publicKey: rawKeyData.slice(-32),
+            type: result[0]
+        }
+    }
+
+    return {
+        publicKey: rawKeyData,
+        type: result[0]
+    }
 }

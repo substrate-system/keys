@@ -115,6 +115,20 @@ cp ./node_modules/@substrate-system/keys/dist/index.min.js ./public/keys.min.js
 
 ## Get started
 
+### Verify a signature
+
+This function takes either an Ed25519 key or an RSA key.
+
+```js
+import { verify } from '@substrate-system/keys/crypto'
+
+// ed25519
+const isOk = await verify({ message, publicKey: ecc.DID, signature })
+
+// RSA
+const isOk = await verify({ message, publicKey: rsa.DID, signature })
+```
+
 ### ECC
 
 #### Create a keypair
@@ -141,11 +155,23 @@ console.assert(keys.DID === keysAgain.DID)  // true
 
 #### `keys.DID`
 
+```js
+'did:key:z13V3Sog2YaUKhdGCmgx9UZuW...'
+```
+
 This is the [DID string](https://www.w3.org/TR/did-1.0/) for the signing key for
 this instance. The DID looks like this:
 
-```js
-'did:key:z13V3Sog2YaUKhdGCmgx9UZuW...'
+The Ed25519 DID looks like this:
+
+```
+did:key:zStERvoWtx7FQS432smzbGENZHjsN55X8pUZ3np8DXGhZFf3TCorijCPeJoLytwb
+```
+
+The RSA DID looks like this:
+
+```
+did:key:z13V3Sog2YaUKhdGCmgx9UZuW1o1ShFJYc6DvGYe7NTt689NoL2HdpC46K4PjfsUVAopaqmnySjJV8T6K9dMB2FUXhqfKYLUz9o9fA7xkgiNr25sUQq4vJPuPfP1kbSqtYXe5V2CZTUMucF2jfNMrWjHHRUZpEzPwGeZd5prsu9pxnVhPKnVxxKTJAVqQCp3CDRASeYKQmqVRmyPSrdQaYz4AoQxaBd52mNC7dEC4xXKbVw45dhQc52j5chR8YKCeaNANWh8DEZ7U8Dtb89PL5qP8817oxswQhz4e97p8EGtJDVrGbCXN4EucnpYaacRane4YPcmevs1pMYV8iqzJd8UZLWtDcUBNrCkeVTdnzXnM4Rq9sWiFwF3nYk6fxqfUZDfYyfPtxacSoGaSjo38ye
 ```
 
 #### `keys.getDeviceName` / `keys.deviceName`
