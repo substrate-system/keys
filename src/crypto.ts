@@ -2,7 +2,6 @@ import { webcrypto } from '@substrate-system/one-webcrypto'
 import { fromString, toString as uToString, concat } from 'uint8arrays'
 import tweetnacl from 'tweetnacl'
 import {
-    type VerifyArgs,
     toArrayBuffer,
     normalizeBase64ToBuf,
     normalizeUnicodeToBuf,
@@ -26,6 +25,12 @@ import {
     type CharSize,
     type DID
 } from './types.js'
+
+export type VerifyArgs = {
+    message:Uint8Array;
+    publicKey:Uint8Array|string;
+    signature:Uint8Array;
+}
 
 /**
  * Using the key type as the record property name (ie. string = key type)
@@ -72,24 +77,27 @@ export async function verify ({
     publicKey,
     signature
 }:VerifyArgs) {
-
+    const pub = 
 }
 
 /**
  * Convert a DID (did:key) to a base64 public key.
  */
-export function didToPublicKey (inputDid:string): {
-  publicKey: Uint8Array
-  type: string
+export function didToPublicKey (inputDid:string):{
+    publicKey:Uint8Array
+    type:string
 } {
-    if (!did.startsWith(BASE58_DID_PREFIX)) {
+    if (!inputDid.startsWith(BASE58_DID_PREFIX)) {
         throw new Error('Please use a base58-encoded DID formatted `did:key:z...`')
     }
 
     const didWithoutPrefix = inputDid.substr(BASE58_DID_PREFIX.length)
     const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
     const result = Object.entries(did.keyTypes).find(
-        ([_key, attr]) => hasPrefix(magicalBuf, attr.magicBytes)
+        ([_key, attr]) => hasPrefix(
+            magicalBuf.buffer as ArrayBuffer,
+            attr.magicBytes.buffer as ArrayBuffer
+        )
     )
 
     if (!result) {
@@ -107,7 +115,11 @@ export async function ed25519Verify ({
     publicKey,
     signature
 }:VerifyArgs):Promise<boolean> {
-    return tweetnacl.sign.detached.verify(message, signature, publicKey)
+    let pub:Uint8Array = publicKey as Uint8Array
+    if (typeof publicKey === 'string') {
+        pub = didToPublicKey(publicKey).publicKey
+    }
+    return tweetnacl.sign.detached.verify(message, signature, pub)
 }
 
 export async function rsaVerify ({
@@ -115,12 +127,16 @@ export async function rsaVerify ({
     publicKey,
     signature
 }:VerifyArgs):Promise<boolean> {
+    let pub:Uint8Array = publicKey as Uint8Array
+    if (typeof publicKey === 'string') {
+        pub = didToPublicKey(publicKey).publicKey
+    }
     return rsaOperations.verify(
         message,
         signature,
         await webcrypto.subtle.importKey(
             'spki',
-            toArrayBuffer(publicKey),
+            toArrayBuffer(pub),
             { name: RSA_SIGN_ALGORITHM, hash: RSA_HASHING_ALGORITHM },
             false,
             ['verify']

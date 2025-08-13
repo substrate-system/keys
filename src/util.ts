@@ -35,12 +35,6 @@ export function toArrayBuffer (data: Uint8Array): ArrayBuffer {
     return new Uint8Array(data).buffer
 }
 
-export type VerifyArgs = {
-    message:Uint8Array
-    publicKey:Uint8Array
-    signature:Uint8Array
-}
-
 /**
  * Create a 32 character, DNS-friendly hash of the given DID.
  *
