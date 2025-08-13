@@ -1,6 +1,6 @@
 {
   "name": "@substrate-system/keys",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Create and store keys in the browser with the webcrypto API",
   "directories": {
     "test": "test"
