@@ -177,7 +177,7 @@ async function encryptBytes (
  * @param opts Optional args for algorithm and stuff
  * @returns {Promise<ArrayBuffer>}
  */
-async function decryptBytes (
+export async function decryptBytes (
     msg:Msg,
     key:CryptoKey|string,
     opts?:Partial<{
