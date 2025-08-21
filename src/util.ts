@@ -79,7 +79,7 @@ export function normalizeBase64ToBuf (msg:Msg):ArrayBuffer {
     return normalizeToBuf(msg, base64ToArrBuf)
 }
 
-export const normalizeUtf8ToBuf = (msg:Msg): ArrayBuffer => {
+export const normalizeUtf8ToBuf = (msg:Msg):ArrayBuffer => {
     return normalizeToBuf(msg, (str) => strToArrBuf(str, CharSize.B8))
 }
 
@@ -231,9 +231,18 @@ export function randomBuf (
     return arr.buffer
 }
 
-export function joinBufs (fst:ArrayBuffer|Uint8Array, snd:ArrayBuffer|Uint8Array):ArrayBuffer {
-    const view1 = fst instanceof ArrayBuffer ? new Uint8Array(fst) : new Uint8Array(toArrayBuffer(fst))
-    const view2 = snd instanceof ArrayBuffer ? new Uint8Array(snd) : new Uint8Array(toArrayBuffer(snd))
+export function joinBufs (
+    fst:ArrayBuffer|Uint8Array,
+    snd:ArrayBuffer|Uint8Array
+):ArrayBuffer {
+    const view1 = fst instanceof ArrayBuffer ?
+        new Uint8Array(fst) :
+        new Uint8Array(toArrayBuffer(fst))
+
+    const view2 = snd instanceof ArrayBuffer ?
+        new Uint8Array(snd) :
+        new Uint8Array(toArrayBuffer(snd))
+
     const joined = new Uint8Array(view1.length + view2.length)
     joined.set(view1)
     joined.set(view2, view1.length)

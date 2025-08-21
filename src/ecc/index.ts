@@ -88,7 +88,7 @@ export class EccKeys extends AbstractKeys {
                 name: ECC_EXCHANGE_NAME
                 // namedCurve: EccCurve.X25519
             },
-            false, // not extractable
+            false,  // not extractable
             ['deriveKey', 'deriveBits']
         ) as CryptoKeyPair
     }
@@ -259,6 +259,8 @@ export class EccKeys extends AbstractKeys {
      * @param {CryptoKey|string} [publicKey] The public key used to generate
      * the AES key used on this message. If omitted, decrypt with our own
      * public key.
+     * @param {string} aesAlgorithm The algorithm. Default is AES-GCM.
+     * @param {string} info Custom "info" parameter
      * @returns {Promise<ArrayBuffer>} The decrypted content.
      */
     async decrypt (
@@ -301,6 +303,15 @@ export class EccKeys extends AbstractKeys {
 
     /**
      * Decrypt and return as string.
+     * The encrypted message should be salt + iv + cipher text.
+     *
+     * @param msg The encrypted content
+     * @param {CryptoKey|string} [publicKey] The public key used to generate
+     * the AES key used on this message. If omitted, decrypt with our own
+     * public key.
+     * @param {string} aesAlgorithm The algorithm. Default is AES-GCM.
+     * @param {string} info Custom "info" parameter
+     * @returns {Promise<ArrayBuffer>} The decrypted content.
      */
     async decryptAsString (
         msg:string|Uint8Array|ArrayBuffer,

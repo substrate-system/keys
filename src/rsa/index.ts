@@ -330,7 +330,7 @@ Object.assign(RsaKeys.prototype.decryptKey, {
  * @param {{ content, publicKey }} opts The content to encrypt and
  * public key to encrypt to
  * @param {SymmKey|Uint8Array|string} [aesKey] An optional AES key to encrypt
- * to the given public key
+ * to the given public key. A new one will be generated if it is not provided.
  * @returns {Promise<ArrayBuffer>} The encrypted AES key, concattenated with
  *   the encrypted content.
  */

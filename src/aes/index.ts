@@ -141,7 +141,14 @@ async function encrypt (
 
     // prefix the `iv` into the cipher text
     const encrypted = (iv ?
-        await webcrypto.subtle.encrypt({ name: AES_GCM, iv: toArrayBuffer(iv) }, key, toArrayBuffer(data)) :
+        await webcrypto.subtle.encrypt(
+            {
+                name: AES_GCM,
+                iv: toArrayBuffer(iv)
+            },
+            key,
+            toArrayBuffer(data)
+        ) :
         await encryptBytes(data, key)
     )
 

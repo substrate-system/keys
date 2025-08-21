@@ -197,7 +197,12 @@ test('encrypt with custom info parameter', async t => {
     const customInfo = 'custom-info'
 
     const encrypted = await myKeys.encrypt(message, undefined, customInfo)
-    const decrypted = await myKeys.decryptAsString(encrypted, undefined, undefined, customInfo)
+    const decrypted = await myKeys.decryptAsString(
+        encrypted,
+        undefined,
+        undefined,
+        customInfo
+    )
     t.equal(decrypted, message, 'should encrypt/decrypt with custom info')
 })
 
