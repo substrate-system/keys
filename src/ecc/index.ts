@@ -43,7 +43,7 @@ function toArrayBuffer (data: Uint8Array): ArrayBuffer {
  * Class for ECC keys
  */
 export class EccKeys extends AbstractKeys {
-    static TYPE: 'ecc' | 'rsa' = 'ecc' as const
+    static TYPE:'ecc'|'rsa' = 'ecc' as const
     static EXCHANGE_KEY_NAME:string = DEFAULT_ECC_EXCHANGE
     static WRITE_KEY_NAME:string = DEFAULT_ECC_WRITE
     static INFO = 'keys'
