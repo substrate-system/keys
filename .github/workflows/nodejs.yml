@@ -23,6 +23,7 @@ jobs:
         npm install
         npm run build --if-present
         npm run lint
+        npx playwright install --with-deps
       env:
         CI: true
     - name: Run tape tests
