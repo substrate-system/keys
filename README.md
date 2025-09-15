@@ -366,7 +366,7 @@ class EccKeys {
   static EXCHANGE_KEY_NAME:string = 'ecc-exchange'
   static WRITE_KEY_NAME:string = 'ecc-write'
 
-  static async create (session?:boolean):Promise<EccKeys>
+  static async create (session?:boolean, extractable?:boolean):Promise<EccKeys>
 }
 ```
 
@@ -376,9 +376,16 @@ class RsaKeys {
   static EXCHANGE_KEY_NAME:string = 'rsa-exchange'
   static WRITE_KEY_NAME:string = 'rsa-write'
 
-  static async create (session?:boolean):Promise<RsaKeys>
+  static async create (session?:boolean, extractable?:boolean):Promise<RsaKeys>
 }
 ```
+
+#### Parameters
+
+- `session` (optional, boolean): If `true`, keys are created in memory only and won't be saved to `indexedDB` even if `persist()` is called.
+- `extractable` (optional, boolean): If `true`, creates extractable keys that can be exported/read. Defaults to `false` for security.
+
+> **⚠️ Security Note**: Set `extractable: true` only when you need to export private keys. Non-extractable keys (default) provide better security as the browser prevents the private key from being read, while still allowing use for cryptographic operations.
 
 #### `.create()` example
 
@@ -388,7 +395,14 @@ Use the factory function b/c async.
 import { EccKeys } from '@substrate-system/keys/ecc'
 // or: import { RsaKeys } from '@substrate-system/keys/rsa'
 
+// Create non-extractable keys (recommended)
 const keys = await EccKeys.create()
+
+// Create extractable keys (only when export is needed)
+const extractableKeys = await EccKeys.create(false, true)
+
+// Create session-only, extractable keys
+const sessionKeys = await EccKeys.create(true, true)
 ```
 
 ### Get a hash of the DID
@@ -455,16 +469,32 @@ class EccKeys {  // or RsaKeys
       encryptionKeyName?:string,
       signingKeyName?:string,
       session?:boolean,
+      extractable?:boolean,
     }):Promise<EccKeys>
 }
 ```
+
+#### Parameters
+
+- `encryptionKeyName` (optional, string): Custom name for the encryption key in `indexedDB`
+- `signingKeyName` (optional, string): Custom name for the signing key in `indexedDB`
+- `session` (optional, boolean): If `true`, creates session-only keys if no keys exist in `indexedDB`
+- `extractable` (optional, boolean): If `true` and keys don't exist in `indexedDB`, new keys will be created as extractable. Defaults to `false`.
 
 #### example
 ```js
 import { EccKeys } from '@substrate-system/keys/ecc'
 // or: import { RsaKeys } from '@substrate-system/keys/rsa'
 
+// Load existing keys from indexedDB, or create new non-extractable ones
 const newKeys = await EccKeys.load()
+
+// Load with custom options
+const customKeys = await EccKeys.load({
+  encryptionKeyName: 'my-custom-encryption-key',
+  signingKeyName: 'my-custom-signing-key',
+  extractable: true  // If keys don't exist, create them as extractable
+})
 ```
 
 

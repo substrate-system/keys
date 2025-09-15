@@ -265,11 +265,11 @@ export abstract class AbstractKeys {
         return AbstractKeys.deviceName(this.DID)
     }
 
-    static _createExchangeKeys (extractable?:boolean):Promise<CryptoKeyPair> {
+    static _createExchangeKeys (_extractable?:boolean):Promise<CryptoKeyPair> {
         throw new Error('The child should implement this')
     }
 
-    static _createWriteKeys (extractable?:boolean):Promise<CryptoKeyPair> {
+    static _createWriteKeys (_extractable?:boolean):Promise<CryptoKeyPair> {
         throw new Error('The child should implement this')
     }
 
