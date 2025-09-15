@@ -95,8 +95,8 @@ export type KeyArgs = {
 interface ChildKeys<T extends AbstractKeys = AbstractKeys> {
     new (opts:KeyArgs):T;
     _instance:T;
-    TYPE: 'ecc' | 'rsa';
-    INFO: string;
+    TYPE:'ecc'|'rsa';
+    INFO:string;
     _createExchangeKeys(extractable?:boolean):Promise<CryptoKeyPair>
     _createWriteKeys(extractable?:boolean):Promise<CryptoKeyPair>
 }

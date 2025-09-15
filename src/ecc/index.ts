@@ -48,6 +48,13 @@ export class EccKeys extends AbstractKeys {
     static WRITE_KEY_NAME:string = DEFAULT_ECC_WRITE
     static INFO = 'keys'
 
+    static async create<T extends EccKeys = EccKeys> (
+        session?:boolean,
+        extractable?:boolean
+    ):Promise<T> {
+        return await super.create<T>(session, extractable)
+    }
+
     constructor (opts:KeyArgs) {
         super(opts)
         EccKeys.EXCHANGE_KEY_NAME = opts.exchangeKeyName || DEFAULT_ECC_EXCHANGE

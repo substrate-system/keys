@@ -59,6 +59,13 @@ export class RsaKeys extends AbstractKeys {
     static EXCHANGE_KEY_NAME:string = DEFAULT_RSA_EXCHANGE
     static WRITE_KEY_NAME:string = DEFAULT_RSA_WRITE
 
+    static async create<T extends AbstractKeys = RsaKeys> (
+        session?:boolean,
+        extractable?:boolean
+    ):Promise<T> {
+        return await super.create<T>(session, extractable)
+    }
+
     constructor (opts:KeyArgs) {
         super(opts)
         RsaKeys.EXCHANGE_KEY_NAME = opts.exchangeKeyName || DEFAULT_RSA_EXCHANGE
