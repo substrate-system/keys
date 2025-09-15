@@ -251,11 +251,12 @@ export function joinBufs (
 
 export async function makeEccKeypair (
     curve:'X25519'|'ECDSA',
-    uses:'encyrpt'|'sign'
+    uses:'encyrpt'|'sign',
+    extractable:boolean = false
 ):Promise<CryptoKeyPair> {
     const keys = await webcrypto.subtle.generateKey(
         { name: curve },  // X25519 or ECDSA
-        false,  // extractable
+        extractable,
         KEY_USE[uses]
     ) as CryptoKeyPair
 
@@ -266,9 +267,9 @@ export async function makeRSAKeypair (
     size:RsaSize,
     hashAlg:HashAlg,
     use:KeyUse,
-    extractable?:boolean
+    extractable:boolean = false
 ):Promise<CryptoKeyPair> {
-    const isExtractable = extractable || false
+    const isExtractable = extractable
     if (!(Object.values(KeyUse).includes(use))) {
         throw new Error('invalid key use')
     }

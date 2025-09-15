@@ -97,8 +97,8 @@ interface ChildKeys<T extends AbstractKeys = AbstractKeys> {
     _instance:T;
     TYPE: 'ecc' | 'rsa';
     INFO: string;
-    _createExchangeKeys():Promise<CryptoKeyPair>
-    _createWriteKeys():Promise<CryptoKeyPair>
+    _createExchangeKeys(extractable?:boolean):Promise<CryptoKeyPair>
+    _createWriteKeys(extractable?:boolean):Promise<CryptoKeyPair>
 }
 
 /**
@@ -265,22 +265,23 @@ export abstract class AbstractKeys {
         return AbstractKeys.deviceName(this.DID)
     }
 
-    static _createExchangeKeys ():Promise<CryptoKeyPair> {
+    static _createExchangeKeys (extractable?:boolean):Promise<CryptoKeyPair> {
         throw new Error('The child should implement this')
     }
 
-    static _createWriteKeys ():Promise<CryptoKeyPair> {
+    static _createWriteKeys (extractable?:boolean):Promise<CryptoKeyPair> {
         throw new Error('The child should implement this')
     }
 
     static async create<T extends AbstractKeys> (
         this:ChildKeys,
-        session?:boolean
+        session?:boolean,
+        extractable?:boolean
     ):Promise<T> {
         // encryption
-        const exchange = await this._createExchangeKeys()
+        const exchange = await this._createExchangeKeys(extractable)
         // signatures
-        const write = await this._createWriteKeys()
+        const write = await this._createWriteKeys(extractable)
 
         const publicSigningKey = await getPublicKeyAsArrayBuffer(write)
         const did = await publicKeyToDid(
@@ -315,6 +316,7 @@ export abstract class AbstractKeys {
             encryptionKeyName:string,
             signingKeyName:string,
             session:boolean,
+            extractable:boolean,
         }> = {
             session: false,
         }
@@ -331,11 +333,11 @@ export abstract class AbstractKeys {
 
         if (!exchangeKeys) {
             hasPersisted = false
-            exchangeKeys = await this._createExchangeKeys()
+            exchangeKeys = await this._createExchangeKeys(opts.extractable)
         }
         if (!writeKeys) {
             hasPersisted = false
-            writeKeys = await this._createWriteKeys()
+            writeKeys = await this._createWriteKeys(opts.extractable)
         }
 
         const publicSigningKey = await getPublicKeyAsArrayBuffer(writeKeys)

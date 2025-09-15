@@ -76,9 +76,9 @@ export class EccKeys extends AbstractKeys {
         })
     }
 
-    static async _createExchangeKeys ():Promise<CryptoKeyPair> {
+    static async _createExchangeKeys (extractable:boolean = false):Promise<CryptoKeyPair> {
         /**
-         * don’t use `{ name: ECDH, namedCurve: 'X25519' }`, use
+         * don't use `{ name: ECDH, namedCurve: 'X25519' }`, use
          * `{ name: 'X25519' }`.
          *
          * X25519/Ed25519 don't use `namedCurve`.
@@ -88,17 +88,17 @@ export class EccKeys extends AbstractKeys {
                 name: ECC_EXCHANGE_NAME
                 // namedCurve: EccCurve.X25519
             },
-            false,  // not extractable
+            extractable,
             ['deriveKey', 'deriveBits']
         ) as CryptoKeyPair
     }
 
-    static async _createWriteKeys ():Promise<CryptoKeyPair> {
+    static async _createWriteKeys (extractable:boolean = false):Promise<CryptoKeyPair> {
         return await webcrypto.subtle.generateKey(
             {
                 name: ECC_WRITE_NAME
             },
-            false, // not extractable
+            extractable,
             ['sign', 'verify']
         )
     }
@@ -113,6 +113,7 @@ export class EccKeys extends AbstractKeys {
             encryptionKeyName:string,
             signingKeyName:string,
             session:boolean,
+            extractable:boolean,
         }> = {
             session: false,
         }

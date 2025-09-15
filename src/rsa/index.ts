@@ -65,21 +65,23 @@ export class RsaKeys extends AbstractKeys {
         RsaKeys.WRITE_KEY_NAME = opts.writeKeyName || DEFAULT_RSA_WRITE
     }
 
-    static async _createExchangeKeys ():Promise<CryptoKeyPair> {
+    static async _createExchangeKeys (extractable:boolean = false):Promise<CryptoKeyPair> {
         const exchangeKeys = await makeRSAKeypair(
             DEFAULT_RSA_SIZE,
             DEFAULT_HASH_ALGORITHM,
-            KeyUse.Exchange
+            KeyUse.Exchange,
+            extractable
         )
 
         return exchangeKeys
     }
 
-    static async _createWriteKeys ():Promise<CryptoKeyPair> {
+    static async _createWriteKeys (extractable:boolean = false):Promise<CryptoKeyPair> {
         const writeKeys = await makeRSAKeypair(
             DEFAULT_RSA_SIZE,
             DEFAULT_HASH_ALGORITHM,
-            KeyUse.Write
+            KeyUse.Write,
+            extractable
         )
 
         return writeKeys
