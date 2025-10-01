@@ -329,7 +329,7 @@ export function importRsaKey (
  * Convert a public key to a DID format string.
  *
  * @param {Uint8Array|CryptoKey|CryptoKeyPair} publicKey Public key as Uint8Array
- * @param {'rsa'} [keyType] 'rsa' or 'ecc'
+ * @param {'rsa'|'ed25519'} [keyType] 'rsa' or 'ecc'
  * @returns {DID} A DID format string
  */
 export async function publicKeyToDid (

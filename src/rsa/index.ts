@@ -100,9 +100,10 @@ export class RsaKeys extends AbstractKeys {
      * and `publicExchangeKey` is the encryption key, `base64` encoded.
      * @returns {Promise<{ DID:DID, publicExchangeKey:string }>}
      */
-    async toJson (
-        format?:SupportedEncodings
-    ):Promise<{ DID:DID; publicExchangeKey:string; }> {
+    async toJson (format?:SupportedEncodings):Promise<{
+        DID:DID;
+        publicExchangeKey:string;
+    }> {
         const pubEnc = this.publicExchangeKey
         const did = this.DID
 

@@ -424,11 +424,21 @@ Object.assign(EccKeys.prototype.sign, {
  * @param {CryptoKeyPair} keypair The keypair to get the public side from.
  * @returns {Promise<ArrayBuffer>} ArrayBuffer of public key material
  */
+export async function exportPublicKey(
+    keypair:CryptoKeyPair,
+    format:'jwk'
+):Promise<JsonWebKey>
+
+export async function exportPublicKey(
+    keypair:CryptoKeyPair,
+    format?:'raw'|'spki'|'pkcs8'
+):Promise<ArrayBuffer>
+
 export async function exportPublicKey (
-    keypair:CryptoKeyPair
-):Promise<ArrayBuffer> {
-    const raw = await webcrypto.subtle.exportKey('raw', keypair.publicKey)
-    return raw
+    keypair:CryptoKeyPair,
+    format:KeyFormat = 'raw'
+):Promise<JsonWebKey|ArrayBuffer> {
+    return await crypto.subtle.exportKey(format, keypair.publicKey)
 }
 
 export async function importPublicKey (
