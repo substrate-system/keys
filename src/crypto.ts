@@ -80,7 +80,7 @@ export async function verify ({
 }:{
     message:string|Uint8Array;
     publicKey:string;  // DID
-    signature:string;
+    signature:string|Uint8Array;
 }):Promise<boolean> {
     const format = getAlgorithm(publicKey)
     const pub = didToPublicKey(publicKey).publicKey
