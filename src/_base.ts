@@ -275,8 +275,8 @@ export abstract class AbstractKeys {
 
     static async create<T extends AbstractKeys> (
         this:ChildKeys,
-        exchangeKeys?:CryptoKeyPair,
-        writeKeys?:CryptoKeyPair,
+        exchangeKeys?:CryptoKeyPair|null,
+        writeKeys?:CryptoKeyPair|null,
         session?:boolean,
         extractable?:boolean
     ):Promise<T> {

@@ -60,8 +60,8 @@ export class RsaKeys extends AbstractKeys {
     static WRITE_KEY_NAME:string = DEFAULT_RSA_WRITE
 
     static async create<T extends AbstractKeys = RsaKeys> (
-        exchangeKyes?:CryptoKeyPair,
-        writeKeys?:CryptoKeyPair,
+        exchangeKyes?:CryptoKeyPair|null,
+        writeKeys?:CryptoKeyPair|null,
         session?:boolean,
         extractable?:boolean
     ):Promise<T> {

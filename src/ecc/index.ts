@@ -49,8 +49,8 @@ export class EccKeys extends AbstractKeys {
     static INFO = 'keys'
 
     static async create<T extends AbstractKeys = EccKeys> (
-        exchangeKyes?:CryptoKeyPair,
-        writeKeys?:CryptoKeyPair,
+        exchangeKyes?:CryptoKeyPair|null,
+        writeKeys?:CryptoKeyPair|null,
         session?:boolean,
         extractable?:boolean
     ):Promise<T> {
