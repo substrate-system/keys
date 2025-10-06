@@ -132,10 +132,6 @@ export async function ed25519Verify ({
         pub = didToPublicKey(publicKey).publicKey
     }
 
-    console.log('Message length:', msg.length)
-    console.log('Signature length:', sig.length, 'expected: 64')
-    console.log('Public key length:', pub.length, 'expected: 32')
-
     // Ed25519 expects exactly 32 bytes for public key and 64 for signature
     if (pub.length !== 32) {
         throw new Error(`Invalid Ed25519 public key size: ${pub.length}` +
