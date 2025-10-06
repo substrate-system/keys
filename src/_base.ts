@@ -275,13 +275,17 @@ export abstract class AbstractKeys {
 
     static async create<T extends AbstractKeys> (
         this:ChildKeys,
+        exchangeKeys?:CryptoKeyPair,
+        writeKeys?:CryptoKeyPair,
         session?:boolean,
         extractable?:boolean
     ):Promise<T> {
         // encryption
-        const exchange = await this._createExchangeKeys(extractable)
+        const exchange = exchangeKeys || await this._createExchangeKeys(
+            extractable
+        )
         // signatures
-        const write = await this._createWriteKeys(extractable)
+        const write = writeKeys || await this._createWriteKeys(extractable)
 
         const publicSigningKey = await getPublicKeyAsArrayBuffer(write)
         const did = await publicKeyToDid(

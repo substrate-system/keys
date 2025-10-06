@@ -48,11 +48,13 @@ export class EccKeys extends AbstractKeys {
     static WRITE_KEY_NAME:string = DEFAULT_ECC_WRITE
     static INFO = 'keys'
 
-    static async create<T extends EccKeys = EccKeys> (
+    static async create<T extends AbstractKeys = EccKeys> (
+        exchangeKyes?:CryptoKeyPair,
+        writeKeys?:CryptoKeyPair,
         session?:boolean,
         extractable?:boolean
     ):Promise<T> {
-        return await super.create<T>(session, extractable)
+        return await super.create<T>(exchangeKyes, writeKeys, session, extractable)
     }
 
     constructor (opts:KeyArgs) {
