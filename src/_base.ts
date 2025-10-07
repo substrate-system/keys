@@ -304,7 +304,7 @@ export abstract class AbstractKeys {
 
         this._instance = keysInstance
 
-        return keys as T
+        return keysInstance as T
     }
 
     /**
