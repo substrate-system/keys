@@ -52,7 +52,7 @@ export class EccKeys extends AbstractKeys {
         session?:boolean,
         extractable?:boolean,
         keys?:{
-            exchangeKyes?:CryptoKeyPair|null,
+            exchangeKeys?:CryptoKeyPair|null,
             writeKeys?:CryptoKeyPair|null,
         }
     ):Promise<T> {
