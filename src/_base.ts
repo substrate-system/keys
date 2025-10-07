@@ -275,17 +275,19 @@ export abstract class AbstractKeys {
 
     static async create<T extends AbstractKeys> (
         this:ChildKeys,
-        exchangeKeys?:CryptoKeyPair|null,
-        writeKeys?:CryptoKeyPair|null,
         session?:boolean,
-        extractable?:boolean
+        extractable?:boolean,
+        keys?:{
+            exchangeKeys?:CryptoKeyPair|null,
+            writeKeys?:CryptoKeyPair|null,
+        }
     ):Promise<T> {
         // encryption
-        const exchange = exchangeKeys || await this._createExchangeKeys(
+        const exchange = keys?.exchangeKeys || await this._createExchangeKeys(
             extractable
         )
         // signatures
-        const write = writeKeys || await this._createWriteKeys(extractable)
+        const write = keys?.writeKeys || await this._createWriteKeys(extractable)
 
         const publicSigningKey = await getPublicKeyAsArrayBuffer(write)
         const did = await publicKeyToDid(
@@ -293,14 +295,14 @@ export abstract class AbstractKeys {
             this.TYPE === 'ecc' ? 'ed25519' : 'rsa'
         )
 
-        const keys = new this({
+        const keysInstance = new this({
             keys: { exchange, write },
             did,
             hasPersisted: false,
             isSessionOnly: !!session
         })
 
-        this._instance = keys
+        this._instance = keysInstance
 
         return keys as T
     }
