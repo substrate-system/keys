@@ -33,20 +33,20 @@ test('Verify all signature types', async t => {
     console.log('**RSA DID**', rsa.DID)
 
     // this should work with either type of signature
-    t.ok(await verify({ message, publicKey: ecc.DID, signature }),
+    t.ok(await verify({ message, did: ecc.DID, signature }),
         'Generic verify ECC keys')
-    t.ok(await verify({ message, publicKey: rsa.DID, signature: rsaSig }),
+    t.ok(await verify({ message, did: rsa.DID, signature: rsaSig }),
         'Can verify RSA with generic function')
 
     t.ok(!(await verify({
         message,
-        publicKey: ecc.DID,
+        did: ecc.DID,
         signature: 'A' + signature.slice(1)
     })), 'Should not verify an invalid Ed25519 signature')
 
     t.ok(!(await verify({
         message,
-        publicKey: rsa.DID,
+        did: rsa.DID,
         signature: 'A' + rsaSig.slice(1)
     })), 'Should not verify an invalid RSA signature')
 })

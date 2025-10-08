@@ -75,15 +75,15 @@ export const did:{ keyTypes:KeyTypes } = {
  */
 export async function verify ({
     message,
-    publicKey,
+    did,
     signature
 }:{
     message:string|Uint8Array;
-    publicKey:string;  // DID
+    did:DID;  // DID
     signature:string|Uint8Array;
 }):Promise<boolean> {
-    const format = getAlgorithm(publicKey)
-    const pub = didToPublicKey(publicKey).publicKey
+    const format = getAlgorithm(did)
+    const pub = didToPublicKey(did).publicKey
 
     if (format === 'ed25519') {
         // Ed25519 verify
