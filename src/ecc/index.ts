@@ -35,7 +35,7 @@ import {
 } from '../_base.js'
 
 // Helper function to ensure proper ArrayBuffer type
-function toArrayBuffer (data: Uint8Array): ArrayBuffer {
+function toArrayBuffer (data:Uint8Array):ArrayBuffer {
     return new Uint8Array(data).buffer
 }
 

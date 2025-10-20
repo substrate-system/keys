@@ -325,7 +325,7 @@ export function importRsaKey (
  * Convert a public key to a DID format string.
  *
  * @param {Uint8Array|CryptoKey|CryptoKeyPair} publicKey Public key as Uint8Array
- * @param {'rsa'|'ed25519'} [keyType] 'rsa' or 'ecc'
+ * @param {'rsa'|'ed25519'} [keyType="rsa"] 'rsa' or 'ecc'. Default is RSA.
  * @returns {DID} A DID format string
  */
 export async function publicKeyToDid (
@@ -377,8 +377,8 @@ export async function getPublicKeyAsUint8Array (
  * Convert a DID (did:key) to a base64 public key.
  */
 export function didToPublicKey (inputDid:string):{
-    publicKey:Uint8Array
-    type:string
+    publicKey:Uint8Array,
+    type:'rsa'|'ed25519'|'bls12-381'
 } {
     if (!inputDid.startsWith(BASE58_DID_PREFIX)) {
         throw new Error('Please use a base58-encoded DID formatted `did:key:z...`')
@@ -393,9 +393,10 @@ export function didToPublicKey (inputDid:string):{
         )
     )
 
-    if (!result) {
-        throw new Error('Unsupported key algorithm.')
-    }
+    const alg = getAlgorithm(inputDid)
+
+    if (!result) throw new Error('Unsupported key algorithm.')
+    // if (alg === 'unknown') throw new Error('Unsupported key algorithm.')
 
     const rawKeyData = magicalBuf.slice(result[1].magicBytes.length)
 
@@ -411,6 +412,6 @@ export function didToPublicKey (inputDid:string):{
 
     return {
         publicKey: rawKeyData,
-        type: result[0]
+        type: alg
     }
 }
