@@ -341,6 +341,10 @@ export async function publicKeyToDid (
         _publicKey
     )
 
+    if (_publicKey instanceof CryptoKey) {
+        keyType = _publicKey.algorithm.name.includes('RSA') ? 'rsa' : 'ed25519'
+    }
+
     // Prefix public-write key
     const prefix = did.keyTypes[keyType]?.magicBytes
     if (!prefix) {
@@ -363,7 +367,7 @@ export function keyTypeFromDid (inputDid:DID):'ed25519'|'rsa' {
             magicalBuf.buffer as ArrayBuffer,
             attr.magicBytes.buffer as ArrayBuffer
         )
-    ) as [keyof KeyTypes, ValueOf<KeyTypes>] | undefined
+    ) as [keyof KeyTypes, ValueOf<KeyTypes>]|undefined
 
     if (!result) throw new Error('Invalid key type')
 

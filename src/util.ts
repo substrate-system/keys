@@ -108,7 +108,7 @@ export function normalizeUnicodeToBuf (msg:Msg, charSize:CharSize) {
 
 export function didToPublicKey (did:string):({
     publicKey:Uint8Array<ArrayBuffer>,
-    type:'rsa' | 'ed25519' | 'bls12-381'
+    type:'rsa'|'ed25519'|'bls12-381'
 }) {
     if (!did.startsWith(BASE58_DID_PREFIX)) {
         throw new Error(

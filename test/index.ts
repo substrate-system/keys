@@ -1,7 +1,8 @@
 import { test } from '@substrate-system/tapzero'
 import { verify as ed25519Verify, EccKeys } from '../src/ecc/index.js'
 import { verify as rsaVerify, RsaKeys } from '../src/rsa/index.js'
-import { verify, keyTypeFromDid } from '../src/crypto.js'
+import { verify, keyTypeFromDid, publicKeyToDid } from '../src/crypto.js'
+import { type DID } from '../src/types.js'
 import './aes.js'
 import './rsa.js'
 import './ecc.js'
@@ -51,8 +52,24 @@ test('Verify all signature types', async t => {
     })), 'Should not verify an invalid RSA signature')
 })
 
-test('key type from DID', async t => {
+let did:DID
+test('public key to DID', async t => {
     const keys = await EccKeys.create()
-    const type = keyTypeFromDid(keys.DID)
+    const authorDid = await publicKeyToDid(keys.writeKey.publicKey, 'ed25519')
+    did = authorDid
+    t.ok(did, 'create did')
+})
+
+test('key type from DID', async t => {
+    const type = keyTypeFromDid(did)
     t.equal(type, 'ed25519', 'should return the key type given a DID')
+})
+
+test('Get a DID without passing in the key type', async t => {
+    const keys = await EccKeys.create()
+    const did = await publicKeyToDid(keys.writeKey.publicKey)
+    t.ok(did.includes('did:key'), 'should create a DID string')
+
+    const typeFromDid = keyTypeFromDid(did)
+    t.equal(typeFromDid, 'ed25519', 'should return the correct key type')
 })
