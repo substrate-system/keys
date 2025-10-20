@@ -393,10 +393,7 @@ export function didToPublicKey (inputDid:string):{
         )
     )
 
-    const alg = getAlgorithm(inputDid)
-
     if (!result) throw new Error('Unsupported key algorithm.')
-    // if (alg === 'unknown') throw new Error('Unsupported key algorithm.')
 
     const rawKeyData = magicalBuf.slice(result[1].magicBytes.length)
 
@@ -412,6 +409,6 @@ export function didToPublicKey (inputDid:string):{
 
     return {
         publicKey: rawKeyData,
-        type: alg
+        type: result[0] as 'rsa'
     }
 }

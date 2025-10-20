@@ -34,7 +34,7 @@ test('Verify all signature types', async t => {
 
     // this should work with either type of signature
     t.ok(await verify({ message, did: ecc.DID, signature }),
-        'Generic verify ECC keys')
+        'Generic verify with ECC keys')
     t.ok(await verify({ message, did: rsa.DID, signature: rsaSig }),
         'Can verify RSA with generic function')
 
