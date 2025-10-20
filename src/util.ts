@@ -31,7 +31,7 @@ export const InvalidMaxValue = new Error('Max must be less than 256 and ' +
     'greater than 0')
 
 // Helper function to ensure proper ArrayBuffer type
-export function toArrayBuffer (data: Uint8Array): ArrayBuffer {
+export function toArrayBuffer (data:Uint8Array):ArrayBuffer {
     return new Uint8Array(data).buffer
 }
 

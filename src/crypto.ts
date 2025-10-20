@@ -47,7 +47,7 @@ export type VerifyArgs = {
  * Key type: "ed25519"
  * Magic bytes: [ 0xed, 0x01 ]
  */
-type KeyTypes = Record<string, {
+type KeyTypes = Record<'ed25519'|'rsa'|'bls12-381', {
     magicBytes:Uint8Array
     verify:(args:VerifyArgs)=>Promise<boolean>
 }>
@@ -353,6 +353,28 @@ export async function publicKeyToDid (
     return (BASE58_DID_PREFIX + uToString(prefixedBuf, 'base58btc')) as DID
 }
 
+type ValueOf<T> = T[keyof T];
+
+export function keyTypeFromDid (inputDid:DID):'ed25519'|'rsa' {
+    const didWithoutPrefix = inputDid.substring(BASE58_DID_PREFIX.length)
+    const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
+    const result = Object.entries(did.keyTypes).find(
+        ([_key, attr]) => hasPrefix(
+            magicalBuf.buffer as ArrayBuffer,
+            attr.magicBytes.buffer as ArrayBuffer
+        )
+    ) as [keyof KeyTypes, ValueOf<KeyTypes>] | undefined
+
+    if (!result) throw new Error('Invalid key type')
+
+    const keyType = result[0]
+    if (keyType !== 'ed25519' && keyType !== 'rsa') {
+        throw new Error(`Unsupported key type: ${keyType}`)
+    }
+
+    return keyType
+}
+
 export async function getPublicKeyAsArrayBuffer (
     keypair:CryptoKeyPair|CryptoKey
 ):Promise<ArrayBuffer> {
@@ -388,7 +410,7 @@ export function didToPublicKey (inputDid:string):{
         throw new Error('Please use a base58-encoded DID formatted `did:key:z...`')
     }
 
-    const didWithoutPrefix = inputDid.substr(BASE58_DID_PREFIX.length)
+    const didWithoutPrefix = inputDid.substring(BASE58_DID_PREFIX.length)
     const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
     const result = Object.entries(did.keyTypes).find(
         ([_key, attr]) => hasPrefix(

@@ -1,7 +1,7 @@
 import { test } from '@substrate-system/tapzero'
 import { verify as ed25519Verify, EccKeys } from '../src/ecc/index.js'
 import { verify as rsaVerify, RsaKeys } from '../src/rsa/index.js'
-import { verify } from '../src/crypto.js'
+import { verify, keyTypeFromDid } from '../src/crypto.js'
 import './aes.js'
 import './rsa.js'
 import './ecc.js'
@@ -49,4 +49,10 @@ test('Verify all signature types', async t => {
         did: rsa.DID,
         signature: 'A' + rsaSig.slice(1)
     })), 'Should not verify an invalid RSA signature')
+})
+
+test('key type from DID', async t => {
+    const keys = await EccKeys.create()
+    const type = keyTypeFromDid(keys.DID)
+    t.equal(type, 'ed25519', 'should return the key type given a DID')
 })
