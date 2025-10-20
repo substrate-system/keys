@@ -182,7 +182,7 @@ export const rsaOperations = {
                 saltLength: SALT_LENGTH
             },
             (typeof publicKey === 'string' ?
-                await importPublicKey(publicKey, hashAlg, KeyUse.Sign) :
+                await rsaImportPublicKey(publicKey, hashAlg, KeyUse.Sign) :
                 publicKey),
             normalizeBase64ToBuf(sig),
             normalizeUnicodeToBuf(msg, charSize)
@@ -212,10 +212,14 @@ export const rsaOperations = {
     ):Promise<ArrayBuffer> {
         let pubKey:CryptoKey
         if (typeof publicKey === 'string') {
-            pubKey = await importPublicKey(publicKey, hashAlg, KeyUse.Exchange)
+            pubKey = await rsaImportPublicKey(publicKey, hashAlg, KeyUse.Exchange)
         } else {
             pubKey = publicKey instanceof Uint8Array ?
-                await importPublicKey(toArrayBuffer(publicKey), hashAlg, KeyUse.Exchange) :
+                await rsaImportPublicKey(
+                    toArrayBuffer(publicKey),
+                    hashAlg,
+                    KeyUse.Exchange
+                ) :
                 publicKey
         }
 
@@ -256,7 +260,7 @@ export const rsaOperations = {
     }
 }
 
-export async function importPublicKey (
+export async function rsaImportPublicKey (
     base64Key:string|ArrayBuffer,
     hashAlg:HashAlg,
     use:KeyUse
@@ -377,7 +381,7 @@ export async function getPublicKeyAsUint8Array (
  * Convert a DID (did:key) to a base64 public key.
  */
 export function didToPublicKey (inputDid:string):{
-    publicKey:Uint8Array,
+    publicKey:Uint8Array<ArrayBuffer>,
     type:'rsa'|'ed25519'|'bls12-381'
 } {
     if (!inputDid.startsWith(BASE58_DID_PREFIX)) {
