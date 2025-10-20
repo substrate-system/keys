@@ -10,6 +10,7 @@ import {
     DEFAULT_RSA_WRITE,
     DEFAULT_RSA_SIZE,
     DEFAULT_HASH_ALGORITHM,
+    // KEY_TYPE,
 } from '../constants.js'
 import { AbstractKeys, type KeyArgs } from '../_base.js'
 import type {
@@ -33,7 +34,7 @@ import {
 } from '../util.js'
 import {
     rsaOperations,
-    importPublicKey,
+    rsaImportPublicKey,
     isCryptoKey,
     publicKeyToDid,
     getPublicKeyAsArrayBuffer,
@@ -312,8 +313,8 @@ export async function verify (
     signingDid:DID
 ):Promise<boolean> {
     const _key = didToPublicKey(signingDid)
-    const key = await importPublicKey(
-        toArrayBuffer(_key.publicKey),
+    const key = await rsaImportPublicKey(
+        _key.publicKey.buffer,
         HashAlg.SHA_256,
         KeyUse.Sign
     )
