@@ -2,7 +2,9 @@ import { type FunctionComponent, render } from 'preact'
 import { html } from 'htm/preact'
 import { EccKeys } from '../src/ecc/index.js'
 import Debug from '@substrate-system/debug'
-const debug = Debug()
+const debug = Debug('keys')
+
+localStorage.setItem('DEBUG', 'keys')
 
 const keys = await EccKeys.create()
 
