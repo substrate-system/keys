@@ -356,7 +356,7 @@ test('in memory, using the .load method', async t => {
         // need different keys here, b/c previous tests have used
         // the defaults
         encryptionKeyName: 'memory_test',
-        signingKeyName: 'memory_test_sig'
+        writeKeyName: 'memory_test_sig'
     })
     await keys.persist()
     t.ok(!(keys.hasPersisted), 'should not be persisted')
@@ -364,7 +364,7 @@ test('in memory, using the .load method', async t => {
     delete RsaKeys._instance
     const keysTwo = await RsaKeys.load({
         encryptionKeyName: 'memory_test',
-        signingKeyName: 'memory_test_sig'
+        writeKeyName: 'memory_test_sig'
     })
 
     t.ok(keysTwo.DID !== keys.DID, 'should not use the same instance')

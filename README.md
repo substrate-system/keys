@@ -366,8 +366,14 @@ class EccKeys {
   static EXCHANGE_KEY_NAME:string = 'ecc-exchange'
   static WRITE_KEY_NAME:string = 'ecc-write'
 
-  static async create (session?:boolean, extractable?:boolean):Promise<EccKeys>
-}
+  static async create (
+    session?:boolean,  // default false
+    extractable?:boolean,
+    keys?:{
+        exchangeKeys?:CryptoKeyPair|null,
+        writeKeys?:CryptoKeyPair|null,
+    }
+):Promise<EccKeys>
 ```
 
 **RSA:**
@@ -376,7 +382,14 @@ class RsaKeys {
   static EXCHANGE_KEY_NAME:string = 'rsa-exchange'
   static WRITE_KEY_NAME:string = 'rsa-write'
 
-  static async create (session?:boolean, extractable?:boolean):Promise<RsaKeys>
+  static async create (
+    session?:boolean,  // defaut false
+    extractable?:boolean,
+    keys?:{
+        exchangeKeys?:CryptoKeyPair|null,
+        writeKeys?:CryptoKeyPair|null,
+    }
+  ):Promise<RsaKeys> {
 }
 ```
 
@@ -436,9 +449,10 @@ properties `EXCHANGE_KEY_NAME` and `WRITE_KEY_NAME`.
 Set them if you want to change the indexes under which the keys are
 saved to `indexedDB`.
 
-By default we use these:
+Defaults for indexedDB:
+
 - **ECC**: `'ecc-exchange'` and `'ecc-write'`
-- **RSA**: `'rsa-exchange'` and `'rsa-write'`
+- **RSA**: `'rsa-exchange-key'` and `'rsa-write-key'`
 
 #### `.persist`
 
@@ -477,11 +491,12 @@ class EccKeys {  // or RsaKeys
 #### Parameters
 
 - `encryptionKeyName` (optional, string): Custom name for the encryption key in `indexedDB`
-- `signingKeyName` (optional, string): Custom name for the signing key in `indexedDB`
+- `writeKeyName` (optional, string): Custom name for the signing key in `indexedDB`
 - `session` (optional, boolean): If `true`, creates session-only keys if no keys exist in `indexedDB`
 - `extractable` (optional, boolean): If `true` and keys don't exist in `indexedDB`, new keys will be created as extractable. Defaults to `false`.
 
 #### example
+
 ```js
 import { EccKeys } from '@substrate-system/keys/ecc'
 // or: import { RsaKeys } from '@substrate-system/keys/rsa'
@@ -492,7 +507,7 @@ const newKeys = await EccKeys.load()
 // Load with custom options
 const customKeys = await EccKeys.load({
   encryptionKeyName: 'my-custom-encryption-key',
-  signingKeyName: 'my-custom-signing-key',
+  writeKeyName: 'my-custom-signing-key',
   extractable: true  // If keys don't exist, create them as extractable
 })
 ```
