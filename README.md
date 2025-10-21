@@ -357,7 +357,7 @@ const decrypted = await keys.decrypt(encryptedMsg)
 ### Create a new `Keys` instance
 
 Use the factory function `EccKeys.create` or `RsaKeys.create`. The optional parameters,
-`encryptionKeyName` and `signingKeyName`, are added as properties to the
+`encryptionKeyName` and `writeKeyName`, are added as properties to the
 `keys` instance. These are used as indexes for saving the keys in `indexedDB`.
 
 **ECC:**
@@ -467,7 +467,7 @@ Create a `Keys` instance from data saved to `indexedDB`. Pass in different
 class EccKeys {  // or RsaKeys
     static async load (opts?:{
       encryptionKeyName?:string,
-      signingKeyName?:string,
+      writeKeyName?:string,
       session?:boolean,
       extractable?:boolean,
     }):Promise<EccKeys>

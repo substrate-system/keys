@@ -119,7 +119,7 @@ export class EccKeys extends AbstractKeys {
         this:typeof EccKeys,
         opts:Partial<{
             encryptionKeyName:string,
-            signingKeyName:string,
+            writeKeyName:string,
             session:boolean,
             extractable:boolean,
         }> = {
@@ -130,12 +130,12 @@ export class EccKeys extends AbstractKeys {
 
         // Use ECC-specific key names as defaults
         const exchangeKeyName = opts.encryptionKeyName || DEFAULT_ECC_EXCHANGE
-        const writeKeyName = opts.signingKeyName || DEFAULT_ECC_WRITE
+        const writeKeyName = opts.writeKeyName || DEFAULT_ECC_WRITE
 
         return super.load({
             ...opts,
             encryptionKeyName: exchangeKeyName,
-            signingKeyName: writeKeyName
+            writeKeyName
         }) as Promise<T>
     }
 

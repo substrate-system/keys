@@ -320,7 +320,7 @@ export abstract class AbstractKeys {
         this:ChildKeys & typeof AbstractKeys,
         opts:Partial<{
             encryptionKeyName:string,
-            signingKeyName:string,
+            writeKeyName:string,
             session:boolean,
             extractable:boolean,
         }> = {
@@ -334,7 +334,7 @@ export abstract class AbstractKeys {
             opts.encryptionKeyName || this.EXCHANGE_KEY_NAME
         )
         let writeKeys:CryptoKeyPair|undefined = await get(
-            opts.signingKeyName || this.WRITE_KEY_NAME
+            opts.writeKeyName || this.WRITE_KEY_NAME
         )
 
         if (!exchangeKeys) {
