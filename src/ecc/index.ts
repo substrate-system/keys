@@ -29,10 +29,7 @@ import {
     didToPublicKey
 } from '../util.js'
 import { checkValidKeyUse } from '../errors.js'
-import {
-    AbstractKeys,
-    type KeyArgs
-} from '../_base.js'
+import { AbstractKeys, type KeyArgs } from '../_base.js'
 
 // Helper function to ensure proper ArrayBuffer type
 function toArrayBuffer (data:Uint8Array):ArrayBuffer {
