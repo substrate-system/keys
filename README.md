@@ -40,7 +40,7 @@ See also, [the API docs generated from typescript](https://substrate-system.gith
   * [`@substrate-system/keys`](#substrate-systemkeys)
   * [`ecc`](#ecc)
   * [`rsa`](#rsa)
-  * [`aes`](#aes)
+  * [import `aes`](#import-aes)
   * [`crypto`](#crypto)
 - [Get started](#get-started)
   * [Verify a signature](#verify-a-signature)
@@ -121,6 +121,8 @@ cp ./node_modules/@substrate-system/keys/dist/index.min.js ./public/keys.min.js
 
 ### `@substrate-system/keys`
 
+Import everything.
+
 ```js
 import * as keys from '@substrate-system/keys'
 ```
@@ -153,7 +155,7 @@ import {
 } from '@substrate-system/keys/rsa' 
 ```
 
-### `aes`
+### [import `aes`](#aes)
 
 Import AES (symmetric) encryption only.
 
@@ -873,7 +875,7 @@ const keysTwo = await EccKeys.load({ session: true })
 
 ## AES
 
-Expose several AES functions with nice defaults.
+Expose several AES functions, use nice defaults.
 
 * algorithm: `AES-GCM`
 * key size: `256`
@@ -911,7 +913,7 @@ export const AES = {
 }
 ```
 
-#### `export` example
+#### `aes.export` example
 
 ```js
 import { AES } from '@substrate-system/keys/aes'
