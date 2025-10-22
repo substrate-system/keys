@@ -7,9 +7,11 @@ import './aes.js'
 import './rsa.js'
 import './ecc.js'
 
+let rsaKeys:RsaKeys
+
 test('Verify all signature types', async t => {
     const ecc = await EccKeys.create(true)
-    const rsa = await RsaKeys.create(true)
+    const rsa = rsaKeys = await RsaKeys.create(true)
     const message = 'message to sign as string'
 
     const signature = await ecc.signAsString(message)
@@ -63,6 +65,8 @@ test('public key to DID', async t => {
 test('key type from DID', async t => {
     const type = keyTypeFromDid(did)
     t.equal(type, 'ed25519', 'should return the key type given a DID')
+    const rsaType = keyTypeFromDid(rsaKeys.DID)
+    t.equal(rsaType, 'rsa', 'should return RSA type for RSA key')
 })
 
 test('Get a DID without passing in the key type', async t => {

@@ -7,7 +7,8 @@ import {
     importKey,
     joinBufs,
     randomBuf,
-    normalizeBase64ToBuf
+    normalizeBase64ToBuf,
+    toArrayBuffer
 } from '../util.js'
 import { isCryptoKey } from '../crypto.js'
 import { SymmKeyLength, type Msg, type SymmAlgorithm } from '../types.js'
@@ -19,13 +20,16 @@ import {
     IV_LENGTH
 } from '../constants.js'
 
-// Helper function to ensure proper ArrayBuffer type
-function toArrayBuffer (data: Uint8Array): ArrayBuffer {
-    return new Uint8Array(data).buffer
-}
+export type AESName = 'AES-CBC'|'AES-GCM'|'AES-KW'|'AES-CTR'
 
 export const AES = {
-    create (opts:{ alg?:string, length?:number } = {
+    /**
+     * Factory function -- create a new AES key. Defaults are `AES-GCM`
+     * algorithm and 12 bytes `iv` size.
+     * @param {{ alg?:string, lenght?:number }} opts Algorithm and key size.
+     * @returns {Promise<CryptoKey>}
+     */
+    create (opts:{ alg?:AESName, length?:number } = {
         alg: DEFAULT_SYMM_ALGORITHM,
         length: DEFAULT_SYMM_LENGTH
     }):Promise<CryptoKey> {
@@ -38,6 +42,10 @@ export const AES = {
         }, true, ['encrypt', 'decrypt'])
     },
 
+    /**
+     * key.export -> return a Uint8Array of the key
+     * key.export.asString -> the key encoded as a string, by default `base64`
+     */
     export: Object.assign(
         async (key:CryptoKey):Promise<Uint8Array> => {
             const raw = await webcrypto.subtle.exportKey('raw', key)

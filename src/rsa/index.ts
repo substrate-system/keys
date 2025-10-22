@@ -10,7 +10,6 @@ import {
     DEFAULT_RSA_WRITE,
     DEFAULT_RSA_SIZE,
     DEFAULT_HASH_ALGORITHM,
-    // KEY_TYPE,
 } from '../constants.js'
 import { AbstractKeys, type KeyArgs } from '../_base.js'
 import type {
@@ -40,6 +39,7 @@ import {
     getPublicKeyAsArrayBuffer,
 } from '../crypto.js'
 
+export { type SerializedKeys } from '../_base.js'
 export { publicKeyToDid, getPublicKeyAsArrayBuffer }
 export * from '../constants.js'
 
@@ -49,10 +49,6 @@ function toArrayBuffer (data: Uint8Array): ArrayBuffer {
 }
 export type { DID }
 export { getPublicKeyAsUint8Array } from '../crypto.js'
-export type SerializedKeys = {
-    DID:DID;
-    publicExchangeKey:string;
-}
 
 export class RsaKeys extends AbstractKeys {
     static TYPE = 'rsa' as const
@@ -60,6 +56,15 @@ export class RsaKeys extends AbstractKeys {
     static EXCHANGE_KEY_NAME:string = DEFAULT_RSA_EXCHANGE
     static WRITE_KEY_NAME:string = DEFAULT_RSA_WRITE
 
+    /**
+     * Factory function.
+     * @param {boolean} [session] Session only? i.e., not saved in indexedDB.
+     *   Default `false`.
+     * @param {boolean} [extractable] Can we extract the private keys? Default
+     *   `false`.
+     * @param {{ exchangeKeys, writeKeys }} [keys] A set of keys to use here.
+     * @returns {Promise<RsaKeys>} A new class instance.
+     */
     static async create<T extends AbstractKeys = RsaKeys> (
         session?:boolean,
         extractable?:boolean,

@@ -33,10 +33,14 @@ test('export an AES key as string', async t => {
     t.equal(typeof exported, 'string', 'should return a string')
     t.ok(exported.length > 0, 'should have content')
 
+    console.log('AES export base64', exported)
+
     // Test with different formats
     const base32 = await AES.export.asString(key, 'base32')
     t.equal(typeof base32, 'string', 'should export as base32 string')
     t.notEqual(base32, exported, 'should be different format')
+
+    console.log('base32 export', base32)
 })
 
 test('exportAsString method', async t => {

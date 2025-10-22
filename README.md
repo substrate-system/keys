@@ -14,7 +14,8 @@ Create and store keypairs in the browser with the [web crypto API](https://devel
 Use [`indexedDB`](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
 to store [non-extractable keypairs](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey#extractable)
 in the browser. "Non-extractable" means that the browser prevents you from ever
-reading the private key, but the keys can be persisted and re-used indefinitely.
+reading the private key, but the keys can still be persisted and
+re-used indefinitely.
 
 >
 > [!TIP]
@@ -32,11 +33,15 @@ See also, [the API docs generated from typescript](https://substrate-system.gith
 <!-- toc -->
 
 - [Install](#install)
-- [Modules](#modules)
-  * [`exports`](#exports)
+- [Exports](#exports)
   * [ESM](#esm)
   * [Common JS](#common-js)
-  * [pre-built JS](#pre-built-js)
+  * [pre-bundled JS](#pre-bundled-js)
+  * [`@substrate-system/keys`](#substrate-systemkeys)
+  * [`ecc`](#ecc)
+  * [`rsa`](#rsa)
+  * [`aes`](#aes)
+  * [`crypto`](#crypto)
 - [Get started](#get-started)
   * [Verify a signature](#verify-a-signature)
   * [ECC](#ecc)
@@ -77,13 +82,14 @@ See also, [the API docs generated from typescript](https://substrate-system.gith
 npm i -S @substrate-system/keys
 ```
 
-## Modules
+## Exports
 
-### `exports`
+This exposes ESM and common JS via
+[package.json `exports` field](https://nodejs.org/api/packages.html#exports).
 
-This exposes ESM and common JS via [package.json `exports` field](https://nodejs.org/api/packages.html#exports).
 
 ### ESM
+
 ```js
 import { EccKeys, verify } from '@substrate-system/keys/ecc'
 import { RsaKeys, verify } from '@substrate-system/keys/rsa'
@@ -91,13 +97,15 @@ import { AES } from '@substrate-system/keys/aes'
 ```
 
 ### Common JS
+
 ```js
 const { EccKeys, verify } = require('@substrate-system/keys/ecc')
 const { RsaKeys, verify } = require('@substrate-system/keys/rsa')
 const { AES } = require('@substrate-system/keys/aes')
 ```
 
-### pre-built JS
+### pre-bundled JS
+
 This package exposes minified JS files too. Copy them to a location that is
 accessible to your web server, then link to them in HTML.
 
@@ -110,6 +118,87 @@ cp ./node_modules/@substrate-system/keys/dist/index.min.js ./public/keys.min.js
 ```html
 <script type="module" src="./keys.min.js"></script>
 ```
+
+
+### `@substrate-system/keys`
+
+```js
+import * as keys from '@substrate-system/keys'
+```
+
+### `ecc`
+
+Import functions for Ed25519 signatures and X25519 encryption.
+
+```js
+import {
+  EccKeys,
+  exportPublicKey,
+  importPublicKey,
+  verify
+} from '@substrate-system/keys/ecc' 
+```
+
+### `rsa`
+
+Import RSA functions.
+
+```js
+import {
+  RsaKeys,
+  encryptKeyTo,
+  encryptTo,
+  verify,
+  publicKeyToDid,
+  getPublicKeyAsUint8Array
+} from '@substrate-system/keys/rsa' 
+```
+
+### `aes`
+
+Import AES (symmetric) encryption only.
+
+```js
+import {
+  AES,
+  importAesKey
+} from '@substrate-system/keys/aes'
+```
+
+### `crypto`
+
+Some miscellaneous functions.
+
+```js
+import {
+  verify,
+  keyTypeFromDid,
+  publicKeyToDid
+} from '@substrate-system/keys/crypto'
+```
+
+#### `crypto.verify`
+
+The `verify` function exposed here will work with either RSA or Ed25519
+signatures.
+
+```js
+const eccOk = await verify({ message, did: ecc.DID, signature: eccSig })
+const rsaOk = await verify({ message, did: rsa.DID, signature: rsaSig })
+```
+
+#### `crypto.keyTypeFromDid`
+
+Return a string either 'rsa' or 'ed25519' given a DID.
+
+```js
+const type = keyTypeFromDid(eccKeys.DID)
+// 'ed25519'
+
+const rsaType = keyTypeFromDid(rsaKeys.DID)
+// 'rsa'
+```
+
 
 ------------------------------------------------------
 
@@ -765,17 +854,11 @@ const decrypted = await keys.decrypt(encrypted)
 // => ArrayBuffer (ECC) or Uint8Array (RSA)
 ```
 
-### Backward compatibility: `.decrypt.asString`
-Decrypt a message, and stringify the result.
-
-```js
-await keys.decrypt.asString(encryptedString)
-// => 'hello encryption'
-```
-
 ### In memory only
+
 Create a keypair, but do not save it in `indexedDB`, even if you call `persist`.
-Pass `true` as the session parameter to `.create` or pass `{ session: true }` to `.load`.
+Pass `true` as the session parameter to `.create` or
+pass `{ session: true }` to `.load`.
 
 ```js
 import { EccKeys } from '@substrate-system/keys/ecc'
@@ -790,11 +873,13 @@ const keysTwo = await EccKeys.load({ session: true })
 ```
 
 ## AES
+
 Expose several AES functions with nice defaults.
 
 * algorithm: `AES-GCM`
 * key size: `256`
-* `iv` size: [`12` bytes](https://crypto.stackexchange.com/questions/41601/aes-gcm-recommended-iv-size-why-12-bytes) (96 bits)
+* `iv` size: [`12` bytes (96 bits)](https://crypto.stackexchange.com/questions/41601/aes-gcm-recommended-iv-size-why-12-bytes)
+
 
 ```js
 import { AES } from '@substrate-system/keys/aes'
@@ -818,19 +903,26 @@ const aesKey = await AES.create()
 ```
 
 ### `export`
+
 Get the AES key as a `Uint8Array`.
 
 ```ts
-  async function export (key:CryptoKey):Promise<Uint8Array>
+export const AES = {
+  async export (key:CryptoKey):Promise<Uint8Array>
+}
 ```
+
+#### `export` example
 
 ```js
 import { AES } from '@substrate-system/keys/aes'
-const exported = await AES.export(aesKey)
+
+const exported = await AES.export(myAesKey)
 ```
 
-### `exportAsString`
-Get the key as a string, `base64` encoded.
+### `export.asString`
+
+Get the key as a string, `base64` encoded by default.
 
 ```ts
 async function asString (
@@ -839,9 +931,16 @@ async function asString (
 ):Promise<string>
 ```
 
+#### `export.asString` example
+
 ```js
 import { AES } from '@substrate-system/keys/aes'
-const exported = await AES.export.asString(aesKey)
+
+const exported = await AES.export.asString(myAesKey)
+// => QlfjZKzzgtNMVC4fPY7S537r/PFstifTyYqcsbsCjHQ=
+
+const base32 = await AES.export.asString(myAesKey, 'base32')
+// => ijl6gzfm6obngtcufypt3dws457ox7hrns3cpu6jrkoldoycrr2a
 ```
 
 ### `AES.encrypt`
@@ -864,6 +963,7 @@ const encryptedText = await AES.encrypt(fromString('hello AES'), aesKey)
 ```
 
 ### `AES.decrypt`
+
 ```ts
 async function decrypt (
   encryptedData:Uint8Array|string,
@@ -873,7 +973,10 @@ async function decrypt (
 ```
 
 ```js
+import { toString } from 'uint8arrays'
 import { AES } from '@substrate-system/keys/aes'
 
-const decryptedText = await AES.decrypt(encryptedText, aesKey)
+const decryped = await AES.decrypt(encryptedText, aesKey)
+const decryptedText = toString(decrypted)
+// => 'hello AES'
 ```

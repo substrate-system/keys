@@ -45,6 +45,15 @@ export class EccKeys extends AbstractKeys {
     static WRITE_KEY_NAME:string = DEFAULT_ECC_WRITE
     static INFO = 'keys'
 
+    /**
+     * Factory function.
+     * @param {boolean} [session] Session only? i.e., not saved in indexedDB.
+     *   Default `false`.
+     * @param {boolean} [extractable] Can we extract the private keys? Default
+     *   `false`.
+     * @param {{ exchangeKeys, writeKeys }} [keys] A set of keys to use here.
+     * @returns {Promise<EccKeys>} A new class instance.
+     */
     static async create<T extends AbstractKeys = EccKeys> (
         session?:boolean,
         extractable?:boolean,
@@ -143,7 +152,7 @@ export class EccKeys extends AbstractKeys {
      * Serialize this keys instance. Will return an object of
      * { DID, publicExchangeKey }, where DID is the public write key,
      * and `publicExchangeKey` is the encryption key, `base64` encoded.
-     * @returns {Promise<{ DID:DID, publicEncryptKey:string }>}
+     * @returns {Promise<{ DID:DID, publicExchangeKey:string }>}
      */
     async toJson (
         format?:SupportedEncodings

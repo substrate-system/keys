@@ -25,7 +25,7 @@ export type { DID }
 export { getPublicKeyAsUint8Array } from './crypto.js'
 export type SerializedKeys = {
     DID:DID;
-    publicEncryptKey:string;
+    pulicExchangeKey:string;
 }
 
 export interface RsaEncryptor {
