@@ -62,12 +62,11 @@ See also, [the API docs generated from typescript](https://substrate-system.gith
   * [Asymmetrically encrypt some arbitrary data](#asymmetrically-encrypt-some-arbitrary-data)
   * [Asymmetrically encrypt a string, return a new string](#asymmetrically-encrypt-a-string-return-a-new-string)
   * [Decrypt a message](#decrypt-a-message)
-  * [Backward compatibility: `.decrypt.asString`](#backward-compatibility-decryptasstring)
   * [In memory only](#in-memory-only)
 - [AES](#aes)
   * [`create`](#create)
   * [`export`](#export)
-  * [`exportAsString`](#exportasstring)
+  * [`export.asString`](#exportasstring)
   * [`AES.encrypt`](#aesencrypt)
   * [`AES.decrypt`](#aesdecrypt)
 
