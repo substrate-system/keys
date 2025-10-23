@@ -1,5 +1,5 @@
 import { webcrypto } from '@substrate-system/one-webcrypto'
-import { type SupportedEncodings, toString } from 'uint8arrays'
+import { type SupportedEncodings, toString, fromString } from 'uint8arrays'
 import {
     DEFAULT_ECC_EXCHANGE,
     DEFAULT_ECC_WRITE,
@@ -183,9 +183,11 @@ export class EccKeys extends AbstractKeys {
      *   4. AES-GCM encrypt the content key under the KEK
      *   5. Return the ephemeral public key (encapsulation) + wrapped key
      *
-     * @param contentKey The existing AES key used to encrypt the content.
-     * @param newPublicKey The new device's public X25519 key.
-     * @param info Optional info parameter for HKDF. Defaults to 'key-wrap'.
+     * @param {SymmKey|Uint8Array|string} contentKey The existing AES key used
+     *   to encrypt the content. Can be a base64 encoded string.
+     * @param {CryptoKey} newPublicKey The new device's public X25519 key.
+     * @param {string} [info] Optional info parameter for HKDF.
+     *   Defaults to 'key-wrap'.
      * @returns {Promise<WrappedKey>} The ephemeral public key (base64) and
      *          the wrapped content key (base64).
      */
@@ -216,7 +218,7 @@ export class EccKeys extends AbstractKeys {
             const exported = await crypto.subtle.exportKey('raw', contentKey)
             contentKeyBytes = new Uint8Array(exported)
         } else if (typeof contentKey === 'string') {
-            contentKeyBytes = new Uint8Array(base64ToArrBuf(contentKey))
+            contentKeyBytes = fromString(contentKey, 'base64pad')
         } else {
             contentKeyBytes = contentKey
         }
