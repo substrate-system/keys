@@ -5,7 +5,6 @@
 [![semantic versioning](https://img.shields.io/badge/semver-2.0.0-blue?logo=semver&style=flat-square)](https://semver.org/)
 [![Common Changelog](https://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
 [![install size](https://flat.badgen.net/packagephobia/install/@substrate-system/keys?cache-control=no-cache)](https://packagephobia.com/result?p=@substrate-system/keys)
-[![GZip size](https://flat.badgen.net/bundlephobia/minzip/@substrate-system/keys)](https://bundlephobia.com/package/@substrate-system/keys)
 [![license](https://img.shields.io/badge/license-Big_Time-blue?style=flat-square)](LICENSE)
 
 
@@ -208,7 +207,9 @@ const rsaType = keyTypeFromDid(rsaKeys.DID)
 
 ### Verify a signature
 
-This function takes either an Ed25519 key or an RSA key.
+This function takes either an Ed25519 key or an RSA key. This is exposed as
+a separate function so that you do not need to bundle all of `keys` just to
+verify something.
 
 ```js
 import { verify } from '@substrate-system/keys/crypto'
