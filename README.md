@@ -892,6 +892,11 @@ const key = await AES.create(/* ... optional arguments ... */)
 Create a new AES key. By default uses 256 bits & GCM algorithm.
 
 ```ts
+import {
+  DEFAULT_SYMM_ALGORITHM,
+  DEFAULT_SYMM_LENGTH
+} from '@substrate-system/keys/constants'
+
 function create (opts:{ alg:string, length:number } = {
     alg: DEFAULT_SYMM_ALGORITHM,  // AES-GCM
     length: DEFAULT_SYMM_LENGTH  // 256

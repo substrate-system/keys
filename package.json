@@ -43,14 +43,8 @@
     "./browser": "./dist/browser/index.js",
     "./browser/min": "./dist/browser/min.js",
     "./*": {
-      "import": [
-        "./dist/*.js",
-        "./dist/*"
-      ],
-      "require": [
-        "./dist/*.cjs",
-        "./dist/*"
-      ]
+      "import": "./dist/*.js",
+      "require": "./dist/*.cjs"
     }
   },
   "scripts": {
