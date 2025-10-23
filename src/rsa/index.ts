@@ -206,7 +206,9 @@ export class RsaKeys extends AbstractKeys {
         _aesAlgorithm?:string,
     ):Promise<Uint8Array> {
         // For RSA, the second parameter is keysize, not publicKey
-        const keysizeValue = (typeof keysize === 'number' ? keysize : undefined) || DEFAULT_SYMM_LENGTH
+        const keysizeValue = ((typeof keysize === 'number' ?
+            keysize :
+            undefined) || DEFAULT_SYMM_LENGTH)
         const cipherText = normalizeToBuf(msg, base64ToArrBuf)
         const key = cipherText.slice(0, keysizeValue)
         const data = cipherText.slice(keysizeValue)

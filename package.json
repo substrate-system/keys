@@ -1,6 +1,6 @@
 {
   "name": "@substrate-system/keys",
-  "version": "0.2.34",
+  "version": "0.2.35",
   "description": "Create and store keys in the browser with the webcrypto API",
   "directories": {
     "test": "test"
@@ -62,7 +62,7 @@
     "build-browser": "mkdir -p ./dist/browser && esbuild ./src/index.ts --keep-names --bundle > ./dist/browser/index.js",
     "build-browser:min": "esbuild ./src/index.ts --bundle --minify --keep-names > ./dist/browser/index.min.js",
     "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-cjs && npm run build-esm && npm run build-esm:min && npm run build-cjs:min && npm run build-browser && npm run build-browser:min",
-    "toc": "markdown-toc --maxdepth 3 -i README.md",
+    "toc": "markdown-toc --maxdepth 4 -i README.md",
     "preversion": "npm run lint",
     "version": "npm run toc && auto-changelog -p --template keepachangelog --breaking-pattern 'BREAKING CHANGE:' && git add CHANGELOG.md README.md",
     "postversion": "git push --follow-tags && npm publish",
