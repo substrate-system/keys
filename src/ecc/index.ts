@@ -3,14 +3,12 @@ import { type SupportedEncodings, toString } from 'uint8arrays'
 import {
     DEFAULT_ECC_EXCHANGE,
     DEFAULT_ECC_WRITE,
-    ECC_EXCHANGE_ALG,
-    ECC_WRITE_ALG,
     DEFAULT_SYMM_ALGORITHM,
     SALT_LENGTH,
     IV_LENGTH,
     DEFAULT_SYMM_LENGTH,
-    ECC_WRITE_NAME,
-    ECC_EXCHANGE_NAME
+    ECC_WRITE_ALGORITHM,
+    ECC_EXCHANGE_ALGORITHM
 } from '../constants.js'
 import {
     EccCurve,
@@ -21,6 +19,7 @@ import {
     type Msg,
     type CharSize,
     type DID,
+    type WrappedKey,
 } from '../types.js'
 import {
     base64ToArrBuf,
@@ -93,7 +92,9 @@ export class EccKeys extends AbstractKeys {
         })
     }
 
-    static async _createExchangeKeys (extractable:boolean = false):Promise<CryptoKeyPair> {
+    static async _createExchangeKeys (
+        extractable:boolean = false
+    ):Promise<CryptoKeyPair> {
         /**
          * don't use `{ name: ECDH, namedCurve: 'X25519' }`, use
          * `{ name: 'X25519' }`.
@@ -102,7 +103,7 @@ export class EccKeys extends AbstractKeys {
          */
         return await webcrypto.subtle.generateKey(
             {
-                name: ECC_EXCHANGE_NAME
+                name: ECC_EXCHANGE_ALGORITHM
                 // namedCurve: EccCurve.X25519
             },
             extractable,
@@ -113,7 +114,7 @@ export class EccKeys extends AbstractKeys {
     static async _createWriteKeys (extractable:boolean = false):Promise<CryptoKeyPair> {
         return await webcrypto.subtle.generateKey(
             {
-                name: ECC_WRITE_NAME
+                name: ECC_WRITE_ALGORITHM
             },
             extractable,
             ['sign', 'verify']
@@ -124,7 +125,7 @@ export class EccKeys extends AbstractKeys {
      * Restore some keys from indexedDB, or create a new keypair if it doesn't
      * exist yet. Overrides base class to use ECC-specific key names.
      */
-    static async load<T extends EccKeys = EccKeys> (
+    static async load<T extends AbstractKeys = EccKeys> (
         this:typeof EccKeys,
         opts:Partial<{
             encryptionKeyName:string,
@@ -172,8 +173,143 @@ export class EccKeys extends AbstractKeys {
     }
 
     /**
+     * "Add a device," meaning, take an existing AES key and add the ability
+     * for a new keypair to decrypt/use the AES key.
+     *
+     * This implements HPKE-style key wrapping:
+     *   1. Generate ephemeral X25519 keypair
+     *   2. Do ECDH with recipient's public key -> shared secret
+     *   3. Use HKDF to derive a KEK (key encryption key)
+     *   4. AES-GCM encrypt the content key under the KEK
+     *   5. Return the ephemeral public key (encapsulation) + wrapped key
+     *
+     * @param contentKey The existing AES key used to encrypt the content.
+     * @param newPublicKey The new device's public X25519 key.
+     * @param info Optional info parameter for HKDF. Defaults to 'key-wrap'.
+     * @returns {Promise<WrappedKey>} The ephemeral public key (base64) and
+     *          the wrapped content key (base64).
+     */
+    async wrap (
+        contentKey:SymmKey|Uint8Array|string,
+        newPublicKey:CryptoKey,  // the new device's public key
+        info?:string
+    ):Promise<WrappedKey> {
+        // 1. Generate ephemeral X25519 keypair
+        const ephemeralKeypair = await EccKeys._createExchangeKeys(true)
+
+        // 2. Generate random salt for HKDF
+        const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))
+
+        // 3. Derive KEK using ECDH + HKDF with ephemeral private key and
+        // recipient's public key
+        const kek = await deriveKey(
+            ephemeralKeypair.privateKey,
+            newPublicKey,
+            salt,
+            info || 'key-wrap'
+        )
+
+        // 4. Prepare the content key for encryption
+        let contentKeyBytes:Uint8Array
+        if (contentKey instanceof CryptoKey) {
+            // Export the AES key to raw format
+            const exported = await crypto.subtle.exportKey('raw', contentKey)
+            contentKeyBytes = new Uint8Array(exported)
+        } else if (typeof contentKey === 'string') {
+            contentKeyBytes = new Uint8Array(base64ToArrBuf(contentKey))
+        } else {
+            contentKeyBytes = contentKey
+        }
+
+        // 5. Generate IV for AES-GCM encryption
+        const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
+
+        // 6. Encrypt the content key with the KEK
+        const wrappedKeyBuffer = await crypto.subtle.encrypt(
+            { name: DEFAULT_SYMM_ALGORITHM, iv },
+            kek,
+            toArrayBuffer(contentKeyBytes)
+        )
+
+        // 7. Export ephemeral public key
+        const ephemeralPubKeyBuffer = await exportPublicKey(ephemeralKeypair)
+
+        // 8. Combine salt + iv + wrapped key for the final wrapped key blob
+        const saltBuf = new Uint8Array(salt)
+        const ivBuf = new Uint8Array(iv)
+        const wrappedBuf = new Uint8Array(wrappedKeyBuffer)
+        const combinedSize = saltBuf.length + ivBuf.length + wrappedBuf.length
+        const combined = new Uint8Array(combinedSize)
+        combined.set(saltBuf, 0)
+        combined.set(ivBuf, saltBuf.length)
+        combined.set(wrappedBuf, saltBuf.length + ivBuf.length)
+
+        // 9. Return base64-encoded results
+        return {
+            enc: toBase64(new Uint8Array(ephemeralPubKeyBuffer)),
+            wrappedKey: toBase64(combined)
+        }
+    }
+
+    /**
+     * Unwrap a content key that was wrapped for this device using the `add` method.
+     *
+     * The recipient device uses its private key + the ephemeral public key
+     * to rederive the KEK and decrypt the wrapped content key.
+     *
+     * @param enc The ephemeral public key (base64) from the sender.
+     * @param wrappedKey The wrapped content key (base64) - contains salt + iv + ciphertext.
+     * @param info Optional info parameter for HKDF. Must match what was used in `add`. Defaults to 'key-wrap'.
+     * @returns {Promise<CryptoKey>} The unwrapped AES content key.
+     */
+    async unwrap (
+        enc:string,
+        wrappedKey:string,
+        info?:string
+    ):Promise<CryptoKey> {
+        // 1. Import the ephemeral public key
+        const ephemeralPubKey = await importPublicKey(
+            enc,
+            EccCurve.X25519,
+            KeyUse.Exchange
+        )
+
+        // 2. Decode the wrapped key blob and extract salt, iv, and ciphertext
+        const wrappedBuf = new Uint8Array(base64ToArrBuf(wrappedKey))
+        const salt = wrappedBuf.slice(0, SALT_LENGTH)
+        const iv = wrappedBuf.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH)
+        const ciphertext = wrappedBuf.slice(SALT_LENGTH + IV_LENGTH)
+
+        // 3. Derive the same KEK using our private key and the ephemeral public key
+        const kek = await deriveKey(
+            this.exchangeKey.privateKey,
+            ephemeralPubKey,
+            salt,
+            info || 'key-wrap'
+        )
+
+        // 4. Decrypt the wrapped key
+        const contentKeyBytes = await crypto.subtle.decrypt(
+            { name: DEFAULT_SYMM_ALGORITHM, iv },
+            kek,
+            toArrayBuffer(ciphertext)
+        )
+
+        // 5. Import the content key back as a CryptoKey
+        const contentKey = await crypto.subtle.importKey(
+            'raw',
+            contentKeyBytes,
+            { name: DEFAULT_SYMM_ALGORITHM },
+            true,
+            ['encrypt', 'decrypt']
+        )
+
+        return contentKey
+    }
+
+    /**
      * Encrypt the given content to the given public key, or encrypt to
-     * our public key if it is not passed in.
+     * our own public key if a key is not passed in.
      *
      * @param {string|Uint8Array} content Content to encrypt
      * @param {CryptoKey|string} [recipient] Their public key. Optional b/c we
@@ -399,7 +535,7 @@ export class EccKeys extends AbstractKeys {
         }
 
         const signature = await webcrypto.subtle.sign(
-            { name: ECC_WRITE_ALG },
+            { name: ECC_WRITE_ALGORITHM },
             this.writeKey.privateKey,
             toArrayBuffer(data)
         )
@@ -457,7 +593,7 @@ export async function importPublicKey (
     use:KeyUse
 ):Promise<PublicKey> {
     checkValidKeyUse(use)
-    const alg = use === KeyUse.Exchange ? ECC_EXCHANGE_ALG : ECC_WRITE_ALG
+    const alg = use === KeyUse.Exchange ? ECC_EXCHANGE_ALGORITHM : ECC_WRITE_ALGORITHM
     const uses:KeyUsage[] = use === KeyUse.Exchange ? [] : ['verify']
     const buf = base64ToArrBuf(base64Key)
 
@@ -540,7 +676,7 @@ export async function verify (
         const publicKey = await webcrypto.subtle.importKey(
             'raw',
             rawKeyBytes,
-            { name: ECC_WRITE_ALG },
+            { name: ECC_WRITE_ALGORITHM },
             true,
             ['verify']
         )
@@ -567,7 +703,7 @@ export async function verify (
 
         // Verify the signature
         const isValid = await webcrypto.subtle.verify(
-            { name: ECC_WRITE_ALG },
+            { name: ECC_WRITE_ALGORITHM },
             publicKey,
             toArrayBuffer(signature),
             toArrayBuffer(data)

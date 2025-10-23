@@ -22,6 +22,17 @@ export type EncryptedMessage = {
     key:string|Uint8Array;
 }
 
+/**
+ * Result of wrapping a content key for a new device.
+ * Used for "add device" functionality with ECC keys.
+ */
+export type WrappedKey = {
+    /** Ephemeral public key (base64) used for HPKE encapsulation */
+    enc:string;
+    /** Wrapped content key (base64): salt + iv + ciphertext */
+    wrappedKey:string;
+}
+
 export type RSA = 'rsa'
 export type ECC = 'ecc'
 

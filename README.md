@@ -43,13 +43,13 @@ See also, [the API docs generated from typescript](https://substrate-system.gith
   * [`crypto`](#crypto)
 - [Get started](#get-started)
   * [Verify a signature](#verify-a-signature)
-  * [ECC](#ecc)
+  * [ECC keys](#ecc-keys)
   * [some notes about the `keys` instance](#some-notes-about-the-keys-instance)
   * [Delete a keypair](#delete-a-keypair)
   * [Sign and Verify Something](#sign-and-verify-something)
   * [encrypt something](#encrypt-something)
   * [decrypt something](#decrypt-something)
-- [examples](#examples)
+- [Examples](#examples)
   * [Create a new `Keys` instance](#create-a-new-keys-instance)
   * [Get a hash of the DID](#get-a-hash-of-the-did)
   * [Persist the keys](#persist-the-keys)
@@ -68,6 +68,7 @@ See also, [the API docs generated from typescript](https://substrate-system.gith
   * [`export.asString`](#exportasstring)
   * [`AES.encrypt`](#aesencrypt)
   * [`AES.decrypt`](#aesdecrypt)
+- [See also](#see-also)
 
 <!-- tocstop -->
 
@@ -221,9 +222,10 @@ const isOk = await verify({ message, publicKey: ecc.DID, signature })
 const isOk = await verify({ message, publicKey: rsa.DID, signature })
 ```
 
-### ECC
+### ECC keys
 
 #### Create a keypair
+
 Create a new keypair, then save it in `indexedDB`.
 
 ECC is now supported in all major browsers.
@@ -241,6 +243,67 @@ await keys.persist()
 const keysAgain = await EccKeys.load()
 
 console.assert(keys.DID === keysAgain.DID)  // true
+```
+
+#### "Add a device"
+
+Take an existing AES key, and encrypt it to a new ECC keypair.
+See [asymmetric docs](./docs-asymmetric/README.md) for more about how
+this works.
+
+- Use `wrap()` to encrypt an AES key for a new device's public key
+- Use `unwrap()` on the new device to recover the AES key
+- Add devices without re-encrypting the entire dataset
+
+
+```ts
+import { EccKeys } from '@substrate-system/keys/ecc'
+import { AES } from '@substrate-system/keys/aes'
+
+// Device 1 has a symmetric key for encrypting data
+const device1 = await EccKeys.create()
+const contentKey = await AES.create({ length: 256 })
+
+// Encrypt some data.
+// (AES.encrypt automatically prepends iv to ciphertext).
+const message = 'secret data for all devices'
+const encrypted = await AES.encrypt(
+    new TextEncoder().encode(message),
+    contentKey
+)
+
+// ... device 1 needs to obtain device 2's public exchange key ...
+
+// wrap the content key for device 2
+const wrapped = await device1.wrap(contentKey, device2.publicExchangeKey)
+
+console.log(wrapped)
+// {
+//   enc: 'base64-encoded-ephemeral-public-key...',
+//   wrappedKey: 'base64-encoded-wrapped-content-key...'
+// }
+
+// Store encrypted data + wrapped key entries for each device
+
+
+// -----------------------------------------
+// device 2
+// -----------------------------------------
+
+// ... device 2 needs to obtain the wrapped key ...
+
+const device2 = await EccKeys.create()
+
+// Device 2 unwraps the content key
+const device2ContentKey = await device2.unwrap(wrapped.enc, wrapped.wrappedKey)
+
+// Device 2 decrypts the data with the unwrapped key
+// (AES.decrypt automatically extracts iv from the encrypted data)
+const decrypted = await AES.decrypt(encrypted, device2ContentKey)
+
+
+console.log(new TextDecoder().decode(decrypted))
+// => 'secret data for all devices'
 ```
 
 ### some notes about the `keys` instance
@@ -443,7 +506,7 @@ const decrypted = await keys.decrypt(encryptedMsg)
 
 ----------------------------------------------------------------------
 
-## examples
+## Examples
 
 ### Create a new `Keys` instance
 
@@ -489,7 +552,12 @@ class RsaKeys {
 - `session` (optional, boolean): If `true`, keys are created in memory only and won't be saved to `indexedDB` even if `persist()` is called.
 - `extractable` (optional, boolean): If `true`, creates extractable keys that can be exported/read. Defaults to `false` for security.
 
-> **⚠️ Security Note**: Set `extractable: true` only when you need to export private keys. Non-extractable keys (default) provide better security as the browser prevents the private key from being read, while still allowing use for cryptographic operations.
+>
+> [!WARNING]  
+> Set `extractable: true` only when you need to export private keys.
+> Non-extractable keys (default) are better for security.
+>
+
 
 #### `.create()` example
 
@@ -507,6 +575,8 @@ const extractableKeys = await EccKeys.create(false, true)
 
 // Create session-only, extractable keys
 const sessionKeys = await EccKeys.create(true, true)
+
+// Session-only keys are not persisted.
 ```
 
 ### Get a hash of the DID
@@ -516,7 +586,7 @@ this will use the `DID` assigned to the given `Keys` instance.
 
 The static method requires a `DID` string to be passed in.
 
-#### static method
+#### Static `deviceName` method
 
 ```ts
 class EccKeys {  // or RsaKeys
@@ -524,7 +594,7 @@ class EccKeys {  // or RsaKeys
 }
 ```
 
-#### instance method
+#### Instance `getdeviceName` method
 
 If used as an instance method, this will use the `DID` assigned to the instance.
 
@@ -987,3 +1057,9 @@ const decryped = await AES.decrypt(encryptedText, aesKey)
 const decryptedText = toString(decrypted)
 // => 'hello AES'
 ```
+
+## See also
+
+* [KEM Trails – Understanding Key Encapsulation Mechanisms](https://soatok.blog/2024/02/26/kem-trails-understanding-key-encapsulation-mechanisms/)
+  > the primary motivation for KEMs comes from post-quantum cryptography, not RSA.
+* [Understanding HKDF](https://soatok.blog/2021/11/17/understanding-hkdf/)

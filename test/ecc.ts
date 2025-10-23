@@ -324,3 +324,244 @@ test('An example use of to/from strings', async t => {
     const data = JSON.parse(text)
     t.equal(data.content, 'hello ECC', 'should get the original object')
 })
+
+test('add device - wrap AES key for new device', async t => {
+    // Create a content key (AES key)
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+
+    // Create a new device
+    const newDevice = await EccKeys.create()
+
+    // Wrap the content key for the new device
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    t.equal(typeof wrapped.enc, 'string', 'should return ephemeral public key as string')
+    t.equal(typeof wrapped.wrappedKey, 'string', 'should return wrapped key as string')
+    t.ok(wrapped.enc.length > 0, 'ephemeral public key should not be empty')
+    t.ok(wrapped.wrappedKey.length > 0, 'wrapped key should not be empty')
+})
+
+test('unwrap - new device unwraps content key', async t => {
+    // Create a content key (AES key)
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+
+    // Export original key for comparison
+    const originalKeyBytes = new Uint8Array(
+        await crypto.subtle.exportKey('raw', contentKey)
+    )
+
+    // Create a new device
+    const newDevice = await EccKeys.create()
+
+    // Wrap the content key for the new device
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    // New device unwraps the content key
+    const unwrappedKey = await newDevice.unwrap(wrapped.enc, wrapped.wrappedKey)
+
+    // Export unwrapped key for comparison
+    const unwrappedKeyBytes = new Uint8Array(
+        await crypto.subtle.exportKey('raw', unwrappedKey)
+    )
+
+    t.ok(unwrappedKey instanceof CryptoKey, 'should return a CryptoKey')
+    t.equal(unwrappedKey.type, 'secret', 'should be a secret key')
+    t.equal(originalKeyBytes.length, unwrappedKeyBytes.length,
+        'unwrapped key should have same length as original')
+
+    // Compare byte by byte
+    let bytesMatch = true
+    for (let i = 0; i < originalKeyBytes.length; i++) {
+        if (originalKeyBytes[i] !== unwrappedKeyBytes[i]) {
+            bytesMatch = false
+            break
+        }
+    }
+    t.ok(bytesMatch, 'unwrapped key should match original key')
+})
+
+test('add device - encrypt data, add device, new device decrypts', async t => {
+    // Device 1 encrypts some data with a content key
+    const device1 = await EccKeys.create()
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+
+    const message = 'secret data for all devices'
+    const encoder = new TextEncoder()
+    const iv = crypto.getRandomValues(new Uint8Array(12))
+
+    // Encrypt the message with the content key
+    const encrypted = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        contentKey,
+        encoder.encode(message)
+    )
+
+    // Device 2 joins - device 1 wraps the content key for device 2
+    const device2 = await EccKeys.create()
+    const wrapped = await device1.wrap(contentKey, device2.publicExchangeKey)
+
+    // Device 2 unwraps the content key
+    const device2ContentKey = await device2.unwrap(wrapped.enc, wrapped.wrappedKey)
+
+    // Device 2 decrypts the message
+    const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        device2ContentKey,
+        encrypted
+    )
+
+    const decryptedText = toString(new Uint8Array(decrypted))
+    t.equal(decryptedText, message, 'device 2 should decrypt message with unwrapped key')
+})
+
+test('add device - with string content key', async t => {
+    // Create a content key and export as string
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const keyBytes = await crypto.subtle.exportKey('raw', contentKey)
+    const keyString = toString(new Uint8Array(keyBytes), 'base64pad')
+
+    // Create a new device
+    const newDevice = await EccKeys.create()
+
+    // Wrap the content key (as string) for the new device
+    const wrapped = await myKeys.wrap(keyString, newDevice.publicExchangeKey)
+
+    t.equal(typeof wrapped.enc, 'string', 'should return ephemeral public key as string')
+    t.equal(typeof wrapped.wrappedKey, 'string', 'should return wrapped key as string')
+
+    // New device should be able to unwrap it
+    const unwrappedKey = await newDevice.unwrap(wrapped.enc, wrapped.wrappedKey)
+    t.ok(unwrappedKey instanceof CryptoKey, 'should unwrap to CryptoKey')
+})
+
+test('add device - with Uint8Array content key', async t => {
+    // Create a content key and export as Uint8Array
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const keyBytes = new Uint8Array(
+        await crypto.subtle.exportKey('raw', contentKey)
+    )
+
+    // Create a new device
+    const newDevice = await EccKeys.create()
+
+    // Wrap the content key (as Uint8Array) for the new device
+    const wrapped = await myKeys.wrap(keyBytes, newDevice.publicExchangeKey)
+
+    t.equal(typeof wrapped.enc, 'string', 'should return ephemeral public key as string')
+    t.equal(typeof wrapped.wrappedKey, 'string', 'should return wrapped key as string')
+
+    // New device should be able to unwrap it
+    const unwrappedKey = await newDevice.unwrap(wrapped.enc, wrapped.wrappedKey)
+    t.ok(unwrappedKey instanceof CryptoKey, 'should unwrap to CryptoKey')
+})
+
+test('add device - with custom info parameter', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+
+    const newDevice = await EccKeys.create()
+    const customInfo = 'custom-key-wrap-info'
+
+    // Wrap with custom info
+    const wrapped = await myKeys.wrap(
+        contentKey,
+        newDevice.publicExchangeKey,
+        customInfo
+    )
+
+    // Unwrap with same custom info
+    const unwrappedKey = await newDevice.unwrap(
+        wrapped.enc,
+        wrapped.wrappedKey,
+        customInfo
+    )
+
+    t.ok(unwrappedKey instanceof CryptoKey,
+        'should unwrap with matching custom info')
+
+    // Verify the keys match
+    const originalBytes = new Uint8Array(
+        await crypto.subtle.exportKey('raw', contentKey)
+    )
+    const unwrappedBytes = new Uint8Array(
+        await crypto.subtle.exportKey('raw', unwrappedKey)
+    )
+
+    let match = originalBytes.length === unwrappedBytes.length
+    if (match) {
+        for (let i = 0; i < originalBytes.length; i++) {
+            if (originalBytes[i] !== unwrappedBytes[i]) {
+                match = false
+                break
+            }
+        }
+    }
+    t.ok(match, 'unwrapped key should match original')
+})
+
+test('add device - multiple devices', async t => {
+    // Simulate adding multiple devices to an account
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+
+    const device1 = await EccKeys.create()
+    const device2 = await EccKeys.create()
+    const device3 = await EccKeys.create()
+
+    // Wrap content key for all devices
+    const wrapped1 = await myKeys.wrap(contentKey, device1.publicExchangeKey)
+    const wrapped2 = await myKeys.wrap(contentKey, device2.publicExchangeKey)
+    const wrapped3 = await myKeys.wrap(contentKey, device3.publicExchangeKey)
+
+    // All devices should be able to unwrap
+    const key1 = await device1.unwrap(wrapped1.enc, wrapped1.wrappedKey)
+    const key2 = await device2.unwrap(wrapped2.enc, wrapped2.wrappedKey)
+    const key3 = await device3.unwrap(wrapped3.enc, wrapped3.wrappedKey)
+
+    // Export all keys for comparison
+    const originalBytes = new Uint8Array(
+        await crypto.subtle.exportKey('raw', contentKey)
+    )
+    const key1Bytes = new Uint8Array(await crypto.subtle.exportKey('raw', key1))
+    const key2Bytes = new Uint8Array(await crypto.subtle.exportKey('raw', key2))
+    const key3Bytes = new Uint8Array(await crypto.subtle.exportKey('raw', key3))
+
+    t.ok(bytesEqual(originalBytes, key1Bytes), 'device 1 key should match')
+    t.ok(bytesEqual(originalBytes, key2Bytes), 'device 2 key should match')
+    t.ok(bytesEqual(originalBytes, key3Bytes), 'device 3 key should match')
+})
+
+// Helper to compare bytes
+function bytesEqual (a:Uint8Array, b:Uint8Array) {
+    if (a.length !== b.length) return false
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false
+    }
+    return true
+}
