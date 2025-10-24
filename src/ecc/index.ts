@@ -315,7 +315,8 @@ export class EccKeys extends AbstractKeys {
      *
      * @param {string|Uint8Array} content Content to encrypt
      * @param {CryptoKey|string} [recipient] Their public key. Optional b/c we
-     *        will use our own public key if not passed in.
+     *        will use our own public key if not passed in. Can be a CryptoKey
+     *        or a base64 encoded string.
      * @param {string} [info] info tag for HKDF. Default is the class property.
      * @param {SymmKey|Uint8Array|string} aesKey This is not relevant for most
      *        use cases.
@@ -329,7 +330,6 @@ export class EccKeys extends AbstractKeys {
         aesKey?:SymmKey|Uint8Array|string,
         keysize?:SymmKeyLength
     ):Promise<Uint8Array> {
-        const encoder = new TextEncoder()
         const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))
 
         // publicKey is either passed in or we use our own for note to self
@@ -365,7 +365,7 @@ export class EccKeys extends AbstractKeys {
         }
         const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
         const plaintext:Uint8Array = (typeof content === 'string' ?
-            encoder.encode(content) :
+            new TextEncoder().encode(content) :
             content)
 
         const ciphertext = await crypto.subtle.encrypt(

@@ -22,8 +22,8 @@ re-used indefinitely.
 > to tell the browser not to delete from `indexedDB`.
 >
 
-Each instance of `Keys` has two keypairs &mdash; one for signing, and another for
-encrypting. 
+Each instance of `Keys` has two keypairs &mdash; one for signing, and another
+for encrypting. 
 
 See also, [the API docs generated from typescript](https://substrate-system.github.io/keys/).
 
