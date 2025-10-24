@@ -305,6 +305,16 @@ long-term private key is compromised, an attacker can decrypt past messages by
 extracting the ephemeral public key from the ciphertext and deriving the
 shared secret for each message.
 
+The good news is that this *would provide* forward secrecy for the sender's
+keys. If the sender's long-term private key is compormised, then past
+messages remain illegible because they were each created with a new keypair,
+the secret side of which has been discarded.
+
+For true forward secrecy, you would want both parties to use ephemeral keys,
+like with
+[Signal's double ratchet protocol](https://signal.org/docs/specifications/doubleratchet/).
+
+
 **Ciphertext format:**
 
 ```
