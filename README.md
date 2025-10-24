@@ -286,24 +286,24 @@ ECC encryption uses the ECIES (Elliptic Curve Integrated Encryption Scheme)
 pattern. For each encrypted message:
 
 1. A new ephemeral X25519 keypair is generated
-2. The ephemeral private key is combined with the recipient's public key via
-   ECDH to derive an AES key
-3. A new AES key is generated with the ephemeral private key and recipient's
+2. A new AES key is generated with the ephemeral private key and recipient's
    public key.
 3. The message is encrypted with the AES key.
 4. The ephemeral public key is prepended to the ciphertext
 
-This provides forward secrecy &mdash; even if a long-term private key is
-compromised, past encrypted messages remain secure because each encryption uses
-a unique ephemeral keypair.
-
 To decrypt:
 
-1. Extract the ephemeral public key, salt, and IV from the ciphertext
-2. Combine your private key with the ephemeral public key via ECDH to get a
-   shared secret
-3. Use HKDF with the shared secret and salt to derive the same AES key
+1. The recipient extracts the ephemeral public key, salt, and IV from
+   the ciphertext
+2. The recipient's private key is combined with the ephemeral public key via
+   ECDH to get a shared secret
+3. Recipient uses HKDF with the shared secret and salt to derive the same AES key
 4. Use the AES key and IV to decrypt the message
+
+Note that this does **not** provide forward secrecy &mdash; if the recipient's
+long-term private key is compromised, an attacker can decrypt past messages by
+extracting the ephemeral public key from the ciphertext and deriving the
+shared secret for each message.
 
 **Ciphertext format:**
 
