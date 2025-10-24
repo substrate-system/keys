@@ -8,7 +8,8 @@ import {
     IV_LENGTH,
     DEFAULT_SYMM_LENGTH,
     ECC_WRITE_ALGORITHM,
-    ECC_EXCHANGE_ALGORITHM
+    ECC_EXCHANGE_ALGORITHM,
+    X25519_PUBLIC_KEY_LENGTH
 } from '../constants.js'
 import {
     EccCurve,
@@ -180,7 +181,7 @@ export class EccKeys extends AbstractKeys {
      *   1. Generate ephemeral X25519 keypair
      *   2. Do ECDH with recipient's public key -> shared secret
      *   3. Use HKDF to derive a KEK (key encryption key)
-     *   4. AES-GCM encrypt the content key under the KEK
+     *   4. AES-GCM encrypt the content
      *   5. Return the ephemeral public key (encapsulation) + wrapped key
      *
      * @param {SymmKey|Uint8Array|string} contentKey The existing AES key used
@@ -189,7 +190,7 @@ export class EccKeys extends AbstractKeys {
      * @param {string} [info] Optional info parameter for HKDF.
      *   Defaults to 'key-wrap'.
      * @returns {Promise<WrappedKey>} The ephemeral public key (base64) and
-     *          the wrapped content key (base64).
+     *          the wrapped AES key (base64).
      */
     async wrap (
         contentKey:SymmKey|Uint8Array|string,
@@ -313,22 +314,27 @@ export class EccKeys extends AbstractKeys {
      * Encrypt the given content to the given public key, or encrypt to
      * our own public key if a key is not passed in.
      *
+     * This does ECIES style encryption -- a new ephemeral keypair is generated
+     * and used to encrypt the message with ephemeral private + recipient public.
+     * The public key from the ephemeral keypair is prefixed to the cipher text.
+     *
      * @param {string|Uint8Array} content Content to encrypt
      * @param {CryptoKey|string} [recipient] Their public key. Optional b/c we
      *        will use our own public key if not passed in. Can be a CryptoKey
      *        or a base64 encoded string.
      * @param {string} [info] info tag for HKDF. Default is the class property.
-     * @param {SymmKey|Uint8Array|string} aesKey This is not relevant for most
+     * @param {SymmKey|Uint8Array|string} [aesKey] This is not relevant for most
      *        use cases.
      * @param {SymmKeyLength} [keysize] Default is 256
-     * @returns {Promise<ArrayBuffer>} Buffer of salt + iv + cipher text
+     * @returns {Promise<ArrayBuffer>} Buffer of ephemeral-public-key + salt +
+     *          iv + cipher text
      */
     async encrypt (
         content:string|Uint8Array,
-        recipient?:CryptoKey|string,  // their public key
-        info?:string,
-        aesKey?:SymmKey|Uint8Array|string,
-        keysize?:SymmKeyLength
+        recipient?:CryptoKey|string|null,  // their public key
+        info?:string|null,
+        aesKey?:SymmKey|Uint8Array|string|null,
+        keysize?:SymmKeyLength|null
     ):Promise<Uint8Array> {
         const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))
 
@@ -345,9 +351,12 @@ export class EccKeys extends AbstractKeys {
             publicKey = _publicKey
         }
 
-        // key is passed in or derived
+        // ECIES: Generate ephemeral keypair for this encryption
+        const ephemeralKeypair = await EccKeys._createExchangeKeys(true)
+
+        // key is passed in or derived using ephemeral private key
         let key = aesKey || (await deriveKey(
-            this.exchangeKey.privateKey,
+            ephemeralKeypair.privateKey,  // use ephemeral private key
             publicKey,
             salt,
             info || EccKeys.INFO,
@@ -357,12 +366,13 @@ export class EccKeys extends AbstractKeys {
         // if a key was passed in, but it is not a CryptoKey instance
         if (!(key instanceof CryptoKey)) {
             key = await deriveKey(
-                this.exchangeKey.privateKey,
+                ephemeralKeypair.privateKey,  // use ephemeral private key
                 publicKey,
                 salt,
                 info || EccKeys.INFO
             )
         }
+
         const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
         const plaintext:Uint8Array = (typeof content === 'string' ?
             new TextEncoder().encode(content) :
@@ -374,15 +384,23 @@ export class EccKeys extends AbstractKeys {
             toArrayBuffer(plaintext)
         )
 
-        // Prepend salt and IV to the ciphertext for decryption
+        // Export ephemeral public key to prepend to ciphertext
+        const ephemeralPubKeyBuf = new Uint8Array(
+            await exportPublicKey(ephemeralKeypair)
+        )
+
+        // Prepend ephemeral public key, salt and IV to the ciphertext
         const saltBuffer = new Uint8Array(salt)
         const ivBuffer = new Uint8Array(iv)
         const cipherBuf = new Uint8Array(ciphertext)
-        const size = saltBuffer.length + ivBuffer.length + cipherBuf.length
+        const size = ephemeralPubKeyBuf.length + saltBuffer.length +
+            ivBuffer.length + cipherBuf.length
         const result = new Uint8Array(size)
-        result.set(saltBuffer, 0)
-        result.set(ivBuffer, saltBuffer.length)
-        result.set(cipherBuf, saltBuffer.length + ivBuffer.length)
+        result.set(ephemeralPubKeyBuf, 0)
+        result.set(saltBuffer, ephemeralPubKeyBuf.length)
+        result.set(ivBuffer, ephemeralPubKeyBuf.length + saltBuffer.length)
+        result.set(cipherBuf, ephemeralPubKeyBuf.length + saltBuffer.length +
+            ivBuffer.length)
 
         return result
     }
@@ -392,10 +410,10 @@ export class EccKeys extends AbstractKeys {
      */
     async encryptAsString (
         content:string|Uint8Array,
-        recipient?:CryptoKey|string,  // their public key
-        info?:string,
-        aesKey?:SymmKey|Uint8Array|string,
-        keysize?:SymmKeyLength,
+        recipient?:CryptoKey|string|null,  // their public key
+        info?:string|null,
+        aesKey?:SymmKey|Uint8Array|string|null,
+        keysize?:SymmKeyLength|null,
     ):Promise<string> {
         const encrypted = await this.encrypt(
             content,
@@ -410,36 +428,52 @@ export class EccKeys extends AbstractKeys {
 
     /**
      * Decrypt the given message. The encrypted message should be
-     * salt + iv + cipher text.
+     * ephemeral public key + salt + iv + cipher text.
+     *
+     * The ephemeral public key is extracted from the beginning of the message
+     * and used with our private key to derive the AES decryption key.
+     *
      * @param msg The encrypted content
-     * @param {CryptoKey|string} [publicKey] The public key used to generate
-     * the AES key used on this message. If omitted, decrypt with our own
-     * public key.
      * @param {string} aesAlgorithm The algorithm. Default is AES-GCM.
      * @param {string} info Custom "info" parameter
      * @returns {Promise<ArrayBuffer>} The decrypted content.
      */
     async decrypt (
         msg:string|Uint8Array|ArrayBuffer,
-        publicKey?:CryptoKey|string,
-        aesAlgorithm?:string,
-        info?:string,
+        aesAlgorithm?:string|null,
+        info?:string|null,
     ):Promise<ArrayBuffer|Uint8Array> {
-        let pub = (typeof publicKey === 'string' ?
-            await importPublicKey(publicKey, EccCurve.X25519, KeyUse.Write) :
-            publicKey)
-
-        if (!pub) pub = this.publicExchangeKey
-
-        // first get the salt & iv from the cipher text
+        // ECIES: Extract ephemeral public key from the beginning of the message
         const encrypted = normalizeToBuf(msg, base64ToArrBuf)
-        const salt = encrypted.slice(0, SALT_LENGTH)
-        const iv = encrypted.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH)
-        const ciphertext = encrypted.slice(SALT_LENGTH + IV_LENGTH)
+        const ephemeralPubKeyBuf = encrypted.slice(0, X25519_PUBLIC_KEY_LENGTH)
+
+        // ephemeral public key should be prepended to the data
+        const ephemeralPublicKey = await webcrypto.subtle.importKey(
+            'raw',
+            ephemeralPubKeyBuf,
+            { name: ECC_EXCHANGE_ALGORITHM },
+            true,
+            []
+        )
+
+        // Extract salt, iv, and ciphertext after the ephemeral public key
+        const salt = encrypted.slice(
+            X25519_PUBLIC_KEY_LENGTH,
+            X25519_PUBLIC_KEY_LENGTH + SALT_LENGTH
+        )
+        const iv = encrypted.slice(
+            X25519_PUBLIC_KEY_LENGTH + SALT_LENGTH,
+            X25519_PUBLIC_KEY_LENGTH + SALT_LENGTH + IV_LENGTH
+        )
+        const ciphertext = encrypted.slice(
+            X25519_PUBLIC_KEY_LENGTH + SALT_LENGTH + IV_LENGTH
+        )
+
+        // Derive an AES key with our private key + ephemeral-public-key
         const { privateKey } = this.exchangeKey
         const key = await deriveKey(
             privateKey,
-            pub,
+            ephemeralPublicKey,
             salt,
             info || EccKeys.INFO
         )
@@ -458,24 +492,23 @@ export class EccKeys extends AbstractKeys {
     }
 
     /**
-     * Decrypt and return as string.
-     * The encrypted message should be salt + iv + cipher text.
+     * Decrypt and return as string using ECIES. The encrypted message should be
+     * ephemeral public key + salt + iv + cipher text.
+     *
+     * The ephemeral public key is extracted from the beginning of the message
+     * and used with our private key to derive the AES decryption key.
      *
      * @param msg The encrypted content
-     * @param {CryptoKey|string} [publicKey] The public key used to generate
-     * the AES key used on this message. If omitted, decrypt with our own
-     * public key.
      * @param {string} aesAlgorithm The algorithm. Default is AES-GCM.
      * @param {string} info Custom "info" parameter
-     * @returns {Promise<ArrayBuffer>} The decrypted content.
+     * @returns {Promise<string>} The decrypted content as a string.
      */
     async decryptAsString (
         msg:string|Uint8Array|ArrayBuffer,
-        publicKey?:CryptoKey|string,
-        aesAlgorithm?:string,
-        info?:string,
+        aesAlgorithm?:string|null,
+        info?:string|null,
     ):Promise<string> {
-        const dec = await this.decrypt(msg, publicKey, aesAlgorithm, info)
+        const dec = await this.decrypt(msg, aesAlgorithm, info)
         return toString(new Uint8Array(dec))
     }
 
@@ -636,10 +669,9 @@ Object.assign(EccKeys.prototype.decrypt, {
     asString: async function (
         this: EccKeys,
         msg: string | Uint8Array | ArrayBuffer,
-        publicKey?: CryptoKey | string,
         aesAlgorithm?: string
     ): Promise<string> {
-        return this.decryptAsString(msg, publicKey, aesAlgorithm)
+        return this.decryptAsString(msg, aesAlgorithm)
     }
 })
 
@@ -725,7 +757,7 @@ async function deriveKey (
     publicKey:CryptoKey,
     salt:Uint8Array|ArrayBuffer,
     info:string,
-    keysize?:number
+    keysize?:number|null
 ):Promise<CryptoKey> {
     const encoder = new TextEncoder()
     const sharedSecret = await crypto.subtle.deriveBits(

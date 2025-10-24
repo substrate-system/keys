@@ -137,7 +137,7 @@ async function encrypt (
 ):Promise<ArrayBuffer>
 
 async function encrypt (
-    data:Uint8Array,
+    data:Uint8Array|string|ArrayBuffer,
     cryptoKey:CryptoKey|Uint8Array,
     format?:'uint8array'|'arraybuffer',
     iv?:Uint8Array
@@ -148,14 +148,16 @@ async function encrypt (
     )
 
     // prefix the `iv` into the cipher text
-    const encrypted = (iv ?
+    const encrypted = (iv ?  // was an `iv` passed in? then encrypt here
         await webcrypto.subtle.encrypt(
             {
                 name: AES_GCM,
                 iv: toArrayBuffer(iv)
             },
             key,
-            toArrayBuffer(data)
+            data instanceof ArrayBuffer ?
+                data :
+                toArrayBuffer(typeof data === 'string' ? fromString(data) : data)
         ) :
         await encryptBytes(data, key)
     )
@@ -165,6 +167,15 @@ async function encrypt (
     return new Uint8Array(encrypted)
 }
 
+/**
+ * Encrypt the given message. This returns the data prefixed with
+ * `iv`.
+ *
+ * @param {Msg} msg The data to encrypt
+ * @param {CryptoKey|string} key The key to use
+ * @param opts Optional `iv` and character size.
+ * @returns {Promise<ArrayBuffer>} Buffer of encrypted data.
+ */
 async function encryptBytes (
     msg:Msg,
     key:CryptoKey|string,

@@ -129,30 +129,30 @@ export abstract class AbstractKeys {
      */
     abstract encrypt (
         content:string|Uint8Array,
-        recipient?:CryptoKey|string,
-        aesKeyOrInfo?:SymmKey|Uint8Array|string,
-        keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,
-        keysize?:SymmKeyLength
+        recipient?:CryptoKey|string|null,
+        aesKeyOrInfo?:SymmKey|Uint8Array|string|null,
+        keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string|null,
+        keysize?:SymmKeyLength|null
     ):Promise<Uint8Array>
 
     abstract encryptAsString (
         content:string|Uint8Array,
-        recipient?:CryptoKey|string,
-        aesKeyOrInfo?:SymmKey|Uint8Array|string,
-        keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string,
-        keysize?:SymmKeyLength
+        recipient?:CryptoKey|string|null,
+        aesKeyOrInfo?:SymmKey|Uint8Array|string|null,
+        keysizeOrAesKey?:SymmKeyLength|SymmKey|Uint8Array|string|null,
+        keysize?:SymmKeyLength|null
     ):Promise<string>
 
     abstract decrypt(
         msg:string|Uint8Array|ArrayBuffer,
-        publicKeyOrKeysize?:CryptoKey|string|SymmKeyLength,
-        aesAlgorithm?:string,
+        publicKeyOrKeysize?:CryptoKey|string|SymmKeyLength|null,
+        aesAlgorithm?:string|null,
     ):Promise<ArrayBuffer|Uint8Array>
 
     abstract decryptAsString(
         msg:string|Uint8Array|ArrayBuffer,
-        publicKeyOrKeysize?:CryptoKey|string|SymmKeyLength,
-        aesAlgorithm?:string,
+        publicKeyOrKeysize?:CryptoKey|string|SymmKeyLength|null,
+        aesAlgorithm?:string|null,
     ):Promise<string>
 
     abstract sign(msg:Msg, charsize?:CharSize):Promise<Uint8Array>

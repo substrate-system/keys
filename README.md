@@ -279,15 +279,69 @@ const keysAgain = await EccKeys.load()
 console.assert(keys.DID === keysAgain.DID)  // true
 ```
 
-#### "Add a device"
+#### Encrypt a Message
 
-Take an existing AES key, and encrypt it to a new ECC keypair.
+ECC encryption uses the ECIES (Elliptic Curve Integrated Encryption Scheme)
+pattern. For each encrypted message:
+
+1. A new ephemeral X25519 keypair is generated
+2. The ephemeral private key is combined with the recipient's public key via
+   ECDH to derive an AES key
+3. A new AES key is generated with the ephemeral private key and recipient's
+   public key.
+3. The message is encrypted with the AES key.
+4. The ephemeral public key is prepended to the ciphertext
+
+This provides forward secrecy &mdash; even if a long-term private key is
+compromised, past encrypted messages remain secure because each encryption uses
+a unique ephemeral keypair.
+
+To decrypt:
+
+1. Extract the ephemeral public key, salt, and IV from the ciphertext
+2. Combine your private key with the ephemeral public key via ECDH to get a
+   shared secret
+3. Use HKDF with the shared secret and salt to derive the same AES key
+4. Use the AES key and IV to decrypt the message
+
+**Ciphertext format:**
+
+```
+[32-byte ephemeral public key][16-byte salt][12-byte IV][ciphertext]
+```
+
+
+```ts
+import { EccKeys } from '@substrate-system/keys/ecc'
+
+const alice = await EccKeys.create()
+const bob = await EccKeys.create()
+
+// Alice encrypts a message to Bob's public key
+const message = 'Hello Bob!'
+const encrypted = await alice.encrypt(message, bob.publicExchangeKey)
+
+// Bob decrypts using his private key + the ephemeral public key from the ciphertext
+const decrypted = await bob.decryptAsString(encrypted)
+console.log(decrypted)  // 'Hello Bob!'
+
+// Encrypt to self (note to self)
+const selfEncrypted = await alice.encrypt('Secret note')
+const selfDecrypted = await alice.decryptAsString(selfEncrypted)
+```
+
+#### Multiple devices
+
+Multiple devices need to read the same data. Generate a random AES key for the
+data encryption, then encrypt that AES key to each device's public key with
+`wrap` and `unwrap` methods.
+
 See [asymmetric docs](./docs-asymmetric/README.md) for more about how
 this works.
 
-- Use `wrap()` to encrypt an AES key for a new device's public key
-- Use `unwrap()` on the new device to recover the AES key
-- Add devices without re-encrypting the entire dataset
+* Use `wrap()` to encrypt an AES key for a new device's public key
+* Use `unwrap()` on the new device to recover the AES key
+* Add devices without re-encrypting the entire dataset
 
 
 ```ts

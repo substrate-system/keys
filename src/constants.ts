@@ -6,6 +6,7 @@ export const BASE58_DID_PREFIX = 'did:key:z'
 export const ECC_WRITE_ALGORITHM = 'Ed25519'
 export const ECC_EXCHANGE_ALGORITHM = 'X25519'
 export const DEFAULT_ECC_EXCHANGE_CURVE = EccCurve.X25519
+export const X25519_PUBLIC_KEY_LENGTH = 32
 
 export const KEY_USE = {
     sign: ['sign', 'verify'],

@@ -123,7 +123,6 @@ test('encrypt to another public key', async t => {
     // Other keys should be able to decrypt
     const decrypted = await otherKeys.decrypt(
         encrypted,
-        myKeys.publicExchangeKey
     )
     const decryptedText = toString(new Uint8Array(decrypted))
     t.equal(decryptedText, message, 'should decrypt message from other key')
@@ -138,10 +137,7 @@ test('encrypt to public key as string', async t => {
     const encrypted = await myKeys.encrypt(message, pubKeyString)
 
     // Other keys should be able to decrypt
-    const decrypted = await otherKeys.decryptAsString(
-        encrypted,
-        myKeys.publicExchangeKey
-    )
+    const decrypted = await otherKeys.decryptAsString(encrypted)
     t.equal(decrypted, message, 'should encrypt/decrypt with string public key')
 })
 
@@ -197,12 +193,7 @@ test('encrypt with custom info parameter', async t => {
     const customInfo = 'custom-info'
 
     const encrypted = await myKeys.encrypt(message, undefined, customInfo)
-    const decrypted = await myKeys.decryptAsString(
-        encrypted,
-        undefined,
-        undefined,
-        customInfo
-    )
+    const decrypted = await myKeys.decryptAsString(encrypted, null, customInfo)
     t.equal(decrypted, message, 'should encrypt/decrypt with custom info')
 })
 
@@ -388,7 +379,7 @@ test('unwrap - new device unwraps content key', async t => {
     t.ok(bytesMatch, 'unwrapped key should match original key')
 })
 
-test('add device - encrypt data, add device, new device decrypts', async t => {
+test('add a device - encrypt data, add device, new device decrypts', async t => {
     // Device 1 encrypts some data with a content key
     const device1 = await EccKeys.create()
     const contentKey = await crypto.subtle.generateKey(
@@ -408,7 +399,7 @@ test('add device - encrypt data, add device, new device decrypts', async t => {
         encoder.encode(message)
     )
 
-    // Device 2 joins - device 1 wraps the content key for device 2
+    // wrap the content key for device 2
     const device2 = await EccKeys.create()
     const wrapped = await device1.wrap(contentKey, device2.publicExchangeKey)
 
@@ -426,7 +417,7 @@ test('add device - encrypt data, add device, new device decrypts', async t => {
     t.equal(decryptedText, message, 'device 2 should decrypt message with unwrapped key')
 })
 
-test('add device - with string content key', async t => {
+test('add device with string content key', async t => {
     // Create a content key and export as string
     const contentKey = await crypto.subtle.generateKey(
         { name: 'AES-GCM', length: 256 },
@@ -450,7 +441,7 @@ test('add device - with string content key', async t => {
     t.ok(unwrappedKey instanceof CryptoKey, 'should unwrap to CryptoKey')
 })
 
-test('add device - with Uint8Array content key', async t => {
+test('add device with Uint8Array content key', async t => {
     // Create a content key and export as Uint8Array
     const contentKey = await crypto.subtle.generateKey(
         { name: 'AES-GCM', length: 256 },
@@ -475,7 +466,7 @@ test('add device - with Uint8Array content key', async t => {
     t.ok(unwrappedKey instanceof CryptoKey, 'should unwrap to CryptoKey')
 })
 
-test('add device - with custom info parameter', async t => {
+test('add device with custom info parameter', async t => {
     const contentKey = await crypto.subtle.generateKey(
         { name: 'AES-GCM', length: 256 },
         true,
