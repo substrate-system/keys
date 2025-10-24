@@ -307,6 +307,16 @@ export abstract class AbstractKeys {
         return keysInstance as T
     }
 
+    static async exist (opts:{
+        encryptionKeyName?:string,
+        writeKeyName?:string
+    } = {}):Promise<boolean> {
+        const keys = await get(opts.writeKeyName || this.WRITE_KEY_NAME)
+        const excahngeKeys = await get(opts.encryptionKeyName || this.EXCHANGE_KEY_NAME)
+        if (!keys || !excahngeKeys) return false
+        return true
+    }
+
     /**
      * Restore some keys from indexedDB, or create a new keypair if it doesn't
      * exist yet.

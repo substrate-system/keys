@@ -24,6 +24,10 @@ test('Sanity', async t => {
     }
 })
 
+test('exist with no keys created', async t => {
+    t.equal(await EccKeys.exist(), false, 'exist should return false')
+})
+
 let myKeys:EccKeys
 test('__________Create a new EccKeys instance___________________', async t => {
     myKeys = await EccKeys.create()
@@ -219,6 +223,10 @@ test('indexedDB persistence', async t => {
     const signKey = await get(EccKeys.WRITE_KEY_NAME)
     t.ok(encryptionKey, 'should save an encryption key in indexedDB')
     t.ok(signKey, 'should save a signature key in indexedDB')
+})
+
+test('create after persisting keys', async t => {
+    t.ok(await EccKeys.exist(), 'should return true after we persist the keys')
 })
 
 test('Create keys from indexedDB', async t => {
