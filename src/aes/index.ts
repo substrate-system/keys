@@ -208,8 +208,8 @@ export async function decryptBytes (
     key:CryptoKey|string,
     opts?:Partial<{
         alg:SymmAlgorithm;
-        length: SymmKeyLength;
-        iv: ArrayBuffer;
+        length:SymmKeyLength;
+        iv:ArrayBuffer;
     }>
 ):Promise<ArrayBuffer> {
     const cipherText = normalizeBase64ToBuf(msg)
