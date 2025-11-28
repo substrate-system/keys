@@ -33,19 +33,17 @@ export type VerifyArgs = {
 }
 
 /**
- * Using the key type as the record property name (ie. string = key type)
+ * Using the key type as the record property name (i.e. string = key type)
  *
  * The magic bytes are the `code` found in {@link https://github.com/multiformats/multicodec/blob/master/table.csv}
- * encoded as a variable integer (more info about that at {@link https://github.com/multiformats/unsigned-varint)}.
+ * encoded as a variable integer (more info about that at {@link https://github.com/multiformats/unsigned-varint}.
  *
  * The key type is also found in that table.
  * It's the name of the codec minus the `-pub` suffix.
  *
  * Example
  * -------
- * Ed25519 public key
- * Key type: "ed25519"
- * Magic bytes: [ 0xed, 0x01 ]
+ * Ed25519 public key = Key type: "ed25519", Magic bytes: [ 0xed, 0x01 ]
  */
 type KeyTypes = Record<'ed25519'|'rsa'|'bls12-381', {
     magicBytes:Uint8Array
@@ -336,13 +334,18 @@ export async function publicKeyToDid (
     _publicKey:Uint8Array|CryptoKey,
     keyType:'rsa'|'ed25519' = 'rsa'
 ):Promise<DID> {
-    const publicKey = ((_publicKey instanceof CryptoKey) ?
-        new Uint8Array(await getPublicKeyAsArrayBuffer(_publicKey)) :
-        _publicKey
-    )
+    let publicKey:Uint8Array
 
     if (_publicKey instanceof CryptoKey) {
         keyType = _publicKey.algorithm.name.includes('RSA') ? 'rsa' : 'ed25519'
+
+        // For Ed25519, use raw format (32 bytes) instead of SPKI (44 bytes)
+        // For RSA, use SPKI format as expected
+        const format = keyType === 'ed25519' ? 'raw' : 'spki'
+        const exported = await webcrypto.subtle.exportKey(format, _publicKey)
+        publicKey = new Uint8Array(exported)
+    } else {
+        publicKey = _publicKey
     }
 
     // Prefix public-write key
