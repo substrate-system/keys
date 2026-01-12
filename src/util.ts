@@ -296,7 +296,7 @@ function publicExponent ():Uint8Array {
  * @param {DID} did String representation of the DID for the device
  * @returns {string} The 32 character, DNS friendly hash
  */
-export async function getDeviceName (did:DID|string) {
+export async function getDeviceName (did:DID|string):Promise<string> {
     const hashedUsername = await sha256(
         new TextEncoder().encode(did.normalize('NFD'))
     )
