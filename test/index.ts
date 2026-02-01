@@ -77,3 +77,10 @@ test('Get a DID without passing in the key type', async t => {
     const typeFromDid = keyTypeFromDid(did)
     t.equal(typeFromDid, 'ed25519', 'should return the correct key type')
 })
+
+test('all done', () => {
+    if (window) {
+        // @ts-expect-error tests
+        window.testsFinished = true
+    }
+})
