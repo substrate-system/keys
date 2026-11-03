@@ -27,6 +27,9 @@ export const AES_GCM = 'AES-GCM' as const
 export const DEFAULT_SYMM_ALGORITHM = AES_GCM
 export const DEFAULT_SYMM_LENGTH = 256
 export const IV_LENGTH = 12
+// AES-GCM appends a 16 byte (128 bit) authentication tag to the
+// ciphertext, so any valid GCM ciphertext is at least this long.
+export const AES_GCM_TAG_LENGTH = 16
 
 // Misc
 export const BLS_DID_PREFIX = new Uint8Array([0xea, 0x01])
@@ -43,3 +46,9 @@ export const DEFAULT_RSA_WRITE = 'rsa-write-key'
 export const DEFAULT_ECC_EXCHANGE = 'ecc-exchange'
 export const DEFAULT_ECC_WRITE = 'ecc-write'
 export const SALT_LENGTH = 16
+
+/**
+ * A version byte prefixed to `wrap`'s output blob, so future format or
+ * algorithm changes can be detected instead of silently misparsed.
+ */
+export const WRAP_FORMAT_VERSION = 1

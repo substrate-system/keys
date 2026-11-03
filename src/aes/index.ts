@@ -27,20 +27,27 @@ export const AES = {
     /**
      * Factory function -- create a new AES key. Defaults are `AES-GCM`
      * algorithm and 12 bytes `iv` size.
-     * @param {{ alg?:string, lenght?:number }} opts Algorithm and key size.
+     * @param {{ alg?:string, length?:number, extractable?:boolean }} opts
+     *   Algorithm, key size, and whether the key can be exported with
+     *   `crypto.subtle.exportKey`. `extractable` defaults to `true`.
      * @returns {Promise<CryptoKey>}
      */
-    create (opts:{ alg?:AESName, length?:number } = {
+    create (opts:{
+        alg?:AESName,
+        length?:number,
+        extractable?:boolean
+    } = {
         alg: DEFAULT_SYMM_ALGORITHM,
         length: DEFAULT_SYMM_LENGTH
     }):Promise<CryptoKey> {
         const length = opts.length || DEFAULT_SYMM_LENGTH
         const alg = opts.alg || DEFAULT_SYMM_ALGORITHM
+        const extractable = opts.extractable ?? true
 
         return webcrypto.subtle.generateKey({
             name: alg,
             length
-        }, true, ['encrypt', 'decrypt'])
+        }, extractable, ['encrypt', 'decrypt'])
     },
 
     /**
@@ -61,8 +68,15 @@ export const AES = {
         }
     ),
 
-    import (key:Uint8Array|string):Promise<CryptoKey> {
-        return importAesKey(typeof key === 'string' ? base64ToArrBuf(key) : key)
+    import (
+        key:Uint8Array|string,
+        extractable?:boolean
+    ):Promise<CryptoKey> {
+        return importAesKey(
+            typeof key === 'string' ? base64ToArrBuf(key) : key,
+            undefined,
+            extractable
+        )
     },
 
     async exportAsString (key:CryptoKey):Promise<string> {
@@ -81,7 +95,9 @@ export const AES = {
             cryptoKey :
             await importAesKey(cryptoKey))
 
-        // the `iv` is prefixed to the cipher text
+        // the `iv` is prefixed to the cipher text. A string ciphertext is
+        // always base64, matching the no-`iv` path below (`decryptBytes`
+        // -> `normalizeBase64ToBuf`).
         const decrypted = (iv ?
             await webcrypto.subtle.decrypt(
                 {
@@ -90,7 +106,7 @@ export const AES = {
                 },
                 key,
                 (typeof encryptedData === 'string' ?
-                    toArrayBuffer(fromString(encryptedData)) :
+                    toArrayBuffer(fromString(encryptedData, 'base64pad')) :
                     encryptedData instanceof Uint8Array ? toArrayBuffer(encryptedData) : encryptedData)
             ) :
 
@@ -100,9 +116,15 @@ export const AES = {
     }
 }
 
+/**
+ * Import a raw AES-GCM key.
+ * @param {boolean} [extractable] Can the key be exported with
+ *   `crypto.subtle.exportKey`? Default `true`.
+ */
 export function importAesKey (
     key:Uint8Array|ArrayBuffer,
-    length?:number
+    length?:number,
+    extractable:boolean = true
 ):Promise<CryptoKey> {
     return webcrypto.subtle.importKey(
         'raw',
@@ -111,7 +133,7 @@ export function importAesKey (
             name: AES_GCM,
             length: length || SymmKeyLength.B256,
         },
-        true,
+        extractable,
         ['encrypt', 'decrypt']
     )
 }

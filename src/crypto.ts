@@ -10,7 +10,6 @@ import {
 import {
     DEFAULT_HASH_ALGORITHM,
     DEFAULT_CHAR_SIZE,
-    SALT_LENGTH,
     RSA_SIGN_ALGORITHM,
     RSA_HASHING_ALGORITHM,
     RSA_ALGORITHM,
@@ -189,8 +188,7 @@ export const rsaOperations = {
     ):Promise<boolean> {
         return webcrypto.subtle.verify(
             {
-                name: RSA_SIGN_ALGORITHM,
-                saltLength: SALT_LENGTH
+                name: RSA_SIGN_ALGORITHM
             },
             (typeof publicKey === 'string' ?
                 await rsaImportPublicKey(publicKey, hashAlg, KeyUse.Sign) :
@@ -206,7 +204,7 @@ export const rsaOperations = {
         charSize:CharSize = DEFAULT_CHAR_SIZE
     ):Promise<ArrayBuffer> {
         return webcrypto.subtle.sign(
-            { name: RSA_SIGN_ALGORITHM, saltLength: SALT_LENGTH },
+            { name: RSA_SIGN_ALGORITHM },
             privateKey,
             normalizeUnicodeToBuf(msg, charSize)
         )
@@ -308,7 +306,17 @@ function stripKeyHeader (base64Key:string):string {
         .replace('\n-----END PUBLIC KEY-----', '')
 }
 
+/**
+ * Prefer `instanceof CryptoKey` where the global is available, so a
+ * plain object with `algorithm`/`extractable`/`type` properties can't
+ * be mistaken for a real key. Falls back to duck-typing only in
+ * environments without a global `CryptoKey` constructor.
+ */
 export function isCryptoKey (val:unknown):val is CryptoKey {
+    if (typeof CryptoKey !== 'undefined') {
+        return val instanceof CryptoKey
+    }
+
     return (
         hasProp(val, 'algorithm') &&
         hasProp(val, 'extractable') &&
@@ -380,8 +388,8 @@ export function keyTypeFromDid (inputDid:DID):'ed25519'|'rsa' {
     const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
     const result = Object.entries(did.keyTypes).find(
         ([_key, attr]) => hasPrefix(
-            magicalBuf.buffer as ArrayBuffer,
-            attr.magicBytes.buffer as ArrayBuffer
+            toArrayBuffer(magicalBuf),
+            toArrayBuffer(attr.magicBytes)
         )
     ) as [keyof KeyTypes, ValueOf<KeyTypes>]|undefined
 
@@ -434,8 +442,8 @@ export function didToPublicKey (inputDid:string):{
     const magicalBuf = fromString(didWithoutPrefix, 'base58btc')
     const result = Object.entries(did.keyTypes).find(
         ([_key, attr]) => hasPrefix(
-            magicalBuf.buffer as ArrayBuffer,
-            attr.magicBytes.buffer as ArrayBuffer
+            toArrayBuffer(magicalBuf),
+            toArrayBuffer(attr.magicBytes)
         )
     )
 

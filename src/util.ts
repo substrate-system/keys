@@ -51,9 +51,15 @@ export async function createDeviceName (did:DID):Promise<string> {
 }
 
 export async function sha256 (bytes:Uint8Array):Promise<Uint8Array> {
-    return new Uint8Array(
-        await webcrypto.subtle.digest('sha-256', bytes.buffer as ArrayBuffer)
-    )
+    // Slice out exactly this view's bytes rather than reading
+    // `bytes.buffer` directly, which is wrong for a view with a
+    // nonzero `byteOffset` (e.g. a `.subarray()`).
+    const buf = bytes.buffer.slice(
+        bytes.byteOffset,
+        bytes.byteOffset + bytes.byteLength
+    ) as ArrayBuffer
+
+    return new Uint8Array(await webcrypto.subtle.digest('sha-256', buf))
 }
 
 export function base64ToArrBuf (string:string):ArrayBuffer {
@@ -81,7 +87,7 @@ export function normalizeBase64ToBuf (msg:Msg):ArrayBuffer {
 }
 
 export const normalizeUtf8ToBuf = (msg:Msg):ArrayBuffer => {
-    return normalizeToBuf(msg, (str) => strToArrBuf(str, CharSize.B8))
+    return normalizeToBuf(msg, (str) => toArrayBuffer(new TextEncoder().encode(str)))
 }
 
 export function strToArrBuf (str:string, charSize:CharSize):ArrayBuffer {
@@ -183,6 +189,10 @@ export function fromBase64 (str:string) {
     return fromString(str, 'base64pad')
 }
 
+/**
+ * Import a raw AES key.
+ * @param {Partial<SymmKeyOpts>} [opts] `extractable` defaults to `true`.
+ */
 export async function importKey (
     key:string|Uint8Array,
     opts?:Partial<SymmKeyOpts>
@@ -196,7 +206,7 @@ export async function importKey (
             name: opts?.alg || DEFAULT_SYMM_ALGORITHM,
             length: opts?.length || DEFAULT_SYMM_LENGTH,
         },
-        true,
+        opts?.extractable ?? true,
         ['encrypt', 'decrypt']
     )
 }

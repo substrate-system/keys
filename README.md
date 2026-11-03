@@ -368,6 +368,13 @@ this works.
 * Use `unwrap()` on the new device to recover the AES key
 * Add devices without re-encrypting the entire dataset
 
+`wrap` signs its output with the sender's write key, and `unwrap` always
+checks that signature against the DID you pass in. Get the sender's DID
+over a channel an attacker can't tamper with, such as scanning a QR code
+or comparing it on both screens. A DID that arrives together with the
+wrapped key proves nothing, because whoever can swap the wrapped key can
+swap the DID too.
+
 
 ```ts
 import { EccKeys } from '@substrate-system/keys/ecc'
@@ -393,7 +400,8 @@ const wrapped = await device1.wrap(contentKey, device2.publicExchangeKey)
 console.log(wrapped)
 // {
 //   enc: 'base64-encoded-ephemeral-public-key...',
-//   wrappedKey: 'base64-encoded-wrapped-content-key...'
+//   wrappedKey: 'base64-encoded-wrapped-content-key...',
+//   signature: 'base64-encoded-signature...'
 // }
 
 // Store encrypted data + wrapped key entries for each device
@@ -407,8 +415,18 @@ console.log(wrapped)
 
 const device2 = await EccKeys.create()
 
-// Device 2 unwraps the content key
-const device2ContentKey = await device2.unwrap(wrapped.enc, wrapped.wrappedKey)
+// ... device 2 needs device 1's DID, from a channel it trusts ...
+
+// Device 2 checks device 1's signature, then unwraps the content key.
+// This throws if the signature is missing, or not from device 1.
+const device2ContentKey = await device2.unwrap(wrapped, device1.DID)
+
+// Options: `info` must match what was passed to `wrap`, and
+// `extractable` defaults to `true`.
+// await device2.unwrap(wrapped, device1.DID, {
+//     info: 'my-app',
+//     extractable: false
+// })
 
 // Device 2 decrypts the data with the unwrapped key
 // (AES.decrypt automatically extracts iv from the encrypted data)
@@ -418,6 +436,19 @@ const decrypted = await AES.decrypt(encrypted, device2ContentKey)
 console.log(new TextDecoder().decode(decrypted))
 // => 'secret data for all devices'
 ```
+
+#### A note on X25519 low-order points
+
+`encrypt`/`decrypt` and `wrap`/`unwrap` all do X25519 ECDH key agreement.
+A maliciously-crafted public key (a "low-order" or "small-subgroup" point)
+can force the ECDH shared secret to a known, low-entropy value -- an
+all-zero output is the classic case. This library does not check for that
+itself; it relies on the platform's WebCrypto implementation rejecting an
+invalid/all-zero X25519 shared secret, per
+[RFC 7748](https://datatracker.ietf.org/doc/html/rfc7748) and the
+[WebCrypto spec](https://www.w3.org/TR/WebCryptoAPI/#x25519-operations).
+That's a guarantee provided by the runtime (browsers, Node.js, Deno) --
+not something this library implements or verifies on its own.
 
 ### some notes about the `keys` instance
 

@@ -9,7 +9,13 @@ import {
     verify
 } from '../src/ecc/index.js'
 import { didToPublicKey } from '../src/crypto.js'
-import { EccCurve, KeyUse } from '../src/types.js'
+import {
+    EccCurve,
+    KeyUse,
+    type DID,
+    type WrappedKey
+} from '../src/types.js'
+import { AES } from '../src/aes/index.js'
 
 const subtle = crypto.subtle
 
@@ -219,6 +225,58 @@ test('getAesKey with another public key', async t => {
     t.ok(aesKey instanceof CryptoKey, 'should return a CryptoKey with other public key')
 })
 
+test('getAesKey exposes the salt so the key can be re-derived', async t => {
+    const otherKeys = await EccKeys.create()
+    const aesKey = await myKeys.getAesKey(otherKeys.publicExchangeKey)
+
+    t.equal(typeof aesKey.salt, 'string',
+        'should expose the salt as a base64 string')
+    t.ok(aesKey.salt.length > 0, 'salt should not be empty')
+
+    // re-derive using the exposed salt -- should produce the same key
+    const rederived = await myKeys.getAesKey(
+        otherKeys.publicExchangeKey, undefined, aesKey.salt
+    )
+
+    const iv = crypto.getRandomValues(new Uint8Array(12))
+    const plaintext = new TextEncoder().encode('probe message')
+    const cipherA = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv }, aesKey, plaintext
+    )
+    const cipherB = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv }, rederived, plaintext
+    )
+
+    t.ok(bytesEqual(new Uint8Array(cipherA), new Uint8Array(cipherB)),
+        'should re-derive byte-identical key material given the same salt')
+})
+
+test('getAesKey accepts a shared salt so both sides derive the same key',
+    async t => {
+        const otherKeys = await EccKeys.create()
+        const salt = crypto.getRandomValues(new Uint8Array(16))
+
+        const keyA = await myKeys.getAesKey(
+            otherKeys.publicExchangeKey, undefined, salt
+        )
+        const keyB = await otherKeys.getAesKey(
+            myKeys.publicExchangeKey, undefined, salt
+        )
+
+        const iv = crypto.getRandomValues(new Uint8Array(12))
+        const plaintext = new TextEncoder().encode('shared secret probe')
+        const ciphertext = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv }, keyA, plaintext
+        )
+        const decrypted = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv }, keyB, ciphertext
+        )
+
+        t.equal(toString(new Uint8Array(decrypted)), 'shared secret probe',
+            'both parties should derive the same AES key from the ' +
+            'shared salt')
+    })
+
 test('encrypt with custom info parameter', async t => {
     const message = 'test with custom info'
     const customInfo = 'custom-info'
@@ -227,6 +285,51 @@ test('encrypt with custom info parameter', async t => {
     const decrypted = await myKeys.decryptAsString(encrypted, null, customInfo)
     t.equal(decrypted, message, 'should encrypt/decrypt with custom info')
 })
+
+test('encrypt honors a caller-supplied AES CryptoKey end-to-end', async t => {
+    const aesKey = await AES.create()
+    const message = 'a message encrypted with an explicit key'
+
+    const encrypted = await myKeys.encrypt(message, undefined, undefined, aesKey)
+    const decrypted = await myKeys.decrypt(encrypted, undefined, undefined, aesKey)
+    const decryptedText = toString(new Uint8Array(decrypted))
+    t.equal(decryptedText, message,
+        'should decrypt with the same CryptoKey passed to encrypt')
+})
+
+test('encrypt honors a caller-supplied AES key given as a base64 string',
+    async t => {
+        const aesKey = await AES.create()
+        const aesKeyString = await AES.exportAsString(aesKey)
+        const message = 'a message encrypted with a string key'
+
+        const encrypted = await myKeys.encrypt(
+            message, undefined, undefined, aesKeyString
+        )
+        const decrypted = await myKeys.decryptAsString(
+            encrypted, undefined, undefined, aesKeyString
+        )
+        t.equal(decrypted, message,
+            'should decrypt with the same string key passed to encrypt')
+    })
+
+test('decrypt fails with a different aesKey than was used to encrypt',
+    async t => {
+        const aesKey = await AES.create()
+        const wrongKey = await AES.create()
+        const message = 'should not be readable with the wrong key'
+
+        const encrypted = await myKeys.encrypt(
+            message, undefined, undefined, aesKey
+        )
+
+        try {
+            await myKeys.decrypt(encrypted, undefined, undefined, wrongKey)
+            t.fail('should throw when decrypting with the wrong key')
+        } catch (_err) {
+            t.ok(_err, 'should throw when decrypting with the wrong key')
+        }
+    })
 
 test('Cache the keys instance', async t => {
     // Clear cache to start fresh
@@ -356,6 +459,138 @@ test('add device - wrap AES key for new device', async t => {
     t.ok(wrapped.wrappedKey.length > 0, 'wrapped key should not be empty')
 })
 
+test('wrap - prefixes the blob with a format version byte', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    const blob = fromString(wrapped.wrappedKey, 'base64pad')
+    t.equal(blob[0], 1, 'should prefix the blob with format version 1')
+})
+
+test('unwrap - rejects an unrecognized format version byte', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    const blob = fromString(wrapped.wrappedKey, 'base64pad')
+    blob[0] = 99
+    const badVersion = toString(blob, 'base64pad')
+
+    try {
+        await newDevice.unwrap(
+            { ...wrapped, wrappedKey: badVersion },
+            myKeys.DID
+        )
+        t.fail('should throw on an unrecognized format version')
+    } catch (err) {
+        t.ok(err, 'should throw on an unrecognized format version')
+    }
+})
+
+test('unwrap - rejects a malformed `enc` public key', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    // truncate the ephemeral public key to something other than 32 bytes
+    const shortEnc = toString(
+        fromString(wrapped.enc, 'base64pad').slice(0, 10),
+        'base64pad'
+    )
+
+    try {
+        await newDevice.unwrap({ ...wrapped, enc: shortEnc }, myKeys.DID)
+        t.fail('should throw for a malformed `enc` value')
+    } catch (err) {
+        t.ok(
+            err instanceof Error &&
+                /X25519 public key/.test((err as Error).message),
+            'should throw a clear error about the `enc` length'
+        )
+    }
+})
+
+test('unwrap - rejects a truncated wrapped key blob', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    const truncated = toString(
+        fromString(wrapped.wrappedKey, 'base64pad').slice(0, 5),
+        'base64pad'
+    )
+
+    try {
+        await newDevice.unwrap(
+            { ...wrapped, wrappedKey: truncated },
+            myKeys.DID
+        )
+        t.fail('should throw for a truncated wrapped key blob')
+    } catch (err) {
+        t.ok(
+            err instanceof Error &&
+                /at least \d+ bytes/.test((err as Error).message),
+            'should throw a clear error about the minimum blob length'
+        )
+    }
+})
+
+test('unwrap - a wrap addressed to one device cannot be unwrapped by ' +
+    'another', async t => {
+    // A blob wrapped for device A must not be readable by device B.
+    // The signature covers the recipient's public key, so B rejects it
+    // before deriving a KEK; behind that, the KEK itself is bound to the
+    // recipient's key (via ECDH and the HPKE-style HKDF `info`).
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const deviceA = await EccKeys.create()
+    const deviceB = await EccKeys.create()
+
+    const wrappedForA = await myKeys.wrap(
+        contentKey,
+        deviceA.publicExchangeKey
+    )
+
+    try {
+        const key = await deviceB.unwrap(wrappedForA, myKeys.DID)
+        const bytes = new Uint8Array(
+            await crypto.subtle.exportKey('raw', key)
+        )
+        const originalBytes = new Uint8Array(
+            await crypto.subtle.exportKey('raw', contentKey)
+        )
+        t.notDeepEqual(
+            Array.from(bytes),
+            Array.from(originalBytes),
+            'should not recover the original key with the wrong ' +
+                'recipient key'
+        )
+    } catch (err) {
+        // AES-GCM auth tag failure is also an acceptable outcome
+        t.ok(err, 'should fail to unwrap with the wrong recipient key')
+    }
+})
+
 test('unwrap - new device unwraps content key', async t => {
     // Create a content key (AES key)
     const contentKey = await crypto.subtle.generateKey(
@@ -376,7 +611,7 @@ test('unwrap - new device unwraps content key', async t => {
     const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
 
     // New device unwraps the content key
-    const unwrappedKey = await newDevice.unwrap(wrapped.enc, wrapped.wrappedKey)
+    const unwrappedKey = await newDevice.unwrap(wrapped, myKeys.DID)
 
     // Export unwrapped key for comparison
     const unwrappedKeyBytes = new Uint8Array(
@@ -424,7 +659,7 @@ test('add a device - encrypt data, add device, new device decrypts', async t => 
     const wrapped = await device1.wrap(contentKey, device2.publicExchangeKey)
 
     // Device 2 unwraps the content key
-    const device2ContentKey = await device2.unwrap(wrapped.enc, wrapped.wrappedKey)
+    const device2ContentKey = await device2.unwrap(wrapped, device1.DID)
 
     // Device 2 decrypts the message
     const decrypted = await crypto.subtle.decrypt(
@@ -457,7 +692,7 @@ test('add device with string content key', async t => {
     t.equal(typeof wrapped.wrappedKey, 'string', 'should return wrapped key as string')
 
     // New device should be able to unwrap it
-    const unwrappedKey = await newDevice.unwrap(wrapped.enc, wrapped.wrappedKey)
+    const unwrappedKey = await newDevice.unwrap(wrapped, myKeys.DID)
     t.ok(unwrappedKey instanceof CryptoKey, 'should unwrap to CryptoKey')
 })
 
@@ -471,6 +706,7 @@ test('add device with Uint8Array content key', async t => {
     const keyBytes = new Uint8Array(
         await crypto.subtle.exportKey('raw', contentKey)
     )
+    const keyBytesCopy = keyBytes.slice()
 
     // Create a new device
     const newDevice = await EccKeys.create()
@@ -480,9 +716,14 @@ test('add device with Uint8Array content key', async t => {
 
     t.equal(typeof wrapped.enc, 'string', 'should return ephemeral public key as string')
     t.equal(typeof wrapped.wrappedKey, 'string', 'should return wrapped key as string')
+    t.deepEqual(
+        Array.from(keyBytes),
+        Array.from(keyBytesCopy),
+        'a caller-supplied Uint8Array should not be zeroed by `wrap`'
+    )
 
     // New device should be able to unwrap it
-    const unwrappedKey = await newDevice.unwrap(wrapped.enc, wrapped.wrappedKey)
+    const unwrappedKey = await newDevice.unwrap(wrapped, myKeys.DID)
     t.ok(unwrappedKey instanceof CryptoKey, 'should unwrap to CryptoKey')
 })
 
@@ -504,11 +745,9 @@ test('add device with custom info parameter', async t => {
     )
 
     // Unwrap with same custom info
-    const unwrappedKey = await newDevice.unwrap(
-        wrapped.enc,
-        wrapped.wrappedKey,
-        customInfo
-    )
+    const unwrappedKey = await newDevice.unwrap(wrapped, myKeys.DID, {
+        info: customInfo
+    })
 
     t.ok(unwrappedKey instanceof CryptoKey,
         'should unwrap with matching custom info')
@@ -551,9 +790,9 @@ test('add device - multiple devices', async t => {
     const wrapped3 = await myKeys.wrap(contentKey, device3.publicExchangeKey)
 
     // All devices should be able to unwrap
-    const key1 = await device1.unwrap(wrapped1.enc, wrapped1.wrappedKey)
-    const key2 = await device2.unwrap(wrapped2.enc, wrapped2.wrappedKey)
-    const key3 = await device3.unwrap(wrapped3.enc, wrapped3.wrappedKey)
+    const key1 = await device1.unwrap(wrapped1, myKeys.DID)
+    const key2 = await device2.unwrap(wrapped2, myKeys.DID)
+    const key3 = await device3.unwrap(wrapped3, myKeys.DID)
 
     // Export all keys for comparison
     const originalBytes = new Uint8Array(
@@ -566,6 +805,178 @@ test('add device - multiple devices', async t => {
     t.ok(bytesEqual(originalBytes, key1Bytes), 'device 1 key should match')
     t.ok(bytesEqual(originalBytes, key2Bytes), 'device 2 key should match')
     t.ok(bytesEqual(originalBytes, key3Bytes), 'device 3 key should match')
+})
+
+test('wrap - includes a signature from the write key', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    t.equal(typeof wrapped.signature, 'string',
+        'should return a signature as a string')
+    t.ok(wrapped.signature.length > 0, 'signature should not be empty')
+})
+
+test('unwrap - verifies the sender signature', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    const unwrappedKey = await newDevice.unwrap(wrapped, myKeys.DID)
+
+    const originalBytes = new Uint8Array(
+        await crypto.subtle.exportKey('raw', contentKey)
+    )
+    const unwrappedBytes = new Uint8Array(
+        await crypto.subtle.exportKey('raw', unwrappedKey)
+    )
+    t.ok(bytesEqual(originalBytes, unwrappedBytes),
+        'should unwrap the key when the signature is valid')
+})
+
+test('unwrap - rejects a wrap forged by another keypair', async t => {
+    const attackerKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+    const attacker = await EccKeys.create()
+
+    // The attacker wraps their own key for the recipient,
+    // but the recipient expects a wrap from `myKeys`
+    const forged = await attacker.wrap(
+        attackerKey,
+        newDevice.publicExchangeKey
+    )
+
+    try {
+        await newDevice.unwrap(forged, myKeys.DID)
+        t.fail('should throw given a signature from the wrong key')
+    } catch (_err) {
+        t.ok(_err, 'should throw given a signature from the wrong key')
+    }
+})
+
+test('unwrap - rejects a tampered wrapped key', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    // flip one byte inside the ciphertext, past the version/salt/iv
+    // prefix, so this exercises AES-GCM tamper detection rather than
+    // the version check
+    const blob = fromString(wrapped.wrappedKey, 'base64pad')
+    const lastIndex = blob.length - 1
+    blob[lastIndex] = blob[lastIndex] ^ 0xff
+    const tampered = toString(blob, 'base64pad')
+
+    try {
+        await newDevice.unwrap(
+            { ...wrapped, wrappedKey: tampered },
+            myKeys.DID
+        )
+        t.fail('should throw given a tampered wrapped key')
+    } catch (_err) {
+        t.ok(_err, 'should throw given a tampered wrapped key')
+    }
+})
+
+test('unwrap - fails closed without a signature', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    // what a JS caller, or one that casts around the types, could send
+    const unsigned = {
+        enc: wrapped.enc,
+        wrappedKey: wrapped.wrappedKey
+    } as WrappedKey
+
+    try {
+        await newDevice.unwrap(unsigned, myKeys.DID)
+        t.fail('should throw for an unsigned wrap')
+    } catch (_err) {
+        t.ok(_err, 'should throw for an unsigned wrap')
+    }
+})
+
+test('unwrap - fails closed without a signer DID', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    try {
+        await newDevice.unwrap(wrapped, undefined as unknown as DID)
+        t.fail('should throw when no signer DID is given')
+    } catch (_err) {
+        t.ok(_err, 'should throw when no signer DID is given')
+    }
+})
+
+test('unwrap - returned key is extractable by default', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    const unwrappedKey = await newDevice.unwrap(wrapped, myKeys.DID)
+
+    t.equal(unwrappedKey.extractable, true,
+        'should default to an extractable key')
+
+    const exported = await crypto.subtle.exportKey('raw', unwrappedKey)
+    t.ok(exported, 'should be able to export the default key')
+})
+
+test('unwrap - extractable:false returns a non-extractable key', async t => {
+    const contentKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    )
+    const newDevice = await EccKeys.create()
+    const wrapped = await myKeys.wrap(contentKey, newDevice.publicExchangeKey)
+
+    const unwrappedKey = await newDevice.unwrap(wrapped, myKeys.DID, {
+        extractable: false
+    })
+
+    t.equal(unwrappedKey.extractable, false,
+        'should not be extractable when passed `false`')
+
+    try {
+        await crypto.subtle.exportKey('raw', unwrappedKey)
+        t.fail('should not be able to export a non-extractable key')
+    } catch (err) {
+        t.ok(err, 'should throw when exporting a non-extractable key')
+    }
 })
 
 // Helper to compare bytes

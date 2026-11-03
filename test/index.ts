@@ -1,7 +1,9 @@
 import { test } from '@substrate-system/tapzero'
+import { toString as uToString } from 'uint8arrays'
 import { verify as ed25519Verify, EccKeys } from '../src/ecc/index.js'
 import { verify as rsaVerify, RsaKeys } from '../src/rsa/index.js'
 import { verify, keyTypeFromDid, publicKeyToDid } from '../src/crypto.js'
+import { sha256 } from '../src/util.js'
 import { type DID } from '../src/types.js'
 import './aes.js'
 import './rsa.js'
@@ -79,6 +81,44 @@ test('Get a DID without passing in the key type', async t => {
     const typeFromDid = keyTypeFromDid(did)
     t.equal(typeFromDid, 'ed25519', 'should return the correct key type')
 })
+
+test('sha256 hashes only its view, not the whole underlying buffer',
+    async t => {
+        // Build one big buffer holding two different messages back to
+        // back, then hash each message via a `.subarray()` view (a
+        // nonzero `byteOffset` for the second one). If `sha256` ever
+        // read `bytes.buffer` directly instead of respecting the
+        // view's bounds, the second hash would incorporate bytes from
+        // the first message too.
+        const messageA = new TextEncoder().encode('message-a')
+        const messageB = new TextEncoder().encode('message-b-longer')
+        const combined = new Uint8Array(messageA.length + messageB.length)
+        combined.set(messageA, 0)
+        combined.set(messageB, messageA.length)
+
+        const viewA = combined.subarray(0, messageA.length)
+        const viewB = combined.subarray(messageA.length)
+
+        t.ok(viewB.byteOffset > 0,
+            'sanity check: the second view has a nonzero byteOffset')
+
+        const hashOfView = await sha256(viewB)
+        const hashOfStandaloneCopy = await sha256(new Uint8Array(messageB))
+
+        t.equal(
+            uToString(hashOfView, 'base64pad'),
+            uToString(hashOfStandaloneCopy, 'base64pad'),
+            'hashing a subarray should match hashing an equivalent, ' +
+                'freshly-allocated copy of the same bytes'
+        )
+
+        const hashOfViewA = await sha256(viewA)
+        t.notEqual(
+            uToString(hashOfView, 'base64pad'),
+            uToString(hashOfViewA, 'base64pad'),
+            'the two views should hash to different digests'
+        )
+    })
 
 test('all done', () => {
     if (window) {

@@ -10,6 +10,8 @@ import {
     getPublicKeyAsUint8Array
 } from '../src/rsa/index.js'
 import { AES } from '../src/aes/index.js'
+import { makeRSAKeypair } from '../src/util.js'
+import { RsaSize, HashAlg, KeyUse } from '../src/types.js'
 
 let keys:RsaKeys
 test('__________________create a new RsaKeys_______________', async t => {
@@ -134,6 +136,25 @@ test('verify an invalid signature', async t => {
     t.ok(!isOk, 'should not verify an invalid signature')
 })
 
+test('sign and verify a message with non-Latin-1 characters', async t => {
+    const message = 'hello 中文 😀 world'
+    const unicodeSig = await keys.signAsString(message)
+    const isOk = await verify(message, unicodeSig, keys.DID)
+    t.ok(isOk, 'should verify a signature over unicode text')
+})
+
+test('sign distinguishes messages that collide under 8-bit truncation', async t => {
+    // char code 0x0100 truncates to 0x00 (NUL) if a string-to-bytes
+    // conversion drops everything above 8 bits -- these must not
+    // produce the same (deterministic) RSASSA-PKCS1-v1_5 signature
+    const a = 'A\u0100'
+    const b = 'A\u0000'
+    const sigA = await keys.signAsString(a)
+    const sigB = await keys.signAsString(b)
+    t.ok(sigA !== sigB,
+        'distinct unicode messages should not produce the same signature')
+})
+
 let encrypted:Uint8Array
 test('encrypt a key to a keys instance', async t => {
     encrypted = await encryptKeyTo({
@@ -240,6 +261,32 @@ test('decrypt a key with the wrong keys', async t => {
 test('decrypt as string', async t => {
     const decrypted = await keys.decryptKeyAsString(encrypted)
     t.equal(decrypted, 'hello', 'should decrypt and return a string')
+})
+
+test('decrypt splits on the RSA modulus size, not the AES key size', async t => {
+    // A non-default modulus length breaks the split point if it is
+    // derived from the (unrelated) AES key size, since that only ever
+    // matches the RSA-2048 ciphertext length by coincidence. 1024 bits
+    // (a 128-byte ciphertext) exercises that as well as 4096 would, and
+    // generates fast enough to stay under the test runner's timeout.
+    const exchange = await makeRSAKeypair(
+        RsaSize.B1024, HashAlg.SHA_256, KeyUse.Exchange, false
+    )
+    const write = await makeRSAKeypair(
+        RsaSize.B1024, HashAlg.SHA_256, KeyUse.Write, false
+    )
+    const did = await publicKeyToDid(write.publicKey, 'rsa')
+    const rsa1024 = new RsaKeys({
+        keys: { exchange, write },
+        did,
+        hasPersisted: false
+    })
+
+    const message = 'hello from a 1024-bit RSA key'
+    const encryptedMsg = await rsa1024.encrypt(message)
+    const decrypted = await rsa1024.decrypt(encryptedMsg)
+    t.equal(toString(decrypted), message,
+        'should decrypt correctly with a non-default modulus size')
 })
 
 let aesKey:CryptoKey
@@ -359,6 +406,85 @@ test('in memory, using the .load method', async t => {
     })
 
     t.ok(keysTwo.DID !== keys.DID, 'should not use the same instance')
+})
+
+test('persist() writes under the custom name passed to load()', async t => {
+    delete RsaKeys._instance
+
+    const custom = await RsaKeys.load({
+        encryptionKeyName: 'clobber_test_custom_exchange',
+        writeKeyName: 'clobber_test_custom_write'
+    })
+
+    t.equal(custom.exchangeKeyName, 'clobber_test_custom_exchange',
+        'instance should remember the custom exchange key name')
+    t.equal(custom.writeKeyName, 'clobber_test_custom_write',
+        'instance should remember the custom write key name')
+
+    await custom.persist()
+
+    const storedExchange = await get('clobber_test_custom_exchange')
+    const storedWrite = await get('clobber_test_custom_write')
+    t.ok(storedExchange, 'should persist under the requested exchange key name')
+    t.ok(storedWrite, 'should persist under the requested write key name')
+
+    delete RsaKeys._instance
+})
+
+test('a second instance does not clobber the first instance\'s key names',
+    async t => {
+        delete RsaKeys._instance
+        const first = await RsaKeys.load({
+            encryptionKeyName: 'clobber_test_first_exchange',
+            writeKeyName: 'clobber_test_first_write'
+        })
+
+        delete RsaKeys._instance
+        const second = await RsaKeys.load({
+            encryptionKeyName: 'clobber_test_second_exchange',
+            writeKeyName: 'clobber_test_second_write'
+        })
+
+        t.equal(first.exchangeKeyName, 'clobber_test_first_exchange',
+            'creating a second instance should not change the ' +
+            'first instance\'s key name')
+        t.equal(second.exchangeKeyName, 'clobber_test_second_exchange',
+            'second instance should have its own key name')
+
+        delete RsaKeys._instance
+    })
+
+test('load() with different key names bypasses the stale cache', async t => {
+    delete RsaKeys._instance
+    const a = await RsaKeys.load({
+        encryptionKeyName: 'cache_test_a_exchange',
+        writeKeyName: 'cache_test_a_write'
+    })
+    await a.persist()
+
+    // do NOT clear `_instance` here -- the cache must be bypassed
+    // because the requested names differ from `a`'s names
+    const b = await RsaKeys.load({
+        encryptionKeyName: 'cache_test_b_exchange',
+        writeKeyName: 'cache_test_b_write'
+    })
+
+    t.ok(a.DID !== b.DID,
+        'should load distinct keys when different names are requested')
+    t.equal(b.exchangeKeyName, 'cache_test_b_exchange',
+        'should return keys loaded under the newly requested name')
+
+    // requesting `a`'s names again (with `b` now cached) must bypass
+    // the stale cache and load `a`'s persisted keys back from indexedDB
+    const aAgain = await RsaKeys.load({
+        encryptionKeyName: 'cache_test_a_exchange',
+        writeKeyName: 'cache_test_a_write'
+    })
+    t.equal(aAgain.DID, a.DID,
+        'requesting the first name again should reload the first ' +
+        'instance\'s keys, not return the second instance')
+
+    delete RsaKeys._instance
 })
 
 // `delete` is terminal -- it destroys the in-memory key material -- so this

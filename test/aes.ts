@@ -2,6 +2,7 @@ import { test } from '@substrate-system/tapzero'
 import { toString, fromString, equals } from 'uint8arrays'
 import { AES, importAesKey } from '../src/aes/index.js'
 import { SymmKeyLength } from '../src/types.js'
+import { isCryptoKey } from '../src/crypto.js'
 
 test('________________create an AES key__________________', async t => {
     const key = await AES.create()
@@ -136,6 +137,36 @@ test('AES encrypt with custom IV', async t => {
     t.equal(decryptedText, 'test with custom IV', 'should work with custom IV')
 })
 
+test('isCryptoKey rejects a duck-typed fake key', async t => {
+    const realKey = await AES.create()
+    t.ok(isCryptoKey(realKey), 'should accept a real CryptoKey')
+
+    const fake = {
+        algorithm: { name: 'AES-GCM' },
+        extractable: true,
+        type: 'secret'
+    }
+    t.equal(isCryptoKey(fake), false,
+        'should reject a plain object with matching properties')
+})
+
+test('AES.decrypt reads a string ciphertext as base64, with or ' +
+    'without an `iv`', async t => {
+    const key = await AES.create()
+    const message = 'consistent string ciphertext encoding'
+    const data = fromString(message)
+    const iv = crypto.getRandomValues(new Uint8Array(12))
+
+    // encrypt with an explicit `iv`, decrypt the base64 string form
+    // through the `iv` branch
+    const encrypted = await AES.encrypt(data, key, undefined, iv)
+    const encryptedString = toString(encrypted, 'base64pad')
+    const decrypted = await AES.decrypt(encryptedString, key, iv)
+
+    t.equal(toString(decrypted), message,
+        'should decode a string ciphertext as base64 on the `iv` path')
+})
+
 test('AES encrypt/decrypt with Uint8Array key', async t => {
     const originalKey = await AES.create()
     const keyBytes = await AES.export(originalKey)
@@ -264,4 +295,52 @@ test('Binary data encryption/decryption', async t => {
     const decrypted = await AES.decrypt(encrypted, key)
 
     t.ok(equals(binaryData, decrypted), 'should handle binary data correctly')
+})
+
+test('AES.create is extractable by default', async t => {
+    const key = await AES.create()
+    t.equal(key.extractable, true, 'should default to extractable')
+})
+
+test('AES.create with extractable:false', async t => {
+    const key = await AES.create({ extractable: false })
+    t.equal(key.extractable, false,
+        'should not be extractable when passed `false`')
+
+    try {
+        await AES.export(key)
+        t.fail('should not be able to export a non-extractable key')
+    } catch (err) {
+        t.ok(err, 'should throw when exporting a non-extractable key')
+    }
+})
+
+test('AES.import is extractable by default', async t => {
+    const originalKey = await AES.create()
+    const exported = await AES.export(originalKey)
+    const imported = await AES.import(exported)
+    t.equal(imported.extractable, true, 'should default to extractable')
+})
+
+test('AES.import with extractable:false', async t => {
+    const originalKey = await AES.create()
+    const exported = await AES.export(originalKey)
+    const imported = await AES.import(exported, false)
+    t.equal(imported.extractable, false,
+        'should not be extractable when passed `false`')
+})
+
+test('importAesKey with extractable:false', async t => {
+    const originalKey = await AES.create()
+    const exported = await AES.export(originalKey)
+    const imported = await importAesKey(exported, undefined, false)
+    t.equal(imported.extractable, false,
+        'should not be extractable when passed `false`')
+
+    try {
+        await crypto.subtle.exportKey('raw', imported)
+        t.fail('should not be able to export a non-extractable key')
+    } catch (err) {
+        t.ok(err, 'should throw when exporting a non-extractable key')
+    }
 })

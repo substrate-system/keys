@@ -31,6 +31,12 @@ export type WrappedKey = {
     enc:string;
     /** Wrapped content key (base64): salt + iv + ciphertext */
     wrappedKey:string;
+    /**
+     * Ed25519 signature (base64) by the sender's write key, covering
+     * the ephemeral public key, the recipient's public key, the wrapped
+     * key blob, and the info string.
+     */
+    signature:string;
 }
 
 export type RSA = 'rsa'
@@ -75,4 +81,9 @@ export type SymmKeyOpts = {
     alg:SymmAlgorithm
     length:SymmKeyLength
     iv:ArrayBuffer
+    /**
+     * Can the key be exported with `crypto.subtle.exportKey`?
+     * Default `true`.
+     */
+    extractable:boolean
 }

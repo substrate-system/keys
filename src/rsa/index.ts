@@ -2,7 +2,6 @@ import { fromString, toString, type SupportedEncodings } from 'uint8arrays'
 import { AES, importAesKey } from '../aes/index.js'
 import {
     DEFAULT_CHAR_SIZE,
-    DEFAULT_SYMM_LENGTH,
     AES_GCM,
     IV_LENGTH,
     DEFAULT_RSA_EXCHANGE,
@@ -50,6 +49,15 @@ function toArrayBuffer (data: Uint8Array): ArrayBuffer {
 }
 export type { DID }
 export { getPublicKeyAsUint8Array } from '../crypto.js'
+
+/**
+ * The byte length of an RSA-OAEP ciphertext is always exactly the
+ * modulus length -- never the AES key size, which is an unrelated value
+ * that happens to collide with it only for a 2048-bit modulus.
+ */
+function rsaCiphertextByteLength (rsaKey:CryptoKey):number {
+    return (rsaKey.algorithm as RsaHashedKeyAlgorithm).modulusLength / 8
+}
 
 export class RsaKeys extends AbstractKeys {
     static TYPE = 'rsa' as const
@@ -217,19 +225,23 @@ export class RsaKeys extends AbstractKeys {
 
     /**
      * Decrypt the given message. Expects encrypted AES key + encrypted content.
+     *
+     * The RSA-encrypted AES key is always exactly one RSA-modulus-sized
+     * block, so the split point between it and the AES-encrypted content
+     * is derived from this instance's RSA modulus length -- not from the
+     * (unrelated) AES key size.
      */
     async decrypt (
         msg:string|Uint8Array|ArrayBuffer,
-        keysize?:CryptoKey|string|SymmKeyLength,
+        _keysize?:CryptoKey|string|SymmKeyLength,
         _aesAlgorithm?:string,
     ):Promise<Uint8Array> {
-        // For RSA, the second parameter is keysize, not publicKey
-        const keysizeValue = ((typeof keysize === 'number' ?
-            keysize :
-            undefined) || DEFAULT_SYMM_LENGTH)
         const cipherText = normalizeToBuf(msg, base64ToArrBuf)
-        const key = cipherText.slice(0, keysizeValue)
-        const data = cipherText.slice(keysizeValue)
+        const rsaCipherLength = rsaCiphertextByteLength(
+            this.exchangeKey.privateKey
+        )
+        const key = cipherText.slice(0, rsaCipherLength)
+        const data = cipherText.slice(rsaCipherLength)
         const decryptedKey = await this.decryptKey(key)
         const decryptedContent = await AES.decrypt(data, decryptedKey)
         return decryptedContent
