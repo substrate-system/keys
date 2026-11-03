@@ -54,6 +54,7 @@ See also,
     + [Create a keypair](#create-a-keypair)
     + [Encrypt a Message](#encrypt-a-message)
     + [Multiple devices](#multiple-devices)
+    + [A note on X25519 low-order points](#a-note-on-x25519-low-order-points)
   * [some notes about the `keys` instance](#some-notes-about-the-keys-instance)
     + [`keys.DID`](#keysdid)
     + [`keys.getDeviceName` / `keys.deviceName`](#keysgetdevicename--keysdevicename)
